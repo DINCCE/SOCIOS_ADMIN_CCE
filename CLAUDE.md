@@ -222,7 +222,41 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) runs on PRs:
 6. **Middleware**: Handles all auth session management—don't duplicate auth logic elsewhere
 7. **Context7 for Documentation**: Always use Context7 MCP tools (`mcp__context7__resolve-library-id` and `mcp__context7__get-library-docs`) when you need code generation, setup/configuration steps, or library/API documentation. This should be done automatically without the user having to explicitly ask. Use it for all libraries in the stack (Next.js, Supabase, TanStack Query, shadcn/ui, Zod, Vitest, etc.)
 
-## Database Migrations
+## Database Schema & Patterns
+
+### Business Partners System
+
+The project implements a Class Table Inheritance (CTI) pattern for managing different types of business partners:
+
+**Core Tables:**
+
+- `organizations` - Multi-tenancy foundation
+- `business_partners` - Base table for all partners (CTI pattern)
+- `personas` - Natural persons specialization
+- `empresas` - Companies specialization
+
+**Key Patterns:**
+
+- **Class Table Inheritance (CTI):** `business_partners` is the base table, `personas` and `empresas` are specializations with 1:1 PK relationship
+- **Multi-Tenancy:** All data filtered by `organizacion_id` via RLS policies
+- **Soft Delete:** Use `eliminado_en` timestamp instead of DELETE operations
+- **JSONB Metadata:** Flexible `atributos` field for custom data per organization
+
+**Database Functions:**
+
+- `calcular_digito_verificacion_nit(nit TEXT)` - Calculate NIT verification digit for Colombian tax IDs
+- `actualizar_timestamp()` - Trigger function to auto-update `actualizado_en`
+- `validar_consistencia_tipo_actor()` - Ensures each business_partner has exactly one specialization
+
+**Comprehensive Documentation:**
+
+- [Database Overview](docs/database/OVERVIEW.md) - Concepts, architecture, roadmap
+- [Schema Reference](docs/database/SCHEMA.md) - ERD, tables, functions, triggers, views
+- [Tables Dictionary](docs/database/TABLES.md) - Complete data dictionary with all fields
+- [Query Examples](docs/database/QUERIES.md) - SQL patterns for common operations
+- [RLS Policies](docs/database/RLS.md) - Row Level Security implementation
+
+### Database Migrations
 
 **Initial Setup:** Use `supabase/schema.sql` for first-time database setup.
 
@@ -232,7 +266,7 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) runs on PRs:
 - Local: Supabase CLI (`supabase db push`)
 - Production: Supabase Dashboard SQL Editor
 
-**See [docs/MIGRATIONS.md](docs/MIGRATIONS.md) for detailed workflow.**
+**See [docs/MIGRATIONS.md](docs/MIGRATIONS.md) for detailed workflow and Business Partners migration history.**
 
 ## Security Headers
 

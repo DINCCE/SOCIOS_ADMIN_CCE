@@ -33,6 +33,8 @@ Visit [http://localhost:3000](http://localhost:3000)
 
 ## Documentation
 
+### General Guides
+
 | Guide | Purpose |
 |-------|---------|
 | [Getting Started](docs/GETTING_STARTED.md) | Complete setup |
@@ -46,6 +48,16 @@ Visit [http://localhost:3000](http://localhost:3000)
 | [PWA Setup](docs/PWA.md) | Progressive Web App config |
 | [Roadmap](docs/ROADMAP.md) | Planned features |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Common issues |
+
+### Database Documentation
+
+| Guide | Purpose |
+| ----- | ------- |
+| [Database Overview](docs/database/OVERVIEW.md) | Concepts, architecture, roadmap |
+| [Schema Reference](docs/database/SCHEMA.md) | ERD, tables, functions, triggers |
+| [Tables Dictionary](docs/database/TABLES.md) | Complete data dictionary |
+| [Query Examples](docs/database/QUERIES.md) | SQL patterns and examples |
+| [RLS Policies](docs/database/RLS.md) | Row Level Security |
 
 **For AI Assistants:** See [CLAUDE.md](CLAUDE.md) for technical reference.
 
