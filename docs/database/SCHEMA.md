@@ -606,6 +606,166 @@ UPDATE tabla SET eliminado_en = NULL WHERE id = 'uuid';
 
 ---
 
+### 5. `bp_relaciones`
+
+**Propósito:** Gestiona relaciones entre Business Partners (familiares, laborales, referencias, membresías, comerciales).
+
+**Tipo:** Tabla de relaciones con soporte bidireccional
+
+**Relaciones:**
+- N:1 con `organizations` (cada relación pertenece a una organización)
+- N:1 con `business_partners` como origen
+- N:1 con `business_partners` como destino
+
+**Campos Principales:**
+- `id` (PK): Identificador único
+- `organizacion_id` (FK): Organización propietaria
+- `bp_origen_id` (FK): Business Partner origen de la relación
+- `bp_destino_id` (FK): Business Partner destino de la relación
+- `tipo_relacion` (ENUM): Tipo de relación (familiar, laboral, referencia, membresia, comercial, otra)
+- `rol_origen` (TEXT): Rol específico del BP origen (ej: "Padre", "Empleado", "Jefe")
+- `rol_destino` (TEXT): Rol específico del BP destino (ej: "Hijo", "Empresa", "Subordinado")
+- `atributos` (JSONB): Metadata flexible por tipo de relación
+- `fecha_inicio` / `fecha_fin` (DATE): Temporalidad de la relación
+- `es_actual` (BOOLEAN, GENERATED): TRUE si `fecha_fin IS NULL`
+- `es_bidireccional` (BOOLEAN): Indica si la relación es simétrica (hermanos=true, padre-hijo=false)
+- `notas` (TEXT): Observaciones adicionales
+- `eliminado_en` (TIMESTAMPTZ): Soft delete
+
+**Constraints Importantes:**
+- FK hacia `organizations(id)` ON DELETE CASCADE
+- FK hacia `business_partners(id)` ON DELETE CASCADE (origen y destino)
+- CHECK: `bp_origen_id != bp_destino_id` (no auto-relaciones)
+- CHECK: `fecha_fin IS NULL OR fecha_fin >= fecha_inicio`
+- UNIQUE: `(bp_origen_id, bp_destino_id, tipo_relacion, rol_origen, rol_destino)` WHERE `eliminado_en IS NULL AND es_actual = true`
+
+**Índices:**
+- `idx_bp_relaciones_origen` en `bp_origen_id` WHERE `eliminado_en IS NULL` (parcial)
+- `idx_bp_relaciones_destino` en `bp_destino_id` WHERE `eliminado_en IS NULL` (parcial)
+- `idx_bp_relaciones_tipo` en `tipo_relacion` WHERE `eliminado_en IS NULL` (parcial)
+- `idx_bp_relaciones_org` en `organizacion_id` WHERE `eliminado_en IS NULL` (parcial)
+- `idx_bp_relaciones_actual` en `es_actual` WHERE `eliminado_en IS NULL AND es_actual = true` (parcial)
+- `idx_bp_relaciones_bidireccional` en `(bp_origen_id, bp_destino_id, tipo_relacion)` WHERE `eliminado_en IS NULL` (compuesto)
+- `idx_bp_relaciones_unique_activa` UNIQUE (para prevenir duplicados activos)
+
+**Triggers:**
+- `actualizar_bp_relaciones_timestamp` (BEFORE UPDATE) - Actualiza `actualizado_en`
+- `validar_relacion_compatible` (BEFORE INSERT/UPDATE) - Valida tipos compatibles
+
+**ERD: Relaciones BP**
+
+```mermaid
+erDiagram
+    organizations ||--o{ bp_relaciones : "tiene"
+    business_partners ||--o{ bp_relaciones : "origen"
+    business_partners ||--o{ bp_relaciones : "destino"
+
+    bp_relaciones {
+        uuid id PK
+        uuid organizacion_id FK
+        uuid bp_origen_id FK
+        uuid bp_destino_id FK
+        tipo_relacion_bp tipo_relacion
+        text rol_origen
+        text rol_destino
+        jsonb atributos
+        date fecha_inicio
+        date fecha_fin
+        boolean es_actual "GENERATED"
+        boolean es_bidireccional
+        text notas
+        timestamptz creado_en
+        timestamptz actualizado_en
+        timestamptz eliminado_en
+    }
+```
+
+**ENUM: `tipo_relacion_bp`**
+```sql
+CREATE TYPE tipo_relacion_bp AS ENUM (
+    'familiar',      -- Relaciones familiares (padre-hijo, hermanos, cónyuge)
+    'laboral',       -- Relaciones laborales (empleado-empresa)
+    'referencia',    -- Referencias personales
+    'membresia',     -- Membresías en clubes, juntas, asociaciones
+    'comercial',     -- Relaciones comerciales/proveedores
+    'otra'           -- Tipo customizable
+);
+```
+
+**Estructura JSONB por Tipo:**
+
+Relaciones Familiares:
+```json
+{
+  "linea": "paterna",
+  "es_biologico": true,
+  "es_adoptivo": false,
+  "parentesco_politico": false
+}
+```
+
+Relaciones Laborales:
+```json
+{
+  "cargo": "Gerente de Ventas",
+  "departamento": "Comercial",
+  "tipo_contrato": "indefinido",
+  "jornada": "completa",
+  "es_principal": true
+}
+```
+
+**Vista Helper: `v_relaciones_bidireccionales`**
+
+Vista que genera automáticamente registros inversos para relaciones bidireccionales:
+
+```sql
+CREATE VIEW v_relaciones_bidireccionales AS
+-- Registros directos
+SELECT *, 'directo' AS direccion
+FROM bp_relaciones
+WHERE eliminado_en IS NULL
+
+UNION ALL
+
+-- Registros inversos (solo si es_bidireccional = true)
+SELECT
+    id,
+    organizacion_id,
+    bp_destino_id AS bp_origen_id,  -- Invertido
+    bp_origen_id AS bp_destino_id,  -- Invertido
+    tipo_relacion,
+    invertir_rol(rol_destino) AS rol_origen,  -- Convertido
+    invertir_rol(rol_origen) AS rol_destino,  -- Convertido
+    atributos,
+    fecha_inicio,
+    fecha_fin,
+    es_actual,
+    es_bidireccional,
+    notas,
+    creado_en,
+    actualizado_en,
+    'inverso' AS direccion
+FROM bp_relaciones
+WHERE es_bidireccional = true
+  AND eliminado_en IS NULL;
+```
+
+**Funciones Helper:**
+
+`invertir_rol(rol TEXT) → TEXT`
+- Convierte un rol a su inverso para relaciones bidireccionales
+- Ejemplos: 'Padre' → 'Hijo', 'Empleado' → 'Empleador', 'Hermano' → 'Hermano'
+
+`validar_tipo_relacion_compatible() → TRIGGER`
+- Valida que tipos de BP sean compatibles con tipo de relación
+- Familiar: ambos deben ser personas
+- Laboral: origen persona, destino empresa
+
+**Ver:** [TABLES.md](./TABLES.md#bp_relaciones) para diccionario completo.
+
+---
+
 ## Diagrama de Flujo de Validación
 
 ```

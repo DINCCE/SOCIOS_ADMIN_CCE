@@ -7,6 +7,7 @@ Este documento contiene ejemplos de queries SQL comunes organizados por caso de 
 - [Inserción de Datos](#inserción-de-datos)
 - [Consultas Básicas](#consultas-básicas)
 - [Consultas Avanzadas](#consultas-avanzadas)
+- [Relaciones entre Business Partners](#relaciones-entre-business-partners)
 - [Soft Delete](#soft-delete)
 - [Búsquedas JSONB](#búsquedas-jsonb)
 - [Agregaciones y Estadísticas](#agregaciones-y-estadísticas)
@@ -368,6 +369,542 @@ WHERE e.representante_legal_id IS NULL
   AND e.eliminado_en IS NULL
   AND bp.organizacion_id = 'org-uuid'
 ORDER BY e.razon_social;
+```
+
+---
+
+## Relaciones entre Business Partners
+
+### Inserción de Relaciones
+
+#### Crear Relación Familiar (Padre-Hijo)
+
+```sql
+INSERT INTO bp_relaciones (
+  organizacion_id,
+  bp_origen_id,
+  bp_destino_id,
+  tipo_relacion,
+  rol_origen,
+  rol_destino,
+  atributos,
+  fecha_inicio,
+  es_bidireccional,
+  notas
+)
+VALUES (
+  'org-uuid',
+  'persona-padre-uuid',
+  'persona-hijo-uuid',
+  'familiar',
+  'Padre',
+  'Hijo',
+  jsonb_build_object(
+    'parentesco', 'Padre',
+    'linea', 'paterna',
+    'convive', true
+  ),
+  '1990-05-15',  -- Fecha de nacimiento del hijo
+  true,  -- Bidireccional: permite consultar desde ambos lados
+  'Relación padre-hijo, conviven en la misma ciudad'
+);
+```
+
+#### Crear Relación Laboral (Empleado-Empresa)
+
+```sql
+INSERT INTO bp_relaciones (
+  organizacion_id,
+  bp_origen_id,
+  bp_destino_id,
+  tipo_relacion,
+  rol_origen,
+  rol_destino,
+  atributos,
+  fecha_inicio,
+  es_bidireccional
+)
+VALUES (
+  'org-uuid',
+  'persona-empleado-uuid',
+  'empresa-empleador-uuid',
+  'laboral',
+  'Empleado',
+  'Empleador',
+  jsonb_build_object(
+    'cargo', 'Desarrollador Senior',
+    'departamento', 'Ingeniería',
+    'tipo_contrato', 'indefinido',
+    'salario_rango', 'alto',
+    'activo', true
+  ),
+  '2020-01-15',
+  false  -- No bidireccional: la empresa no es "empleado" de la persona
+);
+```
+
+#### Crear Relación Bidireccional (Hermanos)
+
+```sql
+-- Solo se inserta UNA vez, la vista genera la relación inversa automáticamente
+INSERT INTO bp_relaciones (
+  organizacion_id,
+  bp_origen_id,
+  bp_destino_id,
+  tipo_relacion,
+  rol_origen,
+  rol_destino,
+  atributos,
+  fecha_inicio,
+  es_bidireccional
+)
+VALUES (
+  'org-uuid',
+  'persona-a-uuid',
+  'persona-b-uuid',
+  'familiar',
+  'Hermano',
+  'Hermano',
+  jsonb_build_object(
+    'parentesco', 'Hermano',
+    'linea', 'paterna'
+  ),
+  NULL,  -- Fecha inicio opcional
+  true   -- ¡IMPORTANTE! Genera registro inverso automático en la vista
+);
+```
+
+### Consultas de Relaciones
+
+#### Ver Todas las Relaciones de un Business Partner
+
+```sql
+-- Opción 1: Solo relaciones donde es ORIGEN
+SELECT
+  r.id,
+  r.tipo_relacion,
+  r.rol_origen,
+  r.rol_destino,
+  r.fecha_inicio,
+  r.fecha_fin,
+  r.es_actual,
+  -- Datos del BP destino
+  bp_dest.tipo_actor AS tipo_destino,
+  CASE
+    WHEN bp_dest.tipo_actor = 'persona' THEN p.nombres || ' ' || p.apellidos
+    WHEN bp_dest.tipo_actor = 'empresa' THEN e.razon_social
+  END AS nombre_destino
+FROM bp_relaciones r
+INNER JOIN business_partners bp_dest ON r.bp_destino_id = bp_dest.id
+LEFT JOIN personas p ON bp_dest.id = p.id
+LEFT JOIN empresas e ON bp_dest.id = e.id
+WHERE r.bp_origen_id = 'bp-uuid'
+  AND r.eliminado_en IS NULL
+ORDER BY r.es_actual DESC, r.fecha_inicio DESC;
+
+-- Opción 2: TODAS las relaciones (dirección agnóstica) usando vista bidireccional
+SELECT
+  vr.tipo_relacion,
+  vr.rol_origen,
+  vr.rol_destino,
+  vr.fecha_inicio,
+  vr.fecha_fin,
+  vr.es_actual,
+  vr.direccion,  -- 'directo' o 'inverso'
+  -- Datos del BP destino
+  bp_dest.tipo_actor AS tipo_destino,
+  CASE
+    WHEN bp_dest.tipo_actor = 'persona' THEN p.nombres || ' ' || p.apellidos
+    WHEN bp_dest.tipo_actor = 'empresa' THEN e.razon_social
+  END AS nombre_destino
+FROM v_relaciones_bidireccionales vr
+INNER JOIN business_partners bp_dest ON vr.bp_destino_id = bp_dest.id
+LEFT JOIN personas p ON bp_dest.id = p.id
+LEFT JOIN empresas e ON bp_dest.id = e.id
+WHERE vr.bp_origen_id = 'bp-uuid'
+ORDER BY vr.es_actual DESC, vr.fecha_inicio DESC;
+```
+
+#### Ver Relaciones Familiares de una Persona
+
+```sql
+SELECT
+  r.rol_origen,
+  r.rol_destino,
+  r.atributos->>'parentesco' AS parentesco,
+  r.atributos->>'linea' AS linea,
+  r.fecha_inicio,
+  r.es_actual,
+  -- Datos del familiar
+  p_dest.numero_documento,
+  p_dest.nombres || ' ' || p_dest.apellidos AS nombre_familiar,
+  p_dest.telefono,
+  p_dest.email
+FROM bp_relaciones r
+INNER JOIN personas p_dest ON r.bp_destino_id = p_dest.id
+WHERE r.bp_origen_id = 'persona-uuid'
+  AND r.tipo_relacion = 'familiar'
+  AND r.eliminado_en IS NULL
+ORDER BY
+  CASE r.rol_destino
+    WHEN 'Cónyuge' THEN 1
+    WHEN 'Hijo' THEN 2
+    WHEN 'Hija' THEN 3
+    WHEN 'Padre' THEN 4
+    WHEN 'Madre' THEN 5
+    ELSE 6
+  END;
+```
+
+#### Ver Empleados de una Empresa
+
+```sql
+SELECT
+  r.fecha_inicio,
+  r.fecha_fin,
+  r.es_actual,
+  r.atributos->>'cargo' AS cargo,
+  r.atributos->>'departamento' AS departamento,
+  r.atributos->>'tipo_contrato' AS tipo_contrato,
+  -- Datos del empleado
+  p.numero_documento,
+  p.nombres || ' ' || p.apellidos AS nombre_empleado,
+  p.telefono,
+  p.email
+FROM bp_relaciones r
+INNER JOIN personas p ON r.bp_origen_id = p.id
+WHERE r.bp_destino_id = 'empresa-uuid'
+  AND r.tipo_relacion = 'laboral'
+  AND r.rol_destino = 'Empleador'
+  AND r.eliminado_en IS NULL
+ORDER BY r.es_actual DESC, r.fecha_inicio DESC;
+```
+
+#### Historial Laboral Completo de una Persona
+
+```sql
+SELECT
+  e.razon_social AS empresa,
+  e.nit || '-' || e.digito_verificacion AS nit_empresa,
+  r.fecha_inicio,
+  r.fecha_fin,
+  r.es_actual,
+  CASE
+    WHEN r.fecha_fin IS NULL THEN 'Actual'
+    ELSE EXTRACT(YEAR FROM AGE(r.fecha_fin, r.fecha_inicio))::TEXT || ' años ' ||
+         EXTRACT(MONTH FROM AGE(r.fecha_fin, r.fecha_inicio))::TEXT || ' meses'
+  END AS duracion,
+  r.atributos->>'cargo' AS cargo,
+  r.atributos->>'departamento' AS departamento,
+  r.atributos->>'tipo_contrato' AS tipo_contrato
+FROM bp_relaciones r
+INNER JOIN empresas e ON r.bp_destino_id = e.id
+WHERE r.bp_origen_id = 'persona-uuid'
+  AND r.tipo_relacion = 'laboral'
+  AND r.eliminado_en IS NULL
+ORDER BY
+  r.es_actual DESC,
+  r.fecha_inicio DESC;
+```
+
+#### Ver Relaciones Bidireccionales (Hermanos, Cónyuges, etc.)
+
+```sql
+-- Esta query aprovecha la vista v_relaciones_bidireccionales
+-- para mostrar relaciones simétricas como "Hermano ↔ Hermano"
+
+SELECT
+  vr.direccion,  -- 'directo' o 'inverso'
+  CASE
+    WHEN vr.direccion = 'directo' THEN 'Persona A → Persona B'
+    ELSE 'Persona B → Persona A (auto-generado)'
+  END AS tipo_registro,
+  p_origen.nombres || ' ' || p_origen.apellidos AS persona_origen,
+  vr.rol_origen,
+  p_destino.nombres || ' ' || p_destino.apellidos AS persona_destino,
+  vr.rol_destino,
+  vr.atributos->>'parentesco' AS parentesco
+FROM v_relaciones_bidireccionales vr
+INNER JOIN personas p_origen ON vr.bp_origen_id = p_origen.id
+INNER JOIN personas p_destino ON vr.bp_destino_id = p_destino.id
+WHERE vr.es_bidireccional = true
+  AND vr.tipo_relacion = 'familiar'
+  AND vr.bp_origen_id = 'persona-a-uuid'
+ORDER BY vr.direccion;
+
+-- Resultado esperado (2 filas):
+-- directo  | Persona A → Persona B                | Juan Pérez    | Hermano | Pedro Pérez   | Hermano | Hermano
+-- inverso  | Persona B → Persona A (auto-generado)| Pedro Pérez   | Hermano | Juan Pérez    | Hermano | Hermano
+```
+
+### Modificación de Relaciones
+
+#### Finalizar Relación Laboral (Mantener Historial)
+
+```sql
+-- NO eliminar, sino marcar fecha_fin para mantener historial
+UPDATE bp_relaciones
+SET
+  fecha_fin = CURRENT_DATE,
+  atributos = atributos || jsonb_build_object('activo', false),
+  notas = COALESCE(notas, '') || E'\n' || 'Finalizada el ' || CURRENT_DATE::TEXT,
+  actualizado_en = NOW()
+WHERE id = 'relacion-uuid'
+  AND eliminado_en IS NULL;
+
+-- La columna GENERATED 'es_actual' se actualiza automáticamente a FALSE
+```
+
+#### Soft Delete de una Relación
+
+```sql
+-- Soft delete: marcar como eliminado sin borrar datos
+UPDATE bp_relaciones
+SET
+  eliminado_en = NOW(),
+  actualizado_en = NOW()
+WHERE id = 'relacion-uuid';
+
+-- Para recuperar:
+UPDATE bp_relaciones
+SET
+  eliminado_en = NULL,
+  actualizado_en = NOW()
+WHERE id = 'relacion-uuid';
+```
+
+### Consultas Avanzadas de Relaciones
+
+#### Árbol Genealógico (Padres → Hijos)
+
+```sql
+WITH RECURSIVE arbol_familiar AS (
+  -- Caso base: persona raíz
+  SELECT
+    r.bp_origen_id,
+    r.bp_destino_id,
+    r.rol_origen,
+    r.rol_destino,
+    p.nombres || ' ' || p.apellidos AS nombre,
+    1 AS nivel
+  FROM bp_relaciones r
+  INNER JOIN personas p ON r.bp_origen_id = p.id
+  WHERE r.bp_origen_id = 'persona-raiz-uuid'
+    AND r.tipo_relacion = 'familiar'
+    AND r.rol_destino IN ('Hijo', 'Hija')
+    AND r.eliminado_en IS NULL
+
+  UNION ALL
+
+  -- Caso recursivo: hijos de cada nivel
+  SELECT
+    r.bp_origen_id,
+    r.bp_destino_id,
+    r.rol_origen,
+    r.rol_destino,
+    p.nombres || ' ' || p.apellidos AS nombre,
+    af.nivel + 1
+  FROM bp_relaciones r
+  INNER JOIN arbol_familiar af ON r.bp_origen_id = af.bp_destino_id
+  INNER JOIN personas p ON r.bp_destino_id = p.id
+  WHERE r.tipo_relacion = 'familiar'
+    AND r.rol_destino IN ('Hijo', 'Hija')
+    AND r.eliminado_en IS NULL
+)
+SELECT
+  nivel,
+  REPEAT('  ', nivel - 1) || '└─ ' || nombre AS arbol,
+  rol_origen,
+  rol_destino
+FROM arbol_familiar
+ORDER BY nivel, nombre;
+```
+
+#### Empresas donde Trabajan Miembros de una Familia
+
+```sql
+-- Encontrar todas las empresas donde trabajan personas relacionadas familiarmente
+SELECT DISTINCT
+  e.razon_social AS empresa,
+  e.nit,
+  p.nombres || ' ' || p.apellidos AS empleado,
+  rel_lab.atributos->>'cargo' AS cargo,
+  rel_fam.rol_origen AS parentesco_con_referencia
+FROM bp_relaciones rel_fam
+-- Join para obtener relaciones laborales de familiares
+INNER JOIN bp_relaciones rel_lab ON rel_fam.bp_destino_id = rel_lab.bp_origen_id
+INNER JOIN empresas e ON rel_lab.bp_destino_id = e.id
+INNER JOIN personas p ON rel_lab.bp_origen_id = p.id
+WHERE rel_fam.bp_origen_id = 'persona-referencia-uuid'
+  AND rel_fam.tipo_relacion = 'familiar'
+  AND rel_lab.tipo_relacion = 'laboral'
+  AND rel_lab.es_actual = true
+  AND rel_fam.eliminado_en IS NULL
+  AND rel_lab.eliminado_en IS NULL
+ORDER BY e.razon_social, p.apellidos;
+```
+
+#### Estadísticas de Relaciones por Tipo
+
+```sql
+SELECT
+  tipo_relacion,
+  COUNT(*) AS total_relaciones,
+  COUNT(*) FILTER (WHERE es_actual = true) AS relaciones_activas,
+  COUNT(*) FILTER (WHERE es_actual = false) AS relaciones_finalizadas,
+  COUNT(*) FILTER (WHERE es_bidireccional = true) AS bidireccionales,
+  ROUND(AVG(EXTRACT(EPOCH FROM (COALESCE(fecha_fin, NOW()) - fecha_inicio)) / 86400), 0)::INTEGER AS duracion_promedio_dias
+FROM bp_relaciones
+WHERE eliminado_en IS NULL
+  AND fecha_inicio IS NOT NULL
+GROUP BY tipo_relacion
+ORDER BY total_relaciones DESC;
+```
+
+#### Validar Integridad: Relaciones Familiares Solo Entre Personas
+
+```sql
+-- Query de validación: Detectar violaciones (no debería retornar filas)
+SELECT
+  r.id,
+  r.tipo_relacion,
+  bp_origen.tipo_actor AS tipo_origen,
+  bp_destino.tipo_actor AS tipo_destino,
+  'ERROR: Relación familiar con empresa' AS problema
+FROM bp_relaciones r
+INNER JOIN business_partners bp_origen ON r.bp_origen_id = bp_origen.id
+INNER JOIN business_partners bp_destino ON r.bp_destino_id = bp_destino.id
+WHERE r.tipo_relacion = 'familiar'
+  AND (bp_origen.tipo_actor != 'persona' OR bp_destino.tipo_actor != 'persona')
+  AND r.eliminado_en IS NULL;
+```
+
+#### Validar Integridad: Relaciones Laborales Persona → Empresa
+
+```sql
+-- Query de validación: Detectar violaciones
+SELECT
+  r.id,
+  r.tipo_relacion,
+  bp_origen.tipo_actor AS tipo_origen,
+  bp_destino.tipo_actor AS tipo_destino,
+  CASE
+    WHEN bp_origen.tipo_actor != 'persona' THEN 'ERROR: Origen debe ser persona'
+    WHEN bp_destino.tipo_actor != 'empresa' THEN 'ERROR: Destino debe ser empresa'
+  END AS problema
+FROM bp_relaciones r
+INNER JOIN business_partners bp_origen ON r.bp_origen_id = bp_origen.id
+INNER JOIN business_partners bp_destino ON r.bp_destino_id = bp_destino.id
+WHERE r.tipo_relacion = 'laboral'
+  AND (bp_origen.tipo_actor != 'persona' OR bp_destino.tipo_actor != 'empresa')
+  AND r.eliminado_en IS NULL;
+```
+
+#### Detectar Relaciones Duplicadas Activas
+
+```sql
+-- No debería retornar filas gracias al índice UNIQUE
+SELECT
+  bp_origen_id,
+  bp_destino_id,
+  tipo_relacion,
+  COUNT(*) AS duplicados,
+  ARRAY_AGG(id) AS ids_duplicados
+FROM bp_relaciones
+WHERE eliminado_en IS NULL
+  AND es_actual = true
+GROUP BY bp_origen_id, bp_destino_id, tipo_relacion
+HAVING COUNT(*) > 1;
+```
+
+### Ejemplo de Uso desde Frontend
+
+#### Server Action: Crear Relación Laboral
+
+```typescript
+// app/actions/relaciones.ts
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
+
+export async function crearRelacionLaboral(data: {
+  organizacion_id: string
+  empleado_id: string
+  empresa_id: string
+  cargo: string
+  departamento: string
+  fecha_inicio: string
+}) {
+  const supabase = await createClient()
+
+  const { data: relacion, error } = await supabase
+    .from('bp_relaciones')
+    .insert({
+      organizacion_id: data.organizacion_id,
+      bp_origen_id: data.empleado_id,
+      bp_destino_id: data.empresa_id,
+      tipo_relacion: 'laboral',
+      rol_origen: 'Empleado',
+      rol_destino: 'Empleador',
+      atributos: {
+        cargo: data.cargo,
+        departamento: data.departamento,
+        tipo_contrato: 'indefinido',
+        activo: true,
+      },
+      fecha_inicio: data.fecha_inicio,
+      es_bidireccional: false,
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return relacion
+}
+```
+
+#### Client Component: Listar Empleados
+
+```typescript
+// components/lista-empleados.tsx
+'use client'
+
+import { useQuery } from '@tanstack/react-query'
+
+export function ListaEmpleados({ empresaId }: { empresaId: string }) {
+  const { data: empleados, isLoading } = useQuery({
+    queryKey: ['empleados', empresaId],
+    queryFn: async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('bp_relaciones')
+        .select(`
+          id,
+          fecha_inicio,
+          fecha_fin,
+          es_actual,
+          atributos,
+          personas:bp_origen_id (
+            numero_documento,
+            nombres,
+            apellidos,
+            telefono,
+            email
+          )
+        `)
+        .eq('bp_destino_id', empresaId)
+        .eq('tipo_relacion', 'laboral')
+        .is('eliminado_en', null)
+        .order('es_actual', { ascending: false })
+        .order('fecha_inicio', { ascending: false })
+
+      if (error) throw error
+      return data
+    },
+  })
+
+  // ... render UI
+}
 ```
 
 ---

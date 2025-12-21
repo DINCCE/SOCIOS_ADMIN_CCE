@@ -179,6 +179,110 @@ supabase/migrations/
 
 These migration files would document the changes but are not required to run since the schema is already applied.
 
+### BP Relaciones System
+
+The following components implement the Business Partners Relationships system with temporal tracking, bidirectional support, and type validations:
+
+**Applied Components:**
+
+All BP Relaciones components have been applied directly to the Supabase database. The system includes:
+
+1. **ENUM tipo_relacion_bp** - Relationship types
+   - Values: `familiar`, `laboral`, `referencia`, `membresia`, `comercial`, `otra`
+   - Defines the 6 supported relationship categories
+
+2. **Table bp_relaciones** - Core relationships table
+   - Fields: 16 columns including origen, destino, tipo, roles, atributos (JSONB), fechas
+   - Primary Key: `id UUID`
+   - Foreign Keys: `organizacion_id`, `bp_origen_id`, `bp_destino_id`
+   - Generated Column: `es_actual` (computed from `fecha_fin IS NULL`)
+   - Check Constraints: no self-relations, valid date ranges
+   - Unique Constraint: prevents duplicate active relationships
+   - RLS: Enabled with basic authenticated user policies
+
+3. **Indexes (7 total)** - Performance optimization
+   - 5 partial indexes for common queries (origen, destino, tipo, org, actual)
+   - 1 compound index for bidirectional queries
+   - 1 unique index to prevent duplicates
+   - All use `WHERE eliminado_en IS NULL` for efficiency
+
+4. **Function invertir_rol()** - Role inversion mapping
+   - Maps 20+ role pairs (e.g., Padre↔Hijo, Empleado↔Empleador)
+   - IMMUTABLE function for performance
+   - Used by bidirectional view to auto-generate inverse relationships
+
+5. **Function validar_tipo_relacion_compatible()** - Type validation
+   - Trigger function enforcing business rules:
+     - Familiar: Both BP must be personas
+     - Laboral: Origin persona, destination empresa
+   - RAISES EXCEPTION on violation
+
+6. **Triggers (2 total)** - Automatic validation and updates
+   - `actualizar_bp_relaciones_timestamp` - Updates `actualizado_en` on changes
+   - `validar_relacion_compatible` - Validates relationship types before INSERT/UPDATE
+
+7. **View v_relaciones_bidireccionales** - Bidirectional query support
+   - UNION of direct records + auto-generated inverse records
+   - Uses `invertir_rol()` for inverse role mapping
+   - Adds `direccion` column ('directo' | 'inverso')
+   - Eliminates need to query both directions manually
+
+8. **Migration: contacto_emergencia_id** - Data migration
+   - Migrated existing `personas.contacto_emergencia_id` references to `bp_relaciones`
+   - Type: `referencia`, Rol destino: 'Contacto de Emergencia'
+   - JSONB metadata includes `migrado_desde` field for traceability
+   - Result: 0 records migrated (no existing data in this project)
+   - Original field preserved for backwards compatibility
+
+**Design Decision:** Uses `rol_origen` + `rol_destino` fields (instead of single `subtipo`) for maximum clarity and long-term maintainability.
+
+**Documentation:**
+
+For detailed schema information, see:
+
+- [Database Overview](database/OVERVIEW.md) - Concepts and system architecture
+- [Schema Reference](database/SCHEMA.md) - ERD, complete table definitions, functions, triggers
+- [Tables Dictionary](database/TABLES.md) - Complete data dictionary with all 16 fields
+- [Query Examples](database/QUERIES.md) - SQL patterns: 3 INSERT, 5 SELECT, 2 UPDATE examples
+- [RLS Policies](database/RLS.md) - Security policies (basic policies implemented, production refinement pending)
+- [Design Document](../TEMP_DOC/06-RELACIONES-BP-DESIGN.md) - Complete design rationale and decisions
+
+**SQL Execution Order:**
+
+While already applied in Supabase, the components were created in this order:
+
+```sql
+-- 1. ENUM
+CREATE TYPE tipo_relacion_bp AS ENUM (...);
+
+-- 2. Table
+CREATE TABLE bp_relaciones (...);
+
+-- 3. Indexes (7 total)
+CREATE INDEX idx_bp_relaciones_origen ON bp_relaciones (...);
+-- ... 6 more indexes
+
+-- 4. Helper Functions
+CREATE FUNCTION invertir_rol(rol TEXT) RETURNS TEXT ...;
+CREATE FUNCTION validar_tipo_relacion_compatible() RETURNS TRIGGER ...;
+
+-- 5. Triggers
+CREATE TRIGGER actualizar_bp_relaciones_timestamp ...;
+CREATE TRIGGER validar_relacion_compatible ...;
+
+-- 6. View
+CREATE VIEW v_relaciones_bidireccionales AS ...;
+
+-- 7. RLS Policies
+ALTER TABLE bp_relaciones ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "..." ON bp_relaciones ...;
+
+-- 8. Data Migration
+INSERT INTO bp_relaciones (...) SELECT ... FROM personas ...;
+```
+
+**Note:** All components are already active in the Supabase database and do not need to be re-executed.
+
 ## Troubleshooting
 
 **"Policy already exists"?**

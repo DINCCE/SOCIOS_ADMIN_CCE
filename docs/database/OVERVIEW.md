@@ -14,6 +14,7 @@ El sistema actualmente incluye las siguientes tablas:
 2. **`business_partners`** - Tabla base para todos los socios de negocio
 3. **`personas`** - Personas naturales (hereda de business_partners)
 4. **`empresas`** - Empresas/personas jurídicas (hereda de business_partners)
+5. **`bp_relaciones`** - Relaciones entre Business Partners con historial y bidireccionalidad
 
 **Tablas Futuras:** El diseño contempla agregar tipos adicionales de actores como socios, proveedores, empleados, etc.
 
@@ -161,8 +162,14 @@ El sistema provee vistas para simplificar queries:
 - Tabla base `business_partners` con patrón CTI
 - Especialización `personas` con contacto de emergencia
 - Especialización `empresas` con representante legal
+- Tabla `bp_relaciones` (relaciones entre Business Partners)
+  - 6 tipos de relaciones (familiar, laboral, referencia, membresia, comercial, otra)
+  - Soporte bidireccional con vista automática
+  - Historial temporal con `fecha_inicio`/`fecha_fin`
+  - Validaciones de tipo (familiar: personas, laboral: persona→empresa)
+  - Función `invertir_rol()` para mapeo de roles inversos
 - Triggers de validación y timestamps
-- Vistas unificadas
+- Vistas unificadas (`v_personas_completa`, `v_empresas_completa`, `v_actores_unificados`, `v_relaciones_bidireccionales`)
 - RLS policies básicas
 - Soft delete en todas las tablas
 
