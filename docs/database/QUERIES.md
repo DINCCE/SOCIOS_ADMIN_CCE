@@ -28,7 +28,7 @@ BEGIN;
 INSERT INTO business_partners (
   organizacion_id,
   tipo_actor,
-  codigo_interno,
+  codigo_bp,
   estado,
   atributos
 )
@@ -45,29 +45,31 @@ RETURNING id;
 -- 2. Insertar en personas (usar el UUID del paso anterior)
 INSERT INTO personas (
   id,
-  nombres,
-  apellidos,
+  primer_nombre,
+  segundo_nombre,
+  primer_apellido,
+  segundo_apellido,
   tipo_documento,
   numero_documento,
   fecha_nacimiento,
   genero,
   telefono,
   email,
-  direccion,
-  atributos
+  direccion
 )
 VALUES (
   'bp-uuid-12345',  -- Mismo UUID del business_partner
-  'Juan Carlos',
-  'Pérez González',
-  'CC',
+  'Juan',
+  'Carlos',
+  'Pérez',
+  'González',
+  'cedula_ciudadania',
   '1234567890',
   '1990-05-15',
   'masculino',
   '+57 300 123 4567',
   'juan.perez@example.com',
-  'Calle 123 # 45-67, Bogotá',
-  '{"profesion": "Ingeniero", "estado_civil": "soltero"}'::jsonb
+  '{"calle": "Calle 123 # 45-67", "ciudad": "Bogotá", "pais": "Colombia"}'::jsonb
 );
 
 COMMIT;
@@ -79,7 +81,25 @@ COMMIT;
 BEGIN;
 
 -- 1. Primero crear la persona que será el contacto de emergencia
--- (repetir pasos de "Crear una Persona")
+INSERT INTO business_partners (organizacion_id, tipo_actor, estado)
+VALUES ('org-uuid', 'persona', 'activo')
+RETURNING id;
+-- Guardar este id como 'persona_contacto_id'
+
+INSERT INTO personas (
+  id,
+  primer_nombre,
+  primer_apellido,
+  tipo_documento,
+  numero_documento
+)
+VALUES (
+  'persona_contacto_id',
+  'Pedro',
+  'Pérez',
+  'cedula_ciudadania',
+  '1111111111'
+);
 
 -- 2. Crear la persona principal con referencia al contacto
 INSERT INTO business_partners (organizacion_id, tipo_actor, estado)
@@ -89,19 +109,27 @@ RETURNING id;
 
 INSERT INTO personas (
   id,
-  nombres,
-  apellidos,
+  primer_nombre,
+  segundo_nombre,
+  primer_apellido,
   tipo_documento,
   numero_documento,
-  contacto_emergencia_id  -- ← Referencia al contacto
+  contacto_emergencia_id,  -- ← Referencia al contacto
+  nombre_contacto_emergencia,
+  relacion_emergencia,
+  telefono_emergencia
 )
 VALUES (
   'persona_principal_id',
   'María',
+  'Elena',
   'López',
-  'CC',
+  'cedula_ciudadania',
   '9876543210',
-  'persona_contacto_id'  -- UUID de la persona contacto de emergencia
+  'persona_contacto_id',  -- UUID de la persona contacto de emergencia
+  'Pedro Pérez',
+  'Hermano',
+  '+57 300 999 8888'
 );
 
 COMMIT;
@@ -116,7 +144,7 @@ BEGIN;
 INSERT INTO business_partners (
   organizacion_id,
   tipo_actor,
-  codigo_interno,
+  codigo_bp,
   estado
 )
 VALUES (
@@ -139,13 +167,12 @@ INSERT INTO empresas (
   nombre_comercial,
   nit,
   digito_verificacion,
-  tipo_empresa,
+  tipo_sociedad,
   fecha_constitucion,
   telefono,
   email,
   direccion,
-  representante_legal_id,
-  atributos
+  representante_legal_id
 )
 VALUES (
   'empresa-bp-uuid',
@@ -153,13 +180,12 @@ VALUES (
   'TechAdvance',
   '900123456',
   '8',  -- DV calculado
-  'SAS',
+  'sas',
   '2020-01-15',
   '+57 1 234 5678',
   'info@techadvance.com',
-  'Carrera 7 # 71-21, Bogotá',
-  'persona-uuid-representante',  -- UUID de una persona existente
-  '{"sector": "Tecnología", "empleados": 50}'::jsonb
+  '{"calle": "Carrera 7 # 71-21", "ciudad": "Bogotá", "pais": "Colombia"}'::jsonb,
+  'persona-uuid-representante'  -- UUID de una persona existente
 );
 
 COMMIT;
@@ -181,7 +207,7 @@ WHERE numero_documento = '1234567890'
 SELECT
   p.*,
   bp.estado,
-  bp.codigo_interno,
+  bp.codigo_bp,
   o.nombre AS organizacion_nombre
 FROM personas p
 INNER JOIN business_partners bp ON p.id = bp.id
@@ -203,9 +229,10 @@ WHERE nit = '900123456'
 SELECT
   e.*,
   bp.estado,
-  bp.codigo_interno,
+  bp.codigo_bp,
   o.nombre AS organizacion_nombre,
-  (p.nombres || ' ' || p.apellidos) AS nombre_representante
+  (p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
+   p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '')) AS nombre_representante
 FROM empresas e
 INNER JOIN business_partners bp ON e.id = bp.id
 INNER JOIN organizations o ON bp.organizacion_id = o.id
@@ -220,17 +247,18 @@ WHERE e.nit = '900123456'
 ```sql
 SELECT
   p.numero_documento,
-  p.nombres || ' ' || p.apellidos AS nombre_completo,
+  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
+    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_completo,
   p.email,
   p.telefono,
   bp.estado,
-  bp.codigo_interno
+  bp.codigo_bp
 FROM personas p
 INNER JOIN business_partners bp ON p.id = bp.id
 WHERE bp.organizacion_id = 'org-uuid'
   AND p.eliminado_en IS NULL
   AND bp.eliminado_en IS NULL
-ORDER BY p.apellidos, p.nombres;
+ORDER BY p.primer_apellido, p.primer_nombre;
 ```
 
 ### Listar Todas las Empresas de una Organización
@@ -242,7 +270,7 @@ SELECT
   e.nombre_comercial,
   e.email,
   bp.estado,
-  bp.codigo_interno
+  bp.codigo_bp
 FROM empresas e
 INNER JOIN business_partners bp ON e.id = bp.id
 WHERE bp.organizacion_id = 'org-uuid'
@@ -263,7 +291,7 @@ SELECT
 FROM v_personas_completa
 WHERE nombre_completo ILIKE '%juan%'
   AND bp_eliminado_en IS NULL
-ORDER BY apellidos, nombres;
+ORDER BY primer_apellido, primer_nombre;
 ```
 
 ### Buscar Cualquier Actor (Persona o Empresa)
@@ -293,16 +321,21 @@ ORDER BY nombre;
 ```sql
 SELECT
   p.numero_documento,
-  p.nombres || ' ' || p.apellidos AS nombre_persona,
+  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
+    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_persona,
   p.telefono AS telefono_persona,
   ce.numero_documento AS doc_contacto,
-  ce.nombres || ' ' || ce.apellidos AS nombre_contacto,
-  ce.telefono AS telefono_contacto
+  ce.primer_nombre || COALESCE(' ' || ce.segundo_nombre, '') || ' ' ||
+    ce.primer_apellido || COALESCE(' ' || ce.segundo_apellido, '') AS nombre_contacto,
+  ce.telefono AS telefono_contacto,
+  p.relacion_emergencia,
+  p.telefono_emergencia
 FROM personas p
+INNER JOIN business_partners bp ON p.id = bp.id
 LEFT JOIN personas ce ON p.contacto_emergencia_id = ce.id
 WHERE p.eliminado_en IS NULL
   AND bp.organizacion_id = 'org-uuid'
-ORDER BY p.apellidos;
+ORDER BY p.primer_apellido;
 ```
 
 ### Empresas con sus Representantes Legales
@@ -313,9 +346,11 @@ SELECT
   e.razon_social,
   e.email AS email_empresa,
   p.numero_documento AS doc_representante,
-  p.nombres || ' ' || p.apellidos AS nombre_representante,
+  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
+    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_representante,
   p.email AS email_representante,
-  p.telefono AS telefono_representante
+  p.telefono AS telefono_representante,
+  e.cargo_representante
 FROM empresas e
 INNER JOIN business_partners bp ON e.id = bp.id
 LEFT JOIN personas p ON e.representante_legal_id = p.id
@@ -344,7 +379,8 @@ ORDER BY bp.estado, bp.tipo_actor;
 ```sql
 SELECT
   p.numero_documento,
-  p.nombres || ' ' || p.apellidos AS nombre_completo,
+  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
+    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_completo,
   p.telefono,
   p.email
 FROM personas p
@@ -352,7 +388,7 @@ INNER JOIN business_partners bp ON p.id = bp.id
 WHERE p.contacto_emergencia_id IS NULL
   AND p.eliminado_en IS NULL
   AND bp.organizacion_id = 'org-uuid'
-ORDER BY p.apellidos;
+ORDER BY p.primer_apellido;
 ```
 
 ### Empresas sin Representante Legal
@@ -491,7 +527,9 @@ SELECT
   -- Datos del BP destino
   bp_dest.tipo_actor AS tipo_destino,
   CASE
-    WHEN bp_dest.tipo_actor = 'persona' THEN p.nombres || ' ' || p.apellidos
+    WHEN bp_dest.tipo_actor = 'persona' THEN
+      p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
+      p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '')
     WHEN bp_dest.tipo_actor = 'empresa' THEN e.razon_social
   END AS nombre_destino
 FROM bp_relaciones r
@@ -514,7 +552,9 @@ SELECT
   -- Datos del BP destino
   bp_dest.tipo_actor AS tipo_destino,
   CASE
-    WHEN bp_dest.tipo_actor = 'persona' THEN p.nombres || ' ' || p.apellidos
+    WHEN bp_dest.tipo_actor = 'persona' THEN
+      p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
+      p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '')
     WHEN bp_dest.tipo_actor = 'empresa' THEN e.razon_social
   END AS nombre_destino
 FROM v_relaciones_bidireccionales vr
@@ -537,7 +577,8 @@ SELECT
   r.es_actual,
   -- Datos del familiar
   p_dest.numero_documento,
-  p_dest.nombres || ' ' || p_dest.apellidos AS nombre_familiar,
+  p_dest.primer_nombre || COALESCE(' ' || p_dest.segundo_nombre, '') || ' ' ||
+    p_dest.primer_apellido || COALESCE(' ' || p_dest.segundo_apellido, '') AS nombre_familiar,
   p_dest.telefono,
   p_dest.email
 FROM bp_relaciones r
@@ -568,7 +609,8 @@ SELECT
   r.atributos->>'tipo_contrato' AS tipo_contrato,
   -- Datos del empleado
   p.numero_documento,
-  p.nombres || ' ' || p.apellidos AS nombre_empleado,
+  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
+    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_empleado,
   p.telefono,
   p.email
 FROM bp_relaciones r
@@ -619,9 +661,11 @@ SELECT
     WHEN vr.direccion = 'directo' THEN 'Persona A → Persona B'
     ELSE 'Persona B → Persona A (auto-generado)'
   END AS tipo_registro,
-  p_origen.nombres || ' ' || p_origen.apellidos AS persona_origen,
+  p_origen.primer_nombre || COALESCE(' ' || p_origen.segundo_nombre, '') || ' ' ||
+    p_origen.primer_apellido || COALESCE(' ' || p_origen.segundo_apellido, '') AS persona_origen,
   vr.rol_origen,
-  p_destino.nombres || ' ' || p_destino.apellidos AS persona_destino,
+  p_destino.primer_nombre || COALESCE(' ' || p_destino.segundo_nombre, '') || ' ' ||
+    p_destino.primer_apellido || COALESCE(' ' || p_destino.segundo_apellido, '') AS persona_destino,
   vr.rol_destino,
   vr.atributos->>'parentesco' AS parentesco
 FROM v_relaciones_bidireccionales vr
@@ -685,7 +729,8 @@ WITH RECURSIVE arbol_familiar AS (
     r.bp_destino_id,
     r.rol_origen,
     r.rol_destino,
-    p.nombres || ' ' || p.apellidos AS nombre,
+    p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
+      p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre,
     1 AS nivel
   FROM bp_relaciones r
   INNER JOIN personas p ON r.bp_origen_id = p.id
@@ -702,7 +747,8 @@ WITH RECURSIVE arbol_familiar AS (
     r.bp_destino_id,
     r.rol_origen,
     r.rol_destino,
-    p.nombres || ' ' || p.apellidos AS nombre,
+    p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
+      p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre,
     af.nivel + 1
   FROM bp_relaciones r
   INNER JOIN arbol_familiar af ON r.bp_origen_id = af.bp_destino_id
@@ -727,7 +773,8 @@ ORDER BY nivel, nombre;
 SELECT DISTINCT
   e.razon_social AS empresa,
   e.nit,
-  p.nombres || ' ' || p.apellidos AS empleado,
+  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
+    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS empleado,
   rel_lab.atributos->>'cargo' AS cargo,
   rel_fam.rol_origen AS parentesco_con_referencia
 FROM bp_relaciones rel_fam
@@ -741,7 +788,7 @@ WHERE rel_fam.bp_origen_id = 'persona-referencia-uuid'
   AND rel_lab.es_actual = true
   AND rel_fam.eliminado_en IS NULL
   AND rel_lab.eliminado_en IS NULL
-ORDER BY e.razon_social, p.apellidos;
+ORDER BY e.razon_social, p.primer_apellido;
 ```
 
 #### Estadísticas de Relaciones por Tipo
@@ -870,6 +917,7 @@ export async function crearRelacionLaboral(data: {
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
 
 export function ListaEmpleados({ empresaId }: { empresaId: string }) {
   const { data: empleados, isLoading } = useQuery({
@@ -886,8 +934,10 @@ export function ListaEmpleados({ empresaId }: { empresaId: string }) {
           atributos,
           personas:bp_origen_id (
             numero_documento,
-            nombres,
-            apellidos,
+            primer_nombre,
+            segundo_nombre,
+            primer_apellido,
+            segundo_apellido,
             telefono,
             email
           )
@@ -967,7 +1017,8 @@ COMMIT;
 -- Personas eliminadas
 SELECT
   p.numero_documento,
-  p.nombres || ' ' || p.apellidos AS nombre_completo,
+  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
+    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_completo,
   bp.eliminado_en,
   bp.estado AS estado_anterior
 FROM personas p
@@ -1005,7 +1056,7 @@ COMMIT;
 SELECT
   bp.id,
   bp.tipo_actor,
-  bp.codigo_interno,
+  bp.codigo_bp,
   bp.atributos
 FROM business_partners bp
 WHERE bp.atributos @> '{"tags": ["vip"]}'::jsonb
@@ -1017,46 +1068,57 @@ WHERE bp.atributos @> '{"tags": ["vip"]}'::jsonb
 ```sql
 SELECT
   p.numero_documento,
-  p.nombres || ' ' || p.apellidos AS nombre_completo,
-  p.atributos->>'profesion' AS profesion
+  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
+    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_completo,
+  p.profesion
 FROM personas p
-WHERE p.atributos->>'profesion' = 'Ingeniero'
+WHERE p.profesion = 'Ingeniero'
   AND p.eliminado_en IS NULL;
 ```
 
-### Buscar Empresas por Sector Económico
+### Buscar Empresas por Sector
 
 ```sql
 SELECT
   e.razon_social,
   e.nit,
-  e.atributos->>'sector_economico' AS sector
+  e.sector_industria
 FROM empresas e
-WHERE e.atributos->>'sector_economico' = 'Tecnología'
+WHERE e.sector_industria = 'Tecnología'
   AND e.eliminado_en IS NULL;
 ```
 
-### Buscar por Campo Anidado en JSONB
+### Buscar por Dirección (JSONB)
 
 ```sql
--- Buscar empresas con certificación ISO 9001
+-- Buscar personas en una ciudad específica
+SELECT
+  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
+    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_completo,
+  p.direccion
+FROM personas p
+WHERE p.direccion->>'ciudad' = 'Bogotá'
+  AND p.eliminado_en IS NULL;
+
+-- Buscar empresas en un país específico
 SELECT
   e.razon_social,
-  e.atributos->'certificaciones' AS certificaciones
+  e.direccion->>'ciudad' AS ciudad,
+  e.direccion->>'pais' AS pais
 FROM empresas e
-WHERE e.atributos->'certificaciones' @> '["ISO 9001"]'::jsonb
+WHERE e.direccion->>'pais' = 'Colombia'
   AND e.eliminado_en IS NULL;
 ```
 
 ### Actualizar Campo JSONB (Preservando Otros Campos)
 
 ```sql
--- Agregar nuevo campo sin perder los existentes
+-- Actualizar dirección de persona
 UPDATE personas
-SET atributos = atributos || '{"nivel_educativo": "Universitario"}'::jsonb
+SET direccion = direccion || '{"apartamento": "301"}'::jsonb
 WHERE id = 'persona-uuid';
 
--- Agregar elemento a un array en JSONB
+-- Agregar tag a business_partner
 UPDATE business_partners
 SET atributos = jsonb_set(
   atributos,
@@ -1097,19 +1159,19 @@ GROUP BY tipo_documento
 ORDER BY total DESC;
 ```
 
-### Distribución por Tipo de Empresa
+### Distribución por Tipo de Sociedad
 
 ```sql
 SELECT
-  tipo_empresa,
+  tipo_sociedad,
   COUNT(*) AS total
 FROM empresas
 WHERE eliminado_en IS NULL
-GROUP BY tipo_empresa
+GROUP BY tipo_sociedad
 ORDER BY total DESC;
 ```
 
-### Edad Promedio de Personas (si hay fecha de nacimiento)
+### Edad Promedio de Personas
 
 ```sql
 SELECT
@@ -1223,7 +1285,8 @@ HAVING COUNT(*) > 1;
 -- Detectar si una persona es su propio contacto de emergencia
 SELECT
   id,
-  nombres || ' ' || apellidos AS nombre,
+  primer_nombre || COALESCE(' ' || segundo_nombre, '') || ' ' ||
+    primer_apellido || COALESCE(' ' || segundo_apellido, '') AS nombre,
   contacto_emergencia_id
 FROM personas
 WHERE id = contacto_emergencia_id
@@ -1296,13 +1359,13 @@ VALUES ('org-uuid', 'persona', 'activo')
 RETURNING id INTO representante_id;
 
 INSERT INTO personas (
-  id, nombres, apellidos, tipo_documento, numero_documento
+  id, primer_nombre, primer_apellido, tipo_documento, numero_documento
 )
 VALUES (
   representante_id,
   'Carlos',
   'Ramírez',
-  'CC',
+  'cedula_ciudadania',
   '7777777777'
 );
 
@@ -1362,6 +1425,7 @@ export async function buscarPersonaPorDocumento(documento: string) {
 // components/buscar-persona-form.tsx
 'use client'
 
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { buscarPersonaPorDocumento } from '@/app/actions/personas'
 
@@ -1384,6 +1448,18 @@ export function BuscarPersonaForm() {
 // app/actions/personas.ts
 'use server'
 
+import { createClient } from '@/lib/supabase/server'
+
+interface PersonaInput {
+  organizacion_id: string
+  primer_nombre: string
+  segundo_nombre?: string
+  primer_apellido: string
+  segundo_apellido?: string
+  tipo_documento: string
+  numero_documento: string
+}
+
 export async function crearPersona(data: PersonaInput) {
   const supabase = await createClient()
 
@@ -1404,8 +1480,10 @@ export async function crearPersona(data: PersonaInput) {
     .from('personas')
     .insert({
       id: bp.id,
-      nombres: data.nombres,
-      apellidos: data.apellidos,
+      primer_nombre: data.primer_nombre,
+      segundo_nombre: data.segundo_nombre,
+      primer_apellido: data.primer_apellido,
+      segundo_apellido: data.segundo_apellido,
       tipo_documento: data.tipo_documento,
       numero_documento: data.numero_documento,
     })
@@ -1419,6 +1497,10 @@ export async function crearPersona(data: PersonaInput) {
 
 ```typescript
 // Client component
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+
+const queryClient = useQueryClient()
+
 const mutation = useMutation({
   mutationFn: crearPersona,
   onSuccess: () => {

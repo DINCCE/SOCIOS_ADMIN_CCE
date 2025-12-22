@@ -59,48 +59,49 @@ export function NavMain({
                     <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
-              <CollapsibleContent>
-                <SidebarMenuSub>
-                  {item.items?.map((subItem) => {
-                    const isActive = pathname === subItem.url
-                    return (
-                      <SidebarMenuSubItem key={subItem.title}>
-                        <SidebarMenuSubButton asChild isActive={isActive}>
-                          <Link
-                            href={subItem.url}
-                            className={
-                              isActive
-                                ? "bg-primary/10 border-l-3 border-l-primary relative before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-primary"
-                                : ""
-                            }
-                          >
-                            <span>{subItem.title}</span>
-                          </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    )
-                  })}
-                </SidebarMenuSub>
-              </CollapsibleContent>
+                <CollapsibleContent>
+                  <SidebarMenuSub>
+                    {item.items?.map((subItem) => {
+                      const isActive = pathname === subItem.url
+                      return (
+                        <SidebarMenuSubItem key={subItem.title}>
+                          <SidebarMenuSubButton asChild isActive={isActive}>
+                            <Link
+                              href={subItem.url}
+                              className={
+                                isActive
+                                  ? "bg-primary/10 border-l-3 border-l-primary relative before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-primary"
+                                  : ""
+                              }
+                            >
+                              <span>{subItem.title}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      )
+                    })}
+                  </SidebarMenuSub>
+                </CollapsibleContent>
+              </SidebarMenuItem>
+            </Collapsible>
+          ) : (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton asChild isActive={pathname === item.url}>
+                <Link
+                  href={item.url}
+                  className={
+                    pathname === item.url
+                      ? "bg-primary/10 relative before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-primary"
+                      : ""
+                  }
+                >
+                  {item.icon && <item.icon />}
+                  <span>{item.title}</span>
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
-          </Collapsible>
-        ) : (
-          <SidebarMenuItem key={item.title}>
-            <SidebarMenuButton asChild isActive={pathname === item.url}>
-              <Link
-                href={item.url}
-                className={
-                  pathname === item.url
-                    ? "bg-primary/10 relative before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-primary"
-                    : ""
-                }
-              >
-                {item.icon && <item.icon />}
-                <span>{item.title}</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        )})}
+          )
+        })}
       </SidebarMenu>
     </SidebarGroup>
   )

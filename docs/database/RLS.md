@@ -6,11 +6,12 @@ Este documento describe las políticas de Row Level Security (RLS) implementadas
 
 - [Conceptos Fundamentales](#conceptos-fundamentales)
 - [Estado Actual de RLS](#estado-actual-de-rls)
-- [Políticas por Tabla](#políticas-por-tabla)
+- [Políticas Implementadas](#políticas-implementadas)
 - [Patrones Comunes](#patrones-comunes)
 - [Multi-Tenancy](#multi-tenancy)
 - [Testing de RLS](#testing-de-rls)
 - [Troubleshooting](#troubleshooting)
+- [Roadmap Futuro](#roadmap-futuro)
 
 ---
 
@@ -31,6 +32,7 @@ Row Level Security es una característica de PostgreSQL que permite controlar **
 Las políticas RLS utilizan funciones de Supabase para identificar al usuario autenticado:
 
 - **`auth.uid()`** - Retorna el UUID del usuario autenticado
+- **`auth.role()`** - Retorna el rol del usuario ('authenticated', 'anon', 'service_role')
 - **`auth.jwt()`** - Retorna el JWT del usuario con claims personalizados
 - **`auth.email()`** - Retorna el email del usuario autenticado
 
@@ -65,344 +67,409 @@ CREATE POLICY "nombre_descriptivo"
 
 ✅ **RLS está habilitado en todas las tablas:**
 
-- `organizations` - RLS enabled
-- `business_partners` - RLS enabled
-- `personas` - RLS enabled
-- `empresas` - RLS enabled
+- `organizations` - RLS enabled ✅
+- `business_partners` - RLS enabled ✅
+- `personas` - RLS enabled ✅
+- `empresas` - RLS enabled ✅
+- `bp_relaciones` - RLS enabled ✅
 
 ### Estado de las Políticas
 
-⚠️ **Estado Actual:** Las tablas tienen RLS habilitado pero **sin políticas definidas**.
+✅ **Estado Actual:** Todas las tablas tienen políticas básicas implementadas.
 
-**Implicación:**
-- Con RLS habilitado pero sin políticas, **ningún usuario puede acceder a los datos** (por defecto niega todo)
-- Actualmente el acceso funciona porque se usa el **service_role key** (bypasses RLS)
-- Para producción, se deben crear políticas que permitan acceso controlado
+**Nivel de Seguridad:**
+- **Políticas implementadas:** Básicas (requiere usuario autenticado)
+- **Multi-tenancy:** NO implementado aún (todas las organizaciones son visibles para usuarios autenticados)
+- **Control de acceso:** Por autenticación (authenticated vs anon)
+- **Soft delete:** Respetado en SELECT (solo muestra registros no eliminados)
 
-### Roadmap de Implementación
-
-**Fase 1: Políticas Básicas (Pendiente)**
-- Permitir SELECT/INSERT/UPDATE/DELETE a usuarios autenticados de la misma organización
-- Implementar filtrado automático por `organizacion_id`
-
-**Fase 2: Políticas Basadas en Roles (Futuro)**
-- Tabla `user_roles` (admin, manager, viewer)
-- Políticas diferenciadas por rol
-- Restricciones de operaciones según rol
-
-**Fase 3: Auditoría (Futuro)**
-- Tabla `audit_log` para tracking de cambios
-- Políticas de solo lectura para auditoría
+**⚠️ IMPORTANTE:** Las políticas actuales permiten a **cualquier usuario autenticado** acceder a **todas las organizaciones**. Para implementar verdadero multi-tenancy, se debe:
+1. Crear tabla `profiles` con `organizacion_id`
+2. Actualizar políticas para filtrar por `organizacion_id`
+3. Ver sección [Roadmap Futuro](#roadmap-futuro) para detalles
 
 ---
 
-## Políticas por Tabla
+## Políticas Implementadas
 
 ### `organizations`
 
-**Objetivo:** Cada usuario solo puede ver/modificar las organizaciones a las que pertenece.
+**Objetivo actual:** Permitir acceso completo a usuarios autenticados.
 
-#### Políticas Recomendadas
+#### Políticas Activas
 
 ```sql
--- SELECT: Ver solo las organizaciones del usuario
-CREATE POLICY "Users can view their own organization"
+-- SELECT: Ver todas las organizaciones (si estás autenticado)
+CREATE POLICY "usuarios_autenticados_pueden_ver_organizaciones"
   ON organizations
   FOR SELECT
-  USING (
-    id IN (
-      SELECT organizacion_id
-      FROM profiles
-      WHERE id = auth.uid()
-    )
-  );
+  TO public
+  USING (auth.role() = 'authenticated');
 
--- INSERT: Solo admins pueden crear organizaciones (a implementar con roles)
-CREATE POLICY "Only admins can create organizations"
+-- INSERT: Crear organizaciones (si estás autenticado)
+CREATE POLICY "usuarios_autenticados_pueden_crear_organizaciones"
   ON organizations
   FOR INSERT
-  WITH CHECK (false);  -- Deshabilitar hasta implementar roles
+  TO public
+  WITH CHECK (auth.role() = 'authenticated');
 
--- UPDATE: Solo admins de la organización pueden actualizarla
-CREATE POLICY "Only org admins can update"
+-- UPDATE: Actualizar organizaciones (si estás autenticado)
+CREATE POLICY "usuarios_autenticados_pueden_actualizar_organizaciones"
   ON organizations
   FOR UPDATE
-  USING (
-    id IN (
-      SELECT organizacion_id
-      FROM profiles
-      WHERE id = auth.uid()
-        AND role = 'admin'  -- Campo a agregar en profiles
-    )
-  );
-
--- DELETE: Solo superadmins pueden eliminar organizaciones
-CREATE POLICY "Only superadmins can delete organizations"
-  ON organizations
-  FOR DELETE
-  USING (false);  -- Deshabilitar completamente (usar soft delete)
+  TO public
+  USING (auth.role() = 'authenticated');
 ```
+
+**Comportamiento:**
+- ✅ Usuarios autenticados pueden ver todas las organizaciones
+- ✅ Usuarios autenticados pueden crear organizaciones
+- ✅ Usuarios autenticados pueden actualizar organizaciones
+- ❌ No hay DELETE policy (hard delete bloqueado)
+- ⚠️ No hay filtrado por organización del usuario (multi-tenancy pendiente)
 
 ---
 
 ### `business_partners`
 
-**Objetivo:** Usuarios solo pueden ver/modificar business partners de su organización.
+**Objetivo actual:** Permitir acceso a usuarios autenticados, respetando soft delete.
 
-#### Políticas Recomendadas
+#### Políticas Activas
 
 ```sql
--- SELECT: Ver business partners de la organización del usuario
-CREATE POLICY "Users can view business partners from their organization"
+-- SELECT: Ver business partners no eliminados
+CREATE POLICY "usuarios_pueden_ver_actores"
   ON business_partners
   FOR SELECT
+  TO public
   USING (
-    organizacion_id IN (
-      SELECT organizacion_id
-      FROM profiles
-      WHERE id = auth.uid()
-    )
+    auth.role() = 'authenticated'
+    AND eliminado_en IS NULL
   );
 
--- INSERT: Crear business partners en la organización del usuario
-CREATE POLICY "Users can create business partners in their organization"
+-- INSERT: Crear business partners
+CREATE POLICY "usuarios_pueden_insertar_actores"
   ON business_partners
   FOR INSERT
-  WITH CHECK (
-    organizacion_id IN (
-      SELECT organizacion_id
-      FROM profiles
-      WHERE id = auth.uid()
-    )
-  );
+  TO public
+  WITH CHECK (auth.role() = 'authenticated');
 
--- UPDATE: Modificar business partners de la organización del usuario
-CREATE POLICY "Users can update business partners from their organization"
+-- UPDATE: Actualizar business partners no eliminados
+CREATE POLICY "usuarios_pueden_actualizar_actores"
   ON business_partners
   FOR UPDATE
+  TO public
   USING (
-    organizacion_id IN (
-      SELECT organizacion_id
-      FROM profiles
-      WHERE id = auth.uid()
-    )
+    auth.role() = 'authenticated'
+    AND eliminado_en IS NULL
   );
 
--- DELETE: Prevenir hard delete (usar soft delete)
-CREATE POLICY "Prevent hard delete of business partners"
+-- UPDATE (soft delete): Permitir marcar como eliminado
+CREATE POLICY "usuarios_pueden_eliminar_actores"
   ON business_partners
-  FOR DELETE
-  USING (false);  -- Forzar uso de soft delete (UPDATE eliminado_en)
+  FOR UPDATE
+  TO public
+  USING (
+    auth.role() = 'authenticated'
+    AND eliminado_en IS NULL
+  );
 ```
+
+**Comportamiento:**
+- ✅ SELECT solo muestra registros no eliminados (`eliminado_en IS NULL`)
+- ✅ UPDATE solo permite modificar registros no eliminados
+- ✅ Soft delete permitido vía UPDATE (marcando `eliminado_en`)
+- ❌ No hay DELETE policy (hard delete bloqueado completamente)
+- ⚠️ No filtra por `organizacion_id` (todos los usuarios ven todo)
 
 ---
 
 ### `personas`
 
-**Objetivo:** Usuarios solo pueden ver/modificar personas de su organización (vía business_partners).
+**Objetivo actual:** Permitir acceso si el business_partner asociado existe y está autenticado.
 
-#### Políticas Recomendadas
+#### Políticas Activas
 
 ```sql
--- SELECT: Ver personas de la organización del usuario
-CREATE POLICY "Users can view personas from their organization"
+-- SELECT: Ver personas cuyo business_partner no está eliminado
+CREATE POLICY "usuarios_pueden_ver_personas"
   ON personas
   FOR SELECT
+  TO public
   USING (
-    id IN (
-      SELECT bp.id
-      FROM business_partners bp
-      INNER JOIN profiles p ON bp.organizacion_id = p.organizacion_id
-      WHERE p.id = auth.uid()
+    EXISTS (
+      SELECT 1
+      FROM business_partners
+      WHERE business_partners.id = personas.id
+        AND business_partners.eliminado_en IS NULL
+        AND auth.role() = 'authenticated'
     )
   );
 
--- INSERT: Crear personas en la organización del usuario
-CREATE POLICY "Users can create personas in their organization"
+-- INSERT: Crear personas si existe business_partner correspondiente
+CREATE POLICY "usuarios_pueden_insertar_personas"
   ON personas
   FOR INSERT
+  TO public
   WITH CHECK (
-    id IN (
-      SELECT bp.id
-      FROM business_partners bp
-      INNER JOIN profiles p ON bp.organizacion_id = p.organizacion_id
-      WHERE p.id = auth.uid()
+    EXISTS (
+      SELECT 1
+      FROM business_partners
+      WHERE business_partners.id = personas.id
+        AND auth.role() = 'authenticated'
     )
   );
 
--- UPDATE: Modificar personas de la organización del usuario
-CREATE POLICY "Users can update personas from their organization"
+-- UPDATE: Actualizar personas si business_partner existe
+CREATE POLICY "usuarios_pueden_actualizar_personas"
   ON personas
   FOR UPDATE
+  TO public
   USING (
-    id IN (
-      SELECT bp.id
-      FROM business_partners bp
-      INNER JOIN profiles p ON bp.organizacion_id = p.organizacion_id
-      WHERE p.id = auth.uid()
+    EXISTS (
+      SELECT 1
+      FROM business_partners
+      WHERE business_partners.id = personas.id
+        AND auth.role() = 'authenticated'
     )
   );
-
--- DELETE: Prevenir hard delete
-CREATE POLICY "Prevent hard delete of personas"
-  ON personas
-  FOR DELETE
-  USING (false);
 ```
+
+**Comportamiento:**
+- ✅ SELECT solo muestra personas cuyo `business_partners.eliminado_en IS NULL`
+- ✅ INSERT/UPDATE requiere existencia de business_partner correspondiente
+- ✅ Respeta Class Table Inheritance (CTI) pattern
+- ❌ No hay DELETE policy (hard delete bloqueado)
+- ⚠️ No filtra por organización (depende de business_partners)
 
 ---
 
 ### `empresas`
 
-**Objetivo:** Usuarios solo pueden ver/modificar empresas de su organización (vía business_partners).
+**Objetivo actual:** Permitir acceso si el business_partner asociado existe y está autenticado.
 
-#### Políticas Recomendadas
+#### Políticas Activas
 
 ```sql
--- SELECT: Ver empresas de la organización del usuario
-CREATE POLICY "Users can view empresas from their organization"
+-- SELECT: Ver empresas cuyo business_partner no está eliminado
+CREATE POLICY "usuarios_pueden_ver_empresas"
   ON empresas
   FOR SELECT
+  TO public
   USING (
-    id IN (
-      SELECT bp.id
-      FROM business_partners bp
-      INNER JOIN profiles p ON bp.organizacion_id = p.organizacion_id
-      WHERE p.id = auth.uid()
+    EXISTS (
+      SELECT 1
+      FROM business_partners
+      WHERE business_partners.id = empresas.id
+        AND business_partners.eliminado_en IS NULL
+        AND auth.role() = 'authenticated'
     )
   );
 
--- INSERT: Crear empresas en la organización del usuario
-CREATE POLICY "Users can create empresas in their organization"
+-- INSERT: Crear empresas si existe business_partner correspondiente
+CREATE POLICY "usuarios_pueden_insertar_empresas"
   ON empresas
   FOR INSERT
+  TO public
   WITH CHECK (
-    id IN (
-      SELECT bp.id
-      FROM business_partners bp
-      INNER JOIN profiles p ON bp.organizacion_id = p.organizacion_id
-      WHERE p.id = auth.uid()
+    EXISTS (
+      SELECT 1
+      FROM business_partners
+      WHERE business_partners.id = empresas.id
+        AND auth.role() = 'authenticated'
     )
   );
 
--- UPDATE: Modificar empresas de la organización del usuario
-CREATE POLICY "Users can update empresas from their organization"
+-- UPDATE: Actualizar empresas si business_partner existe
+CREATE POLICY "usuarios_pueden_actualizar_empresas"
   ON empresas
   FOR UPDATE
+  TO public
   USING (
-    id IN (
-      SELECT bp.id
-      FROM business_partners bp
-      INNER JOIN profiles p ON bp.organizacion_id = p.organizacion_id
-      WHERE p.id = auth.uid()
+    EXISTS (
+      SELECT 1
+      FROM business_partners
+      WHERE business_partners.id = empresas.id
+        AND auth.role() = 'authenticated'
     )
   );
-
--- DELETE: Prevenir hard delete
-CREATE POLICY "Prevent hard delete of empresas"
-  ON empresas
-  FOR DELETE
-  USING (false);
 ```
+
+**Comportamiento:**
+- ✅ SELECT solo muestra empresas cuyo `business_partners.eliminado_en IS NULL`
+- ✅ INSERT/UPDATE requiere existencia de business_partner correspondiente
+- ✅ Respeta Class Table Inheritance (CTI) pattern
+- ❌ No hay DELETE policy (hard delete bloqueado)
+- ⚠️ No filtra por organización (depende de business_partners)
+
+---
+
+### `bp_relaciones`
+
+**Objetivo actual:** Permitir acceso completo a usuarios autenticados.
+
+#### Políticas Activas
+
+```sql
+-- SELECT: Ver todas las relaciones
+CREATE POLICY "Usuarios autenticados pueden ver bp_relaciones"
+  ON bp_relaciones
+  FOR SELECT
+  TO authenticated
+  USING (true);
+
+-- INSERT: Crear relaciones
+CREATE POLICY "Usuarios autenticados pueden insertar bp_relaciones"
+  ON bp_relaciones
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (true);
+
+-- UPDATE: Actualizar relaciones
+CREATE POLICY "Usuarios autenticados pueden actualizar bp_relaciones"
+  ON bp_relaciones
+  FOR UPDATE
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+```
+
+**Comportamiento:**
+- ✅ Usuarios autenticados tienen acceso completo (SELECT, INSERT, UPDATE)
+- ✅ No hay restricciones adicionales (`USING (true)`)
+- ❌ No hay DELETE policy (hard delete bloqueado)
+- ⚠️ No filtra por organización (todos pueden ver/modificar todas las relaciones)
 
 ---
 
 ## Patrones Comunes
 
-### Patrón Multi-Tenancy
+### Patrón de Autenticación Básica
 
-**Estructura:**
+**Estructura actual en todas las tablas:**
 ```sql
--- Política típica de multi-tenancy
+CREATE POLICY "policy_name"
+  ON table_name
+  FOR SELECT
+  USING (auth.role() = 'authenticated');
+```
+
+**Explicación:**
+1. `auth.role()` verifica si el usuario está autenticado
+2. Retorna `'authenticated'` para usuarios logueados
+3. Retorna `'anon'` para usuarios no autenticados
+4. Solo usuarios autenticados pasan la política
+
+### Patrón de Soft Delete en SELECT
+
+**Estructura en business_partners, personas, empresas:**
+```sql
 CREATE POLICY "policy_name"
   ON table_name
   FOR SELECT
   USING (
-    organizacion_id IN (
-      SELECT organizacion_id
-      FROM profiles
-      WHERE id = auth.uid()
+    auth.role() = 'authenticated'
+    AND eliminado_en IS NULL  -- Solo registros no eliminados
+  );
+```
+
+**Comportamiento:**
+- SELECT automáticamente filtra registros eliminados
+- Mantiene historial completo en la base de datos
+- No permite ver registros marcados como eliminados
+
+### Patrón de Class Table Inheritance (CTI)
+
+**Estructura en personas y empresas:**
+```sql
+CREATE POLICY "policy_name"
+  ON personas
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM business_partners
+      WHERE business_partners.id = personas.id
+        AND business_partners.eliminado_en IS NULL
+        AND auth.role() = 'authenticated'
     )
   );
 ```
 
 **Explicación:**
-1. `auth.uid()` obtiene el ID del usuario autenticado
-2. Se busca el `organizacion_id` del usuario en `profiles`
-3. Solo se permiten filas donde `organizacion_id` coincida
+1. Verifica existencia en tabla padre (`business_partners`)
+2. Respeta soft delete del padre
+3. Mantiene integridad del patrón CTI
+4. Solo permite ver especializaciones si el padre es válido
 
 ### Patrón de Prevención de Hard Delete
 
-**Uso:** Forzar soft delete en todas las tablas
+**Implementado en TODAS las tablas:**
+- No hay políticas FOR DELETE
+- Hard delete está completamente bloqueado
+- Solo soft delete es posible (UPDATE `eliminado_en`)
 
 ```sql
-CREATE POLICY "prevent_hard_delete"
-  ON table_name
-  FOR DELETE
-  USING (false);  -- Niega todas las operaciones DELETE
-```
-
-**Alternativa (permitir solo a superadmins):**
-```sql
-CREATE POLICY "only_superadmin_delete"
-  ON table_name
-  FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE id = auth.uid()
-        AND role = 'superadmin'
-    )
-  );
-```
-
-### Patrón Basado en Roles
-
-**Estructura (a implementar en el futuro):**
-```sql
--- Verificar rol del usuario
-CREATE POLICY "admin_only_update"
-  ON table_name
-  FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE id = auth.uid()
-        AND role IN ('admin', 'manager')
-    )
-  );
-```
-
-### Patrón de Propietario (Owner)
-
-**Uso:** Solo el creador puede modificar
-
-```sql
--- Agregar columna created_by UUID a la tabla
-ALTER TABLE table_name ADD COLUMN created_by UUID REFERENCES auth.users(id);
-
--- Política: Solo el propietario puede actualizar
-CREATE POLICY "owner_can_update"
-  ON table_name
-  FOR UPDATE
-  USING (created_by = auth.uid());
+-- No hay CREATE POLICY ... FOR DELETE
+-- Por lo tanto, DELETE está prohibido para todos
 ```
 
 ---
 
 ## Multi-Tenancy
 
-### Arquitectura de Multi-Tenancy
+### Estado Actual: NO Implementado
 
-El sistema implementa multi-tenancy a nivel de **organización** mediante:
+⚠️ **IMPORTANTE:** El sistema NO tiene multi-tenancy implementado actualmente.
 
-1. **Tabla `organizations`:** Define las organizaciones
-2. **Tabla `profiles`:** Usuario pertenece a una organización
-3. **Campo `organizacion_id`:** En todas las tablas de negocio
-4. **RLS Policies:** Filtran automáticamente por organización
+**Situación Actual:**
+- Todos los usuarios autenticados pueden ver **todas las organizaciones**
+- Todos los usuarios autenticados pueden ver **todos los business partners**
+- No hay filtrado por `organizacion_id` del usuario
+- No existe tabla `profiles` para asociar usuarios con organizaciones
 
-### Flujo de Aislamiento
+### Arquitectura Necesaria para Multi-Tenancy
 
+Para implementar multi-tenancy se requiere:
+
+```sql
+-- 1. Crear tabla profiles
+CREATE TABLE profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  organizacion_id UUID REFERENCES organizations(id) NOT NULL,
+  role TEXT CHECK (role IN ('admin', 'manager', 'viewer')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Habilitar RLS
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- 3. Política para profiles
+CREATE POLICY "usuarios_pueden_ver_su_perfil"
+  ON profiles
+  FOR SELECT
+  USING (auth.uid() = id);
+```
+
+### Ejemplo de Política Multi-Tenancy (Futuro)
+
+```sql
+-- Política para business_partners con multi-tenancy
+CREATE POLICY "usuarios_solo_ven_su_organizacion"
+  ON business_partners
+  FOR SELECT
+  USING (
+    organizacion_id IN (
+      SELECT organizacion_id
+      FROM profiles
+      WHERE id = auth.uid()
+    )
+    AND eliminado_en IS NULL
+  );
+```
+
+**Flujo de Aislamiento (Futuro):**
 ```
 Usuario autenticado
        ↓
@@ -414,34 +481,6 @@ Usuario autenticado
        ↓
 Solo datos de esa organización
 ```
-
-### Ejemplo Completo de Multi-Tenancy
-
-```sql
--- 1. Usuario se autentica
--- Supabase Auth retorna JWT con auth.uid() = 'user-uuid-123'
-
--- 2. Query del usuario
-SELECT * FROM personas;
-
--- 3. RLS aplica automáticamente:
-SELECT * FROM personas
-WHERE id IN (
-  SELECT bp.id
-  FROM business_partners bp
-  INNER JOIN profiles p ON bp.organizacion_id = p.organizacion_id
-  WHERE p.id = 'user-uuid-123'  -- auth.uid()
-);
-
--- Resultado: Solo personas de la organización del usuario
-```
-
-### Ventajas del Enfoque
-
-✅ **Transparente:** Desarrolladores no escriben filtros manualmente
-✅ **Seguro:** Imposible acceder datos de otra organización
-✅ **Escalable:** Agregar organizaciones no requiere cambios en código
-✅ **Auditable:** PostgreSQL logs registran todos los accesos
 
 ---
 
@@ -461,157 +500,159 @@ SELECT
   qual,
   with_check
 FROM pg_policies
-WHERE tablename = 'business_partners';
+WHERE tablename = 'business_partners'
+ORDER BY cmd, policyname;
 ```
 
-### Probar Políticas como Usuario
+### Probar como Usuario Autenticado
 
-**Opción 1: Usando `SET LOCAL`**
-
-```sql
--- Simular ser un usuario específico
-BEGIN;
-
--- Setear el usuario de la sesión
-SET LOCAL request.jwt.claim.sub = 'user-uuid-aqui';
-
--- Ejecutar queries (RLS aplicará)
-SELECT * FROM business_partners;
-
-ROLLBACK;
-```
-
-**Opción 2: Usando Supabase Client**
+**Desde Supabase Client (aplica RLS):**
 
 ```typescript
 // Client-side (usa anon key - RLS aplicado)
 import { createClient } from '@/lib/supabase/client'
 
 const supabase = createClient()
-const { data } = await supabase.from('personas').select()
-// RLS se aplica automáticamente
+
+// Usuario debe estar autenticado
+const { data, error } = await supabase.auth.signInWithPassword({
+  email: 'user@example.com',
+  password: 'password'
+})
+
+// Ahora RLS permitirá acceso
+const { data: personas } = await supabase.from('personas').select()
+// Retorna todas las personas (no filtrado por organización aún)
 ```
+
+**Desde Server (bypasses RLS con service_role):**
 
 ```typescript
-// Server-side (usa service_role - bypasses RLS)
-import { createClient } from '@/lib/supabase/server'
+// Server-side con service_role bypasses RLS
+import { createClient } from '@supabase/supabase-js'
 
-const supabase = await createClient()
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!  // ⚠️ Bypasses RLS
+)
+
 const { data } = await supabase.from('personas').select()
-// ⚠️ RLS NO se aplica (admin access)
+// ⚠️ RLS NO se aplica - acceso completo
 ```
 
-### Verificar Aislamiento de Organizaciones
+### Verificar Soft Delete
 
 ```sql
--- Crear 2 usuarios en diferentes organizaciones
-INSERT INTO auth.users (id, email) VALUES
-  ('user-1', 'user1@org1.com'),
-  ('user-2', 'user2@org2.com');
+-- Crear una persona
+INSERT INTO business_partners (organizacion_id, tipo_actor, estado)
+VALUES ('org-uuid', 'persona', 'activo')
+RETURNING id;
+-- Resultado: 'bp-uuid-123'
 
-INSERT INTO profiles (id, organizacion_id) VALUES
-  ('user-1', 'org-1'),
-  ('user-2', 'org-2');
+INSERT INTO personas (id, primer_nombre, primer_apellido, tipo_documento, numero_documento)
+VALUES ('bp-uuid-123', 'Juan', 'Pérez', 'cedula_ciudadania', '123456789');
 
--- Crear business partners en cada organización
-INSERT INTO business_partners (organizacion_id, tipo_actor) VALUES
-  ('org-1', 'persona'),  -- bp-1
-  ('org-2', 'persona');  -- bp-2
+-- Verificar que se ve (como usuario autenticado)
+SELECT * FROM personas WHERE id = 'bp-uuid-123';
+-- Retorna la persona ✅
 
--- Probar como user-1 (solo debe ver bp-1)
-BEGIN;
-SET LOCAL request.jwt.claim.sub = 'user-1';
-SELECT * FROM business_partners;  -- Solo retorna bp-1
-ROLLBACK;
+-- Soft delete
+UPDATE business_partners SET eliminado_en = NOW() WHERE id = 'bp-uuid-123';
 
--- Probar como user-2 (solo debe ver bp-2)
-BEGIN;
-SET LOCAL request.jwt.claim.sub = 'user-2';
-SELECT * FROM business_partners;  -- Solo retorna bp-2
-ROLLBACK;
+-- Verificar que ya NO se ve
+SELECT * FROM personas WHERE id = 'bp-uuid-123';
+-- No retorna nada (filtrada por RLS) ✅
+```
+
+### Verificar Bloqueo de Hard Delete
+
+```sql
+-- Intentar hard delete (debe fallar)
+DELETE FROM personas WHERE id = 'bp-uuid-123';
+-- ERROR: permission denied for table personas ✅
+
+DELETE FROM business_partners WHERE id = 'bp-uuid-123';
+-- ERROR: permission denied for table business_partners ✅
 ```
 
 ---
 
 ## Troubleshooting
 
-### Problema: "No rows returned" pero hay datos
+### Problema: "No rows returned" siendo usuario autenticado
 
-**Causa:** RLS habilitado sin políticas = niega todo por defecto
+**Causa 1:** No estás autenticado correctamente
 
-**Solución temporal (desarrollo):**
-```sql
--- Deshabilitar RLS temporalmente
-ALTER TABLE table_name DISABLE ROW LEVEL SECURITY;
-
--- O crear política permisiva temporal
-CREATE POLICY "temp_allow_all"
-  ON table_name
-  FOR ALL
-  USING (true);
+**Diagnóstico:**
+```typescript
+const { data: { user } } = await supabase.auth.getUser()
+console.log('Usuario:', user)  // Debe retornar objeto, no null
 ```
 
-**Solución permanente:**
-```sql
--- Implementar políticas correctas (ver secciones anteriores)
+**Solución:**
+```typescript
+// Asegurarse de autenticar primero
+await supabase.auth.signInWithPassword({
+  email: 'user@example.com',
+  password: 'password'
+})
 ```
 
-### Problema: Queries muy lentas con RLS
-
-**Causa:** Subqueries complejas en políticas RLS
+**Causa 2:** El registro está marcado como eliminado
 
 **Diagnóstico:**
 ```sql
--- Ver plan de ejecución
+-- Con service_role (bypasses RLS)
+SELECT id, eliminado_en FROM business_partners WHERE id = 'bp-uuid';
+```
+
+**Solución:**
+```sql
+-- Recuperar registro
+UPDATE business_partners SET eliminado_en = NULL WHERE id = 'bp-uuid';
+```
+
+### Problema: "Permission denied" en DELETE
+
+**Causa:** DELETE está bloqueado por RLS (no hay políticas DELETE)
+
+**Solución:** Usar soft delete
+```sql
+-- ❌ No funciona
+DELETE FROM business_partners WHERE id = 'bp-uuid';
+
+-- ✅ Funciona (soft delete)
+UPDATE business_partners SET eliminado_en = NOW() WHERE id = 'bp-uuid';
+```
+
+### Problema: Queries lentas con RLS
+
+**Causa:** Subqueries en políticas RLS (especialmente personas/empresas)
+
+**Diagnóstico:**
+```sql
 EXPLAIN ANALYZE
 SELECT * FROM personas;
 ```
 
-**Optimización:**
+**Optimización:** Ya existe índice en business_partners(id)
 ```sql
--- Opción 1: Agregar índices
-CREATE INDEX idx_profiles_organizacion
-  ON profiles(organizacion_id)
-  WHERE deleted_at IS NULL;
-
--- Opción 2: Simplificar política con función
-CREATE FUNCTION get_user_org_id()
-RETURNS UUID AS $$
-  SELECT organizacion_id
-  FROM profiles
-  WHERE id = auth.uid()
-  LIMIT 1;
-$$ LANGUAGE SQL STABLE;
-
-CREATE POLICY "simplified_policy"
-  ON business_partners
-  FOR SELECT
-  USING (organizacion_id = get_user_org_id());
+-- Verificar índices existentes
+SELECT indexname, indexdef
+FROM pg_indexes
+WHERE tablename IN ('business_partners', 'personas', 'empresas');
 ```
 
-### Problema: "Permission denied" en operación válida
+### Problema: Bypass accidental de RLS
 
-**Causa:** Política tiene condición muy restrictiva
+**Causa:** Usando service_role key en lugar de anon key
 
 **Diagnóstico:**
-```sql
--- Ver políticas aplicadas
-SELECT * FROM pg_policies WHERE tablename = 'table_name';
-
--- Probar condición manualmente
-SELECT
-  id,
-  organizacion_id IN (
-    SELECT organizacion_id FROM profiles WHERE id = auth.uid()
-  ) AS pasaria_rls
-FROM business_partners;
+```typescript
+// Verificar qué key se está usando
+console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+console.log('Using service_role?', supabaseClient.supabaseKey.startsWith('eyJ'))
 ```
-
-**Solución:** Ajustar la condición de la política
-
-### Problema: Bypass de RLS en Server Actions
-
-**Causa:** Usando `service_role` key que bypasses RLS
 
 **Solución:**
 ```typescript
@@ -620,88 +661,172 @@ import { createClient } from '@supabase/supabase-js'
 const supabase = createClient(url, SERVICE_ROLE_KEY)
 
 // ✅ Bien - aplica RLS
-import { createClient } from '@/lib/supabase/server'
-const supabase = await createClient()  // Usa anon key con user JWT
+import { createClient } from '@/lib/supabase/client'
+const supabase = createClient()
 ```
 
-### Problema: Usuario no puede ver sus propios datos
+---
 
-**Causa:** `profiles.organizacion_id` es NULL o no coincide
+## Roadmap Futuro
 
-**Diagnóstico:**
+### Fase 1: Multi-Tenancy (Próximo Paso)
+
+**Objetivo:** Aislar datos por organización
+
+**Tareas:**
+1. Crear tabla `profiles`
+   ```sql
+   CREATE TABLE profiles (
+     id UUID PRIMARY KEY REFERENCES auth.users(id),
+     organizacion_id UUID REFERENCES organizations(id) NOT NULL,
+     role TEXT DEFAULT 'viewer',
+     created_at TIMESTAMPTZ DEFAULT NOW()
+   );
+   ```
+
+2. Actualizar políticas de `business_partners`:
+   ```sql
+   -- Reemplazar política actual
+   DROP POLICY "usuarios_pueden_ver_actores" ON business_partners;
+
+   CREATE POLICY "usuarios_ven_actores_de_su_org"
+     ON business_partners
+     FOR SELECT
+     USING (
+       organizacion_id IN (
+         SELECT organizacion_id FROM profiles WHERE id = auth.uid()
+       )
+       AND eliminado_en IS NULL
+     );
+   ```
+
+3. Actualizar políticas de personas, empresas, bp_relaciones similarmente
+
+4. Testing exhaustivo con múltiples organizaciones
+
+**Beneficio:** Seguridad real de multi-tenancy
+
+---
+
+### Fase 2: Roles y Permisos
+
+**Objetivo:** Control granular por rol de usuario
+
+**Roles propuestos:**
+- `admin` - Acceso completo a su organización
+- `manager` - Lectura/escritura, sin eliminar
+- `viewer` - Solo lectura
+
+**Ejemplo de política con roles:**
 ```sql
--- Verificar profile del usuario
-SELECT id, organizacion_id FROM profiles WHERE id = 'user-uuid';
-
--- Verificar business_partners de esa org
-SELECT id, organizacion_id FROM business_partners
-WHERE organizacion_id = (SELECT organizacion_id FROM profiles WHERE id = 'user-uuid');
+-- Solo admins pueden crear business partners
+CREATE POLICY "solo_admins_crean_actores"
+  ON business_partners
+  FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE id = auth.uid()
+        AND role = 'admin'
+        AND organizacion_id = business_partners.organizacion_id
+    )
+  );
 ```
 
-**Solución:** Asignar organización al usuario
+---
+
+### Fase 3: Auditoría
+
+**Objetivo:** Tracking completo de cambios
+
+**Tabla de auditoría:**
 ```sql
-UPDATE profiles
-SET organizacion_id = 'org-uuid'
-WHERE id = 'user-uuid';
+CREATE TABLE audit_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  table_name TEXT NOT NULL,
+  record_id UUID NOT NULL,
+  action TEXT CHECK (action IN ('INSERT', 'UPDATE', 'DELETE')),
+  old_data JSONB,
+  new_data JSONB,
+  user_id UUID REFERENCES auth.users(id),
+  timestamp TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- RLS: Solo lectura, nunca modificar
+CREATE POLICY "audit_read_only"
+  ON audit_log
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+```
+
+**Trigger de auditoría:**
+```sql
+CREATE OR REPLACE FUNCTION audit_trigger()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO audit_log (table_name, record_id, action, old_data, new_data, user_id)
+  VALUES (
+    TG_TABLE_NAME,
+    COALESCE(NEW.id, OLD.id),
+    TG_OP,
+    to_jsonb(OLD),
+    to_jsonb(NEW),
+    auth.uid()
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 ---
 
 ## Checklist de Implementación
 
-Al implementar RLS en producción, seguir estos pasos:
+Estado actual del sistema:
 
-- [ ] **1. Habilitar RLS en todas las tablas**
-  ```sql
-  ALTER TABLE table_name ENABLE ROW LEVEL SECURITY;
-  ```
+- [x] **1. Habilitar RLS en todas las tablas**
+  - organizations ✅
+  - business_partners ✅
+  - personas ✅
+  - empresas ✅
+  - bp_relaciones ✅
 
-- [ ] **2. Crear políticas de SELECT**
-  - Permitir usuarios ver datos de su organización
+- [x] **2. Crear políticas básicas de SELECT**
+  - Requiere autenticación ✅
+  - Respeta soft delete ✅
 
-- [ ] **3. Crear políticas de INSERT**
-  - Permitir crear solo en organización del usuario
+- [x] **3. Crear políticas de INSERT**
+  - Requiere autenticación ✅
+  - Valida CTI pattern (personas/empresas) ✅
 
-- [ ] **4. Crear políticas de UPDATE**
-  - Permitir modificar solo datos de su organización
+- [x] **4. Crear políticas de UPDATE**
+  - Requiere autenticación ✅
+  - Respeta soft delete ✅
 
-- [ ] **5. Deshabilitar DELETE (forzar soft delete)**
-  ```sql
-  CREATE POLICY "prevent_delete" ON table_name FOR DELETE USING (false);
-  ```
+- [x] **5. Bloquear DELETE (forzar soft delete)**
+  - No hay políticas DELETE ✅
+  - Hard delete bloqueado ✅
 
-- [ ] **6. Testing exhaustivo**
-  - Probar como usuarios de diferentes organizaciones
-  - Verificar aislamiento correcto
-  - Medir performance
+- [ ] **6. Implementar multi-tenancy**
+  - Crear tabla profiles ❌
+  - Filtrar por organizacion_id ❌
+  - Testing de aislamiento ❌
 
-- [ ] **7. Documentar políticas**
-  - Actualizar este archivo con políticas implementadas
-  - Documentar excepciones o casos especiales
+- [x] **7. Documentar políticas**
+  - Actualizado este archivo ✅
 
-- [ ] **8. Monitoreo**
-  - Logs de acceso denegado
-  - Performance de queries con RLS
-  - Alertas de intentos de acceso no autorizado
+- [ ] **8. Implementar roles**
+  - Campo role en profiles ❌
+  - Políticas diferenciadas ❌
 
----
-
-## Próximos Pasos
-
-**Fase 1: Implementación Básica**
-1. Crear políticas de multi-tenancy para todas las tablas
-2. Testing con múltiples organizaciones
-3. Documentar políticas creadas
-
-**Fase 2: Roles y Permisos**
-1. Agregar columna `role` a `profiles`
-2. Crear políticas diferenciadas por rol
-3. Implementar roles: admin, manager, viewer
-
-**Fase 3: Auditoría**
-1. Tabla `audit_log` para tracking
-2. Trigger para registrar cambios
-3. RLS de solo lectura para auditoría
+- [ ] **9. Implementar auditoría**
+  - Tabla audit_log ❌
+  - Triggers de auditoría ❌
 
 ---
 

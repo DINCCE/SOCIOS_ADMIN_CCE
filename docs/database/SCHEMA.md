@@ -6,62 +6,130 @@
 
 ```mermaid
 erDiagram
+    organizations ||--o{ organizations : "jerarquia"
     organizations ||--o{ business_partners : "contiene"
+    organizations ||--o{ bp_relaciones : "gestiona"
     business_partners ||--o| personas : "es_una"
     business_partners ||--o| empresas : "es_una"
+    business_partners ||--o{ bp_relaciones : "origen"
+    business_partners ||--o{ bp_relaciones : "destino"
     personas }o--o| personas : "contacto_emergencia"
     empresas }o--o| personas : "representante_legal"
 
     organizations {
         uuid id PK
         text nombre
-        text descripcion
+        text slug UK
+        text tipo
+        uuid organizacion_padre_id FK
+        text email
+        text telefono
+        text website
+        jsonb direccion
         jsonb configuracion
         timestamptz creado_en
         timestamptz actualizado_en
-        timestamptz eliminado_en
     }
 
     business_partners {
         uuid id PK
+        text codigo_bp UK
+        text tipo_actor
         uuid organizacion_id FK
-        enum tipo_actor
-        text codigo_interno
-        enum estado
-        jsonb atributos
+        text estado
+        text email_principal
+        text telefono_principal
         timestamptz creado_en
+        uuid creado_por
         timestamptz actualizado_en
+        uuid actualizado_por
         timestamptz eliminado_en
+        uuid eliminado_por
     }
 
     personas {
         uuid id PK_FK
-        text nombres
-        text apellidos
-        enum tipo_documento
-        text numero_documento
+        text tipo_documento
+        text numero_documento UK
+        date fecha_expedicion
+        text lugar_expedicion
+        text primer_nombre
+        text segundo_nombre
+        text primer_apellido
+        text segundo_apellido
+        text genero
         date fecha_nacimiento
-        enum genero
-        text telefono
-        text email
-        text direccion
+        text lugar_nacimiento
+        text nacionalidad
+        text estado_civil
+        text ocupacion
+        text profesion
+        text nivel_educacion
+        text tipo_sangre
+        text email_secundario
+        text telefono_secundario
+        text whatsapp
+        text linkedin_url
+        text facebook_url
+        text instagram_handle
+        text twitter_handle
+        text foto_url
         uuid contacto_emergencia_id FK
+        text relacion_emergencia
         jsonb atributos
+        timestamptz creado_en
+        timestamptz actualizado_en
     }
 
     empresas {
         uuid id PK_FK
+        text nit UK
+        text digito_verificacion
         text razon_social
         text nombre_comercial
-        text nit
-        text digito_verificacion
-        enum tipo_empresa
+        text tipo_sociedad
         date fecha_constitucion
-        text telefono
-        text email
-        text direccion
+        text ciudad_constitucion
+        text pais_constitucion
+        text numero_registro
+        text codigo_ciiu
+        text sector_industria
+        text actividad_economica
+        text tamano_empresa
         uuid representante_legal_id FK
+        text cargo_representante
+        text telefono_secundario
+        text whatsapp
+        text website
+        text linkedin_url
+        text facebook_url
+        text instagram_handle
+        text twitter_handle
+        text logo_url
+        numeric ingresos_anuales
+        integer numero_empleados
         jsonb atributos
+        timestamptz creado_en
+        timestamptz actualizado_en
+    }
+
+    bp_relaciones {
+        uuid id PK
+        uuid organizacion_id FK
+        uuid bp_origen_id FK
+        uuid bp_destino_id FK
+        tipo_relacion_bp tipo_relacion
+        text rol_origen
+        text rol_destino
+        jsonb atributos
+        date fecha_inicio
+        date fecha_fin
+        boolean es_actual "GENERATED"
+        boolean es_bidireccional
+        text notas
+        timestamptz creado_en
+        timestamptz actualizado_en
+        timestamptz eliminado_en
     }
 ```
 
@@ -71,6 +139,7 @@ erDiagram
 ┌─────────────────────────────────────────────────────────────┐
 │                       ORGANIZATIONS                          │
 │  - Nivel de multi-tenancy                                    │
+│  - Soporta jerarquía (organizacion_padre_id)               │
 │  - Contiene todos los datos de la organización              │
 └──────────────────────────┬──────────────────────────────────┘
                            │ 1:N
@@ -78,8 +147,10 @@ erDiagram
 ┌──────────────────────────▼──────────────────────────────────┐
 │                   BUSINESS_PARTNERS                          │
 │  - Tabla base (CTI Pattern)                                  │
-│  - Campos comunes a todos los tipos                         │
+│  - Campos comunes + auditoría (creado_por, etc.)           │
+│  - codigo_bp autogenerado (BP-0000001)                      │
 │  - tipo_actor: 'persona' | 'empresa'                        │
+│  - Contacto centralizado: email_principal, telefono_principal│
 └─────────────┬────────────────────────────────────────────────┘
               │
               │ 1:1 (STRICT - validado por trigger)
@@ -89,8 +160,9 @@ erDiagram
 ┌─────▼──────┐  ┌──────▼────────┐
 │  PERSONAS  │  │   EMPRESAS    │
 │            │  │               │
-│  Persona   │  │  Razón social │
-│  natural   │  │  NIT + DV     │
+│  30+ campos│  │  25+ campos   │
+│  nombres   │  │  Razón social │
+│  separados │  │  NIT + DV     │
 │            │  │  Rep. legal───┼─┐
 └──────┬─────┘  └───────────────┘ │
        │                           │
@@ -105,17 +177,25 @@ erDiagram
 
 ### 1. `organizations`
 
-**Propósito:** Tabla de organizaciones para implementar multi-tenancy. Cada organización tiene sus propios datos aislados vía RLS.
+**Propósito:** Tabla de organizaciones para implementar multi-tenancy. Soporta jerarquía de organizaciones (clubs, sedes, divisiones).
 
-**Tipo:** Tabla independiente
+**Tipo:** Tabla independiente con auto-referencia
 
 **Relaciones:**
 - 1:N con `business_partners` (una organización tiene múltiples socios)
+- 1:N con `bp_relaciones` (una organización gestiona relaciones)
+- N:1 con `organizations` (jerarquía: organización padre)
+- 1:N con `organizations` (sub-organizaciones)
 
 **Campos Principales:**
 - `id` (PK): Identificador único
 - `nombre`: Nombre de la organización
-- `configuracion` (JSONB): Configuración específica de la organización
+- `slug` (UNIQUE): Identificador URL-friendly único
+- `tipo`: 'club' | 'sede' | 'division'
+- `organizacion_padre_id` (FK): Para jerarquía de organizaciones
+- `email`, `telefono`, `website`: Contacto
+- `direccion` (JSONB): Dirección estructurada
+- `configuracion` (JSONB): Configuración específica
 
 **Ver:** [TABLES.md](./TABLES.md#organizations) para diccionario completo.
 
@@ -131,18 +211,23 @@ erDiagram
 - N:1 con `organizations` (cada socio pertenece a una organización)
 - 1:1 con `personas` (si `tipo_actor = 'persona'`)
 - 1:1 con `empresas` (si `tipo_actor = 'empresa'`)
+- 1:N con `bp_relaciones` (como origen)
+- 1:N con `bp_relaciones` (como destino)
 
 **Campos Principales:**
 - `id` (PK): Identificador único compartido con tabla especializada
+- `codigo_bp` (UNIQUE, autogenerado): Código formato BP-0000001
 - `organizacion_id` (FK): Organización a la que pertenece
-- `tipo_actor` (ENUM): 'persona' | 'empresa'
-- `estado` (ENUM): 'activo' | 'inactivo' | 'suspendido'
-- `atributos` (JSONB): Metadata adicional flexible
+- `tipo_actor`: 'persona' | 'empresa'
+- `estado`: 'activo' | 'inactivo' | 'suspendido'
+- `email_principal`, `telefono_principal`: Contacto centralizado
+- Campos de auditoría: `creado_por`, `actualizado_por`, `eliminado_por`
 
 **Constraints Importantes:**
 - FK hacia `organizations(id)` ON DELETE CASCADE
 - CHECK: `tipo_actor IN ('persona', 'empresa')`
-- UNIQUE: `(organizacion_id, codigo_interno)` WHERE `eliminado_en IS NULL`
+- CHECK: `estado IN ('activo', 'inactivo', 'suspendido')`
+- UNIQUE: `codigo_bp`
 
 **Triggers:**
 - `actualizar_timestamp` (BEFORE UPDATE)
@@ -154,30 +239,39 @@ erDiagram
 
 ### 3. `personas`
 
-**Propósito:** Tabla especializada para personas naturales. Hereda de `business_partners` mediante relación 1:1.
+**Propósito:** Tabla especializada para personas naturales. Hereda de `business_partners` mediante relación 1:1 con PK compartido.
 
 **Tipo:** Tabla especializada (CTI)
 
 **Relaciones:**
 - 1:1 con `business_partners` (PK compartido)
 - N:1 con `personas` (contacto de emergencia, auto-referencia opcional)
+- 1:N con `personas` (es contacto de emergencia de otras)
+- 1:N con `empresas` (es representante legal de empresas)
 
 **Campos Principales:**
 - `id` (PK, FK): Mismo ID que en `business_partners`
-- `nombres`, `apellidos`: Nombre completo
-- `tipo_documento` (ENUM): 'CC' | 'CE' | 'PA' | 'TI' | 'RC'
-- `numero_documento`: Número único de identificación
-- `contacto_emergencia_id` (FK, opcional): Referencia a otra persona
+- **Nombres separados:** `primer_nombre`, `segundo_nombre`, `primer_apellido`, `segundo_apellido`
+- `tipo_documento`: 10 valores (CC, CE, TI, PA, RC, NIT, PEP, PPT, DNI, NUIP)
+- `numero_documento` (UNIQUE): Número único de identificación
+- `fecha_expedicion`, `lugar_expedicion`: Datos del documento
+- `genero`: 'masculino' | 'femenino' | 'otro' | 'no_especifica'
+- `fecha_nacimiento`, `lugar_nacimiento`, `nacionalidad`
+- `estado_civil`: 6 valores (soltero, casado, union_libre, divorciado, viudo, separado)
+- `ocupacion`, `profesion`
+- `nivel_educacion`: 8 valores (primaria a doctorado)
+- `tipo_sangre`: 8 valores (A+, A-, B+, B-, AB+, AB-, O+, O-)
+- Contacto secundario: `email_secundario`, `telefono_secundario`, `whatsapp`
+- Redes sociales: `linkedin_url`, `facebook_url`, `instagram_handle`, `twitter_handle`
+- `foto_url`
+- `contacto_emergencia_id` (FK), `relacion_emergencia`
+- `atributos` (JSONB): Direcciones, info médica, preferencias
 
 **Constraints Importantes:**
 - PK/FK hacia `business_partners(id)` ON DELETE CASCADE
-- UNIQUE: `numero_documento` WHERE `eliminado_en IS NULL`
+- UNIQUE: `numero_documento`
 - FK hacia `personas(id)` para contacto emergencia (permite NULL)
-
-**Índices:**
-- `idx_personas_documento` en `numero_documento`
-- `idx_personas_nombres` en `nombres`
-- `idx_personas_apellidos` en `apellidos`
+- Múltiples CHECK constraints para ENUMs
 
 **Triggers:**
 - `actualizar_timestamp` (BEFORE UPDATE)
@@ -188,7 +282,7 @@ erDiagram
 
 ### 4. `empresas`
 
-**Propósito:** Tabla especializada para empresas/personas jurídicas. Hereda de `business_partners` mediante relación 1:1.
+**Propósito:** Tabla especializada para empresas/personas jurídicas. Hereda de `business_partners` mediante relación 1:1 con PK compartido.
 
 **Tipo:** Tabla especializada (CTI)
 
@@ -198,21 +292,29 @@ erDiagram
 
 **Campos Principales:**
 - `id` (PK, FK): Mismo ID que en `business_partners`
+- `nit` (UNIQUE): Número de Identificación Tributaria
+- `digito_verificacion`: Dígito verificador del NIT (1 carácter)
 - `razon_social`: Nombre legal de la empresa
 - `nombre_comercial`: Nombre comercial (opcional)
-- `nit`: Número de Identificación Tributaria
-- `digito_verificacion`: Dígito verificador del NIT (calculado automáticamente)
-- `representante_legal_id` (FK, opcional): Referencia a `personas`
+- `tipo_sociedad`: 10 valores (SA, SAS, LTDA, EU, COOP, FUNDACION, CORP, ONG, SUCURSAL, OTRO)
+- `fecha_constitucion`, `ciudad_constitucion`, `pais_constitucion`
+- `numero_registro`: Registro mercantil
+- `codigo_ciiu`: Código CIIU (actividad económica)
+- `sector_industria`, `actividad_economica`
+- `tamano_empresa`: 'micro' | 'pequena' | 'mediana' | 'grande'
+- `representante_legal_id` (FK hacia personas), `cargo_representante`
+- Contacto: `telefono_secundario`, `whatsapp`, `website`
+- Redes sociales: `linkedin_url`, `facebook_url`, `instagram_handle`, `twitter_handle`
+- `logo_url`
+- Métricas: `ingresos_anuales`, `numero_empleados`
+- `atributos` (JSONB): Sucursales, certificaciones, contactos clave, info bancaria
 
 **Constraints Importantes:**
 - PK/FK hacia `business_partners(id)` ON DELETE CASCADE
-- UNIQUE: `nit` WHERE `eliminado_en IS NULL`
+- UNIQUE: `nit`
 - FK hacia `personas(id)` para representante legal (permite NULL)
 - CHECK: `length(digito_verificacion) = 1`
-
-**Índices:**
-- `idx_empresas_nit` en `nit`
-- `idx_empresas_razon_social` en `razon_social`
+- CHECK constraints para `tipo_sociedad` y `tamano_empresa`
 
 **Triggers:**
 - `actualizar_timestamp` (BEFORE UPDATE)
@@ -221,54 +323,167 @@ erDiagram
 
 ---
 
-## Tipos Enumerados (ENUMs)
+### 5. `bp_relaciones`
 
-### `tipo_documento_persona`
+**Propósito:** Gestiona relaciones entre Business Partners (familiares, laborales, referencias, membresías, comerciales).
+
+**Tipo:** Tabla de relaciones con soporte bidireccional
+
+**Relaciones:**
+- N:1 con `organizations` (cada relación pertenece a una organización)
+- N:1 con `business_partners` como origen
+- N:1 con `business_partners` como destino
+
+**Campos Principales:**
+- `id` (PK): Identificador único
+- `organizacion_id` (FK): Organización propietaria
+- `bp_origen_id` (FK): Business Partner origen
+- `bp_destino_id` (FK): Business Partner destino
+- `tipo_relacion` (ENUM): familiar, laboral, referencia, membresia, comercial, otra
+- `rol_origen`, `rol_destino`: Roles específicos (ej: Padre/Hijo, Empleado/Empleador)
+- `atributos` (JSONB): Metadata flexible por tipo
+- `fecha_inicio`, `fecha_fin`: Temporalidad
+- `es_actual` (GENERATED): TRUE si `fecha_fin IS NULL`
+- `es_bidireccional`: Si TRUE, vista genera registro inverso
+- `notas`: Observaciones adicionales
+
+**Constraints Importantes:**
+- FK hacia `organizations(id)` ON DELETE CASCADE
+- FK hacia `business_partners(id)` ON DELETE CASCADE (origen y destino)
+- CHECK: `bp_origen_id != bp_destino_id` (no auto-relaciones)
+- CHECK: `fecha_fin IS NULL OR fecha_fin >= fecha_inicio`
+- UNIQUE: `(bp_origen_id, bp_destino_id, tipo_relacion)` WHERE `eliminado_en IS NULL AND es_actual = true`
+
+**Triggers:**
+- `actualizar_bp_relaciones_timestamp` (BEFORE UPDATE)
+- `validar_relacion_compatible` (BEFORE INSERT/UPDATE) - Valida tipos compatibles
+
+**Ver:** [TABLES.md](./TABLES.md#bp_relaciones) para diccionario completo.
+
+---
+
+## Tipos Enumerados (ENUMs / CHECK Constraints)
+
+### `tipo_documento` (personas)
 ```sql
-CREATE TYPE tipo_documento_persona AS ENUM (
-    'CC',  -- Cédula de Ciudadanía
-    'CE',  -- Cédula de Extranjería
-    'PA',  -- Pasaporte
-    'TI',  -- Tarjeta de Identidad
-    'RC'   -- Registro Civil
-);
+CHECK (tipo_documento IN (
+    'CC',   -- Cédula de Ciudadanía
+    'CE',   -- Cédula de Extranjería
+    'TI',   -- Tarjeta de Identidad
+    'PA',   -- Pasaporte
+    'RC',   -- Registro Civil
+    'NIT',  -- Número de Identificación Tributaria
+    'PEP',  -- Permiso Especial de Permanencia
+    'PPT',  -- Permiso por Protección Temporal
+    'DNI',  -- Documento Nacional de Identidad
+    'NUIP'  -- Número Único de Identificación Personal
+))
 ```
 
-### `genero_persona`
+### `genero` (personas)
 ```sql
-CREATE TYPE genero_persona AS ENUM (
+CHECK (genero IN (
     'masculino',
     'femenino',
     'otro',
-    'prefiero_no_decir'
-);
+    'no_especifica'
+))
 ```
 
-### `tipo_empresa`
+### `estado_civil` (personas)
 ```sql
-CREATE TYPE tipo_empresa AS ENUM (
-    'SA',           -- Sociedad Anónima
-    'SAS',          -- Sociedad por Acciones Simplificada
-    'LTDA',         -- Limitada
-    'UNIPERSONAL',  -- Empresa Unipersonal
-    'OTRA'          -- Otro tipo
-);
+CHECK (estado_civil IN (
+    'soltero',
+    'casado',
+    'union_libre',
+    'divorciado',
+    'viudo',
+    'separado'
+))
 ```
 
-### `estado_actor`
+### `nivel_educacion` (personas)
 ```sql
-CREATE TYPE estado_actor AS ENUM (
+CHECK (nivel_educacion IN (
+    'primaria',
+    'bachillerato',
+    'tecnico',
+    'tecnologo',
+    'pregrado',
+    'posgrado',
+    'maestria',
+    'doctorado'
+))
+```
+
+### `tipo_sangre` (personas)
+```sql
+CHECK (tipo_sangre IN (
+    'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'
+))
+```
+
+### `tipo_sociedad` (empresas)
+```sql
+CHECK (tipo_sociedad IN (
+    'SA',         -- Sociedad Anónima
+    'SAS',        -- Sociedad por Acciones Simplificada
+    'LTDA',       -- Limitada
+    'EU',         -- Empresa Unipersonal
+    'COOP',       -- Cooperativa
+    'FUNDACION',  -- Fundación
+    'CORP',       -- Corporación
+    'ONG',        -- Organización No Gubernamental
+    'SUCURSAL',   -- Sucursal
+    'OTRO'        -- Otro tipo
+))
+```
+
+### `tamano_empresa` (empresas)
+```sql
+CHECK (tamano_empresa IN (
+    'micro',
+    'pequena',
+    'mediana',
+    'grande'
+))
+```
+
+### `estado_actor` (business_partners)
+```sql
+CHECK (estado IN (
     'activo',
     'inactivo',
     'suspendido'
-);
+))
 ```
 
-### `tipo_actor`
+### `tipo_actor` (business_partners)
 ```sql
-CREATE TYPE tipo_actor AS ENUM (
+CHECK (tipo_actor IN (
     'persona',
     'empresa'
+))
+```
+
+### `tipo` (organizations)
+```sql
+CHECK (tipo IN (
+    'club',
+    'sede',
+    'division'
+))
+```
+
+### `tipo_relacion_bp` (bp_relaciones - Native ENUM)
+```sql
+CREATE TYPE tipo_relacion_bp AS ENUM (
+    'familiar',      -- Relaciones familiares (padre-hijo, hermanos, cónyuge)
+    'laboral',       -- Relaciones laborales (empleado-empresa)
+    'referencia',    -- Referencias personales
+    'membresia',     -- Membresías en clubes, juntas, asociaciones
+    'comercial',     -- Relaciones comerciales/proveedores
+    'otra'           -- Tipo customizable
 );
 ```
 
@@ -276,33 +491,26 @@ CREATE TYPE tipo_actor AS ENUM (
 
 ## Funciones de Base de Datos
 
-### `calcular_digito_verificacion_nit(nit TEXT)`
+### `calcular_digito_verificacion_nit(nit_numero TEXT)`
 
 **Propósito:** Calcula el dígito de verificación para NITs colombianos según el algoritmo estándar de la DIAN.
 
 **Parámetros:**
-- `nit` (TEXT): Número de Identificación Tributaria sin dígito verificador
+- `nit_numero` (TEXT): Número de Identificación Tributaria sin dígito verificador
 
 **Retorna:** TEXT (un solo dígito '0'-'9')
 
 **Algoritmo:**
-1. Multiplicar cada dígito del NIT por la secuencia [71, 67, 59, 53, 47, 43, 41, 37, 29, 23, 19, 17, 13, 7, 3]
-2. Sumar todos los productos
-3. Calcular el residuo de la división por 11
-4. Si residuo = 0 o 1, DV = residuo, sino DV = 11 - residuo
+1. Limpiar el NIT (solo números)
+2. Multiplicar cada dígito por la secuencia [71, 67, 59, 53, 47, 43, 41, 37, 29, 23, 19, 17, 13, 7, 3]
+3. Sumar todos los productos
+4. Calcular el residuo de la división por 11
+5. Si residuo >= 2, DV = 11 - residuo, sino DV = residuo
 
 **Ejemplo:**
 ```sql
 SELECT calcular_digito_verificacion_nit('900123456');
 -- Resultado: '8'
-```
-
-**Uso:**
-```sql
--- Validar NIT antes de insertar
-SELECT nit, calcular_digito_verificacion_nit(nit) AS dv_calculado
-FROM empresas
-WHERE digito_verificacion != calcular_digito_verificacion_nit(nit);
 ```
 
 ---
@@ -320,13 +528,17 @@ WHERE digito_verificacion != calcular_digito_verificacion_nit(nit);
 - `business_partners`
 - `personas`
 - `empresas`
+- `bp_relaciones`
 
-**Ejemplo de creación del trigger:**
+**Implementación:**
 ```sql
-CREATE TRIGGER actualizar_business_partners_timestamp
-    BEFORE UPDATE ON business_partners
-    FOR EACH ROW
-    EXECUTE FUNCTION actualizar_timestamp();
+CREATE OR REPLACE FUNCTION actualizar_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.actualizado_en = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 ```
 
 ---
@@ -349,15 +561,53 @@ CREATE TRIGGER actualizar_business_partners_timestamp
 **Errores que previene:**
 - Business partner tipo 'persona' sin registro en tabla `personas`
 - Business partner tipo 'empresa' sin registro en tabla `empresas`
-- Business partner existente en ambas tablas especializadas
 
-**Ejemplo de error:**
+---
+
+### `invertir_rol(rol TEXT)`
+
+**Propósito:** Función auxiliar que mapea roles a sus inversos para generación automática de relaciones bidireccionales en la vista `v_relaciones_bidireccionales`.
+
+**Parámetros:**
+- `rol` (TEXT): Rol a invertir
+
+**Retorna:** TEXT (rol inverso)
+
+**Ejemplos:**
 ```sql
--- Esto fallaría:
-INSERT INTO business_partners (organizacion_id, tipo_actor)
-VALUES ('org-uuid', 'persona');
--- ERROR: Business partner de tipo 'persona' debe tener registro en tabla personas
+SELECT invertir_rol('Padre');    -- 'Hijo'
+SELECT invertir_rol('Madre');    -- 'Hija'
+SELECT invertir_rol('Empleado'); -- 'Empleador'
+SELECT invertir_rol('Hermano');  -- 'Hermano' (simétrico)
+SELECT invertir_rol('Cónyuge');  -- 'Cónyuge' (simétrico)
 ```
+
+**Mapeos implementados:**
+- Relaciones familiares: Padre/Hijo, Madre/Hija, Hermano/Hermano, Abuelo/Nieto, Tío/Sobrino, etc.
+- Relaciones laborales: Empleado/Empleador, Jefe/Subordinado, Supervisor/Supervisado
+- Si no hay mapeo, devuelve el mismo rol
+
+---
+
+### `validar_tipo_relacion_compatible()`
+
+**Propósito:** Trigger function que valida que los tipos de Business Partners sean compatibles con el tipo de relación.
+
+**Tipo:** Trigger Function (BEFORE INSERT/UPDATE)
+
+**Retorna:** TRIGGER (NEW row si validación pasa, ERROR si falla)
+
+**Validaciones:**
+1. **Relación familiar:** Ambos BP (origen y destino) deben ser `tipo_actor = 'persona'`
+2. **Relación laboral:** BP origen debe ser `tipo_actor = 'persona'`, BP destino debe ser `tipo_actor = 'empresa'`
+3. **Otras relaciones:** Sin restricciones de tipo
+
+**Aplicado a:** `bp_relaciones`
+
+**Errores que previene:**
+- Relaciones familiares entre empresas
+- Relaciones laborales donde el empleado no es persona
+- Relaciones laborales donde el empleador no es empresa
 
 ---
 
@@ -367,32 +617,17 @@ VALUES ('org-uuid', 'persona');
 
 **Propósito:** Vista desnormalizada que combina datos de `personas`, `business_partners` y `organizations` para facilitar queries.
 
-**Campos:**
+**Campos Destacados:**
 - Todos los campos de `personas`
-- Campos relevantes de `business_partners` (estado, codigo_interno, atributos)
-- Nombre de la organización
-- `nombre_completo` (computed): `nombres || ' ' || apellidos`
-- `nombre_contacto_emergencia` (computed): Nombre completo del contacto
+- Campos relevantes de `business_partners` (estado, codigo_bp, email_principal, telefono_principal)
+- Nombre de la organización, slug, tipo
+- **`nombre_completo` (computed):** Concatenación de nombres y apellidos
+- **`contacto_emergencia_nombre` (computed):** Nombre completo del contacto
 
-**Query Base:**
+**Nota sobre nombres:** La vista concatena correctamente:
 ```sql
-SELECT
-    p.*,
-    bp.organizacion_id,
-    bp.tipo_actor,
-    bp.codigo_interno,
-    bp.estado,
-    bp.atributos AS atributos_bp,
-    bp.creado_en AS bp_creado_en,
-    bp.actualizado_en AS bp_actualizado_en,
-    bp.eliminado_en AS bp_eliminado_en,
-    o.nombre AS organizacion_nombre,
-    (p.nombres || ' ' || p.apellidos) AS nombre_completo,
-    (ce.nombres || ' ' || ce.apellidos) AS nombre_contacto_emergencia
-FROM personas p
-INNER JOIN business_partners bp ON p.id = bp.id
-INNER JOIN organizations o ON bp.organizacion_id = o.id
-LEFT JOIN personas ce ON p.contacto_emergencia_id = ce.id;
+primer_nombre || COALESCE(' ' || segundo_nombre, '') || ' ' ||
+primer_apellido || COALESCE(' ' || segundo_apellido, '')
 ```
 
 **Uso recomendado:**
@@ -409,33 +644,12 @@ WHERE numero_documento = '123456789'
 
 **Propósito:** Vista desnormalizada que combina datos de `empresas`, `business_partners`, `organizations` y representante legal.
 
-**Campos:**
+**Campos Destacados:**
 - Todos los campos de `empresas`
 - Campos relevantes de `business_partners`
-- Nombre de la organización
-- `nit_completo` (computed): `nit || '-' || digito_verificacion`
-- `nombre_representante_legal` (computed): Nombre completo del representante
-
-**Query Base:**
-```sql
-SELECT
-    e.*,
-    bp.organizacion_id,
-    bp.tipo_actor,
-    bp.codigo_interno,
-    bp.estado,
-    bp.atributos AS atributos_bp,
-    bp.creado_en AS bp_creado_en,
-    bp.actualizado_en AS bp_actualizado_en,
-    bp.eliminado_en AS bp_eliminado_en,
-    o.nombre AS organizacion_nombre,
-    (e.nit || '-' || e.digito_verificacion) AS nit_completo,
-    (rl.nombres || ' ' || rl.apellidos) AS nombre_representante_legal
-FROM empresas e
-INNER JOIN business_partners bp ON e.id = bp.id
-INNER JOIN organizations o ON bp.organizacion_id = o.id
-LEFT JOIN personas rl ON e.representante_legal_id = rl.id;
-```
+- Nombre de la organización, slug, tipo
+- **`nit_completo` (computed):** `nit || '-' || digito_verificacion`
+- **`representante_legal_nombre` (computed):** Nombre completo del representante
 
 **Uso recomendado:**
 ```sql
@@ -453,59 +667,16 @@ WHERE nit = '900123456'
 
 **Campos:**
 - `id`: ID del business partner
+- `codigo_bp`: Código autogenerado
 - `organizacion_id`: ID de la organización
 - `tipo_actor`: 'persona' | 'empresa'
 - `nombre`: Nombre completo (persona) o razón social (empresa)
 - `identificacion`: Número documento (persona) o NIT completo (empresa)
 - `tipo_identificacion`: Tipo de documento o 'NIT'
-- `email`, `telefono`, `direccion`: Campos de contacto
+- `email_principal`, `telefono_principal`: Contacto principal
+- `email_secundario`, `telefono_secundario`: Contacto secundario
 - `estado`: Estado del actor
-- `codigo_interno`: Código interno del business partner
 - Campos de timestamp
-
-**Query Base:**
-```sql
--- UNION de personas y empresas
-SELECT
-    bp.id,
-    bp.organizacion_id,
-    bp.tipo_actor,
-    (p.nombres || ' ' || p.apellidos) AS nombre,
-    p.numero_documento AS identificacion,
-    p.tipo_documento::text AS tipo_identificacion,
-    p.email,
-    p.telefono,
-    p.direccion,
-    bp.estado,
-    bp.codigo_interno,
-    bp.creado_en,
-    bp.actualizado_en,
-    bp.eliminado_en
-FROM business_partners bp
-INNER JOIN personas p ON bp.id = p.id
-WHERE bp.tipo_actor = 'persona'
-
-UNION ALL
-
-SELECT
-    bp.id,
-    bp.organizacion_id,
-    bp.tipo_actor,
-    e.razon_social AS nombre,
-    (e.nit || '-' || e.digito_verificacion) AS identificacion,
-    'NIT' AS tipo_identificacion,
-    e.email,
-    e.telefono,
-    e.direccion,
-    bp.estado,
-    bp.codigo_interno,
-    bp.creado_en,
-    bp.actualizado_en,
-    bp.eliminado_en
-FROM business_partners bp
-INNER JOIN empresas e ON bp.id = e.id
-WHERE bp.tipo_actor = 'empresa';
-```
 
 **Uso recomendado:**
 ```sql
@@ -519,208 +690,18 @@ ORDER BY nombre;
 
 ---
 
-## Índices
+### `v_relaciones_bidireccionales`
 
-### Índices de Primary Key (automáticos)
-- `organizations(id)`
-- `business_partners(id)`
-- `personas(id)`
-- `empresas(id)`
+**Propósito:** Vista que genera automáticamente registros inversos para relaciones bidireccionales, facilitando consultas desde ambas direcciones.
 
-### Índices de Foreign Key (automáticos)
-- `business_partners(organizacion_id)`
-- `personas(contacto_emergencia_id)`
-- `empresas(representante_legal_id)`
+**Funcionamiento:**
+- Registros con `es_bidireccional = false` → Solo registro directo
+- Registros con `es_bidireccional = true` → Registro directo + registro inverso generado
 
-### Índices de Búsqueda
-- `idx_personas_documento` en `personas(numero_documento)`
-- `idx_personas_nombres` en `personas(nombres)`
-- `idx_personas_apellidos` en `personas(apellidos)`
-- `idx_empresas_nit` en `empresas(nit)`
-- `idx_empresas_razon_social` en `empresas(razon_social)`
+**Columna adicional:** `direccion` ('directo' | 'inverso')
 
-### Índices Compuestos Únicos (con filtro soft delete)
-- `UNIQUE (organizacion_id, codigo_interno)` WHERE `eliminado_en IS NULL` en `business_partners`
-- `UNIQUE (numero_documento)` WHERE `eliminado_en IS NULL` en `personas`
-- `UNIQUE (nit)` WHERE `eliminado_en IS NULL` en `empresas`
-
----
-
-## Convenciones de Naming
-
-### Tablas
-- snake_case, plural para tablas independientes: `organizations`, `business_partners`
-- snake_case, plural consistente para especializaciones: `personas`, `empresas`
-
-### Columnas
-- snake_case: `numero_documento`, `fecha_nacimiento`
-- Sufijos estándar:
-  - `_id` para foreign keys: `organizacion_id`, `contacto_emergencia_id`
-  - `_en` para timestamps: `creado_en`, `actualizado_en`, `eliminado_en`
-
-### Constraints
-- Primary Key: `{tabla}_pkey` (automático)
-- Foreign Key: `{tabla}_{columna}_fkey` (automático)
-- Unique: `{tabla}_{columna}_key` (automático)
-- Check: `{tabla}_{descripcion}_check`
-
-### Índices
-- `idx_{tabla}_{columna}` para índices simples
-- `idx_{tabla}_{col1}_{col2}` para índices compuestos
-
-### Funciones
-- snake_case: `calcular_digito_verificacion_nit`, `actualizar_timestamp`
-- Verbos descriptivos: `calcular_`, `validar_`, `actualizar_`
-
-### Triggers
-- `{accion}_{tabla}_{descripcion}`
-- Ejemplo: `actualizar_business_partners_timestamp`
-
----
-
-## Política de Soft Delete
-
-**Implementación uniforme en todas las tablas:**
-
+**Query Base:**
 ```sql
--- Campo en todas las tablas
-eliminado_en TIMESTAMPTZ DEFAULT NULL
-
--- Para "eliminar" un registro
-UPDATE tabla SET eliminado_en = NOW() WHERE id = 'uuid';
-
--- Queries siempre filtran registros activos
-SELECT * FROM tabla WHERE eliminado_en IS NULL;
-
--- Recuperar registro eliminado
-UPDATE tabla SET eliminado_en = NULL WHERE id = 'uuid';
-```
-
-**Ventajas:**
-- Auditoría completa
-- Recuperación de datos
-- Integridad referencial preservada
-- Cumplimiento normativo
-
-**Ver:** [QUERIES.md](./QUERIES.md#soft-delete) para ejemplos de uso.
-
----
-
-### 5. `bp_relaciones`
-
-**Propósito:** Gestiona relaciones entre Business Partners (familiares, laborales, referencias, membresías, comerciales).
-
-**Tipo:** Tabla de relaciones con soporte bidireccional
-
-**Relaciones:**
-- N:1 con `organizations` (cada relación pertenece a una organización)
-- N:1 con `business_partners` como origen
-- N:1 con `business_partners` como destino
-
-**Campos Principales:**
-- `id` (PK): Identificador único
-- `organizacion_id` (FK): Organización propietaria
-- `bp_origen_id` (FK): Business Partner origen de la relación
-- `bp_destino_id` (FK): Business Partner destino de la relación
-- `tipo_relacion` (ENUM): Tipo de relación (familiar, laboral, referencia, membresia, comercial, otra)
-- `rol_origen` (TEXT): Rol específico del BP origen (ej: "Padre", "Empleado", "Jefe")
-- `rol_destino` (TEXT): Rol específico del BP destino (ej: "Hijo", "Empresa", "Subordinado")
-- `atributos` (JSONB): Metadata flexible por tipo de relación
-- `fecha_inicio` / `fecha_fin` (DATE): Temporalidad de la relación
-- `es_actual` (BOOLEAN, GENERATED): TRUE si `fecha_fin IS NULL`
-- `es_bidireccional` (BOOLEAN): Indica si la relación es simétrica (hermanos=true, padre-hijo=false)
-- `notas` (TEXT): Observaciones adicionales
-- `eliminado_en` (TIMESTAMPTZ): Soft delete
-
-**Constraints Importantes:**
-- FK hacia `organizations(id)` ON DELETE CASCADE
-- FK hacia `business_partners(id)` ON DELETE CASCADE (origen y destino)
-- CHECK: `bp_origen_id != bp_destino_id` (no auto-relaciones)
-- CHECK: `fecha_fin IS NULL OR fecha_fin >= fecha_inicio`
-- UNIQUE: `(bp_origen_id, bp_destino_id, tipo_relacion, rol_origen, rol_destino)` WHERE `eliminado_en IS NULL AND es_actual = true`
-
-**Índices:**
-- `idx_bp_relaciones_origen` en `bp_origen_id` WHERE `eliminado_en IS NULL` (parcial)
-- `idx_bp_relaciones_destino` en `bp_destino_id` WHERE `eliminado_en IS NULL` (parcial)
-- `idx_bp_relaciones_tipo` en `tipo_relacion` WHERE `eliminado_en IS NULL` (parcial)
-- `idx_bp_relaciones_org` en `organizacion_id` WHERE `eliminado_en IS NULL` (parcial)
-- `idx_bp_relaciones_actual` en `es_actual` WHERE `eliminado_en IS NULL AND es_actual = true` (parcial)
-- `idx_bp_relaciones_bidireccional` en `(bp_origen_id, bp_destino_id, tipo_relacion)` WHERE `eliminado_en IS NULL` (compuesto)
-- `idx_bp_relaciones_unique_activa` UNIQUE (para prevenir duplicados activos)
-
-**Triggers:**
-- `actualizar_bp_relaciones_timestamp` (BEFORE UPDATE) - Actualiza `actualizado_en`
-- `validar_relacion_compatible` (BEFORE INSERT/UPDATE) - Valida tipos compatibles
-
-**ERD: Relaciones BP**
-
-```mermaid
-erDiagram
-    organizations ||--o{ bp_relaciones : "tiene"
-    business_partners ||--o{ bp_relaciones : "origen"
-    business_partners ||--o{ bp_relaciones : "destino"
-
-    bp_relaciones {
-        uuid id PK
-        uuid organizacion_id FK
-        uuid bp_origen_id FK
-        uuid bp_destino_id FK
-        tipo_relacion_bp tipo_relacion
-        text rol_origen
-        text rol_destino
-        jsonb atributos
-        date fecha_inicio
-        date fecha_fin
-        boolean es_actual "GENERATED"
-        boolean es_bidireccional
-        text notas
-        timestamptz creado_en
-        timestamptz actualizado_en
-        timestamptz eliminado_en
-    }
-```
-
-**ENUM: `tipo_relacion_bp`**
-```sql
-CREATE TYPE tipo_relacion_bp AS ENUM (
-    'familiar',      -- Relaciones familiares (padre-hijo, hermanos, cónyuge)
-    'laboral',       -- Relaciones laborales (empleado-empresa)
-    'referencia',    -- Referencias personales
-    'membresia',     -- Membresías en clubes, juntas, asociaciones
-    'comercial',     -- Relaciones comerciales/proveedores
-    'otra'           -- Tipo customizable
-);
-```
-
-**Estructura JSONB por Tipo:**
-
-Relaciones Familiares:
-```json
-{
-  "linea": "paterna",
-  "es_biologico": true,
-  "es_adoptivo": false,
-  "parentesco_politico": false
-}
-```
-
-Relaciones Laborales:
-```json
-{
-  "cargo": "Gerente de Ventas",
-  "departamento": "Comercial",
-  "tipo_contrato": "indefinido",
-  "jornada": "completa",
-  "es_principal": true
-}
-```
-
-**Vista Helper: `v_relaciones_bidireccionales`**
-
-Vista que genera automáticamente registros inversos para relaciones bidireccionales:
-
-```sql
-CREATE VIEW v_relaciones_bidireccionales AS
 -- Registros directos
 SELECT *, 'directo' AS direccion
 FROM bp_relaciones
@@ -751,18 +732,115 @@ WHERE es_bidireccional = true
   AND eliminado_en IS NULL;
 ```
 
-**Funciones Helper:**
+**Ejemplo de uso:**
+```sql
+-- Consultar todas las relaciones de un BP (desde cualquier dirección)
+SELECT * FROM v_relaciones_bidireccionales
+WHERE bp_origen_id = 'bp-uuid'
+ORDER BY es_actual DESC, fecha_inicio DESC;
+```
 
-`invertir_rol(rol TEXT) → TEXT`
-- Convierte un rol a su inverso para relaciones bidireccionales
-- Ejemplos: 'Padre' → 'Hijo', 'Empleado' → 'Empleador', 'Hermano' → 'Hermano'
+---
 
-`validar_tipo_relacion_compatible() → TRIGGER`
-- Valida que tipos de BP sean compatibles con tipo de relación
-- Familiar: ambos deben ser personas
-- Laboral: origen persona, destino empresa
+## Índices
 
-**Ver:** [TABLES.md](./TABLES.md#bp_relaciones) para diccionario completo.
+### Índices de Primary Key (automáticos)
+- `organizations(id)`
+- `business_partners(id)`
+- `personas(id)`
+- `empresas(id)`
+- `bp_relaciones(id)`
+
+### Índices Únicos
+- `organizations(slug)`
+- `business_partners(codigo_bp)`
+- `personas(numero_documento)`
+- `empresas(nit)`
+
+### Índices de Foreign Key (automáticos)
+- `organizations(organizacion_padre_id)`
+- `business_partners(organizacion_id)`
+- `personas(contacto_emergencia_id)`
+- `empresas(representante_legal_id)`
+- `bp_relaciones(organizacion_id)`
+- `bp_relaciones(bp_origen_id)`
+- `bp_relaciones(bp_destino_id)`
+
+### Índices Parciales (bp_relaciones)
+Todos los índices en `bp_relaciones` tienen condición `WHERE eliminado_en IS NULL` para indexar solo registros activos:
+- `idx_bp_relaciones_origen` en `bp_origen_id`
+- `idx_bp_relaciones_destino` en `bp_destino_id`
+- `idx_bp_relaciones_tipo` en `tipo_relacion`
+- `idx_bp_relaciones_org` en `organizacion_id`
+- `idx_bp_relaciones_actual` en `es_actual` WHERE `es_actual = true`
+- `idx_bp_relaciones_bidireccional` en `(bp_origen_id, bp_destino_id, tipo_relacion)`
+
+---
+
+## Convenciones de Naming
+
+### Tablas
+- snake_case, plural para tablas independientes: `organizations`, `business_partners`
+- snake_case, plural para especializaciones: `personas`, `empresas`
+
+### Columnas
+- snake_case: `numero_documento`, `fecha_nacimiento`
+- Nombres separados: `primer_nombre`, `segundo_nombre`, `primer_apellido`, `segundo_apellido`
+- Sufijos estándar:
+  - `_id` para foreign keys: `organizacion_id`, `contacto_emergencia_id`
+  - `_en` para timestamps: `creado_en`, `actualizado_en`, `eliminado_en`
+  - `_por` para auditoría: `creado_por`, `actualizado_por`, `eliminado_por`
+
+### Constraints
+- Primary Key: `{tabla}_pkey` (automático)
+- Foreign Key: `{tabla}_{columna}_fkey` (automático)
+- Unique: `{tabla}_{columna}_key` (automático)
+- Check: `{tabla}_{descripcion}_check`
+
+### Índices
+- `idx_{tabla}_{columna}` para índices simples
+- `idx_{tabla}_{col1}_{col2}` para índices compuestos
+
+### Funciones
+- snake_case: `calcular_digito_verificacion_nit`, `actualizar_timestamp`
+- Verbos descriptivos: `calcular_`, `validar_`, `actualizar_`, `invertir_`
+
+### Triggers
+- `{accion}_{tabla}_{descripcion}`
+- Ejemplo: `actualizar_business_partners_timestamp`
+
+---
+
+## Política de Soft Delete
+
+**Implementación uniforme en todas las tablas:**
+
+```sql
+-- Campos en todas las tablas principales
+eliminado_en TIMESTAMPTZ DEFAULT NULL
+eliminado_por UUID  -- En business_partners
+
+-- Para "eliminar" un registro
+UPDATE tabla SET
+  eliminado_en = NOW(),
+  eliminado_por = auth.uid()  -- Si aplica
+WHERE id = 'uuid';
+
+-- Queries siempre filtran registros activos
+SELECT * FROM tabla WHERE eliminado_en IS NULL;
+
+-- Recuperar registro eliminado
+UPDATE tabla SET
+  eliminado_en = NULL,
+  eliminado_por = NULL
+WHERE id = 'uuid';
+```
+
+**Ventajas:**
+- Auditoría completa
+- Recuperación de datos
+- Integridad referencial preservada
+- Cumplimiento normativo
 
 ---
 
@@ -818,25 +896,36 @@ WHERE es_bidireccional = true
 
 ## Próximos Pasos de Arquitectura
 
-1. **Normalización de Timestamps:**
-   - Migrar de `creado_en`/`actualizado_en` → `created_at`/`updated_at`
-   - Consistencia con estándares internacionales
+**Implementado ✅**
+- Multi-tenancy con jerarquía de organizaciones
+- CTI pattern con personas y empresas (30+ y 25+ campos respectivamente)
+- Sistema completo de relaciones bidireccionales
+- Auditoría con campos `*_por`
+- Soft delete en todas las tablas
+- Vistas unificadas y polimórficas
+- RLS habilitado en todas las tablas
 
-2. **Auditoría Avanzada:**
-   - Tabla `audit_log` para tracking de cambios
+**Planificado 🔄**
+1. **RLS Policies basadas en Organización:**
+   - Actualmente: Políticas básicas con `auth.role() = 'authenticated'`
+   - Objetivo: Filtrado automático por `organizacion_id` usando tabla `user_organizations`
+
+2. **Roles y Permisos:**
+   - Tabla `user_roles` (admin, manager, viewer)
+   - RLS policies diferenciadas por rol
+   - Restricciones de operaciones según rol
+
+3. **Extensiones de Socios:**
+   - Tabla `socios` (especialización de business_partners)
+   - Tabla `proveedores` (especialización de business_partners)
+   - Tabla `empleados` (especialización de business_partners)
+
+4. **Auditoría Avanzada:**
+   - Tabla `audit_log` para tracking completo de cambios
    - Trigger `log_changes()` en tablas críticas
 
-3. **Roles y Permisos:**
-   - Tabla `user_roles` (admin, manager, viewer)
-   - RLS policies basadas en roles
-
-4. **Extensiones de Socios:**
-   - Tabla `socios` (tipo_socio, participacion, etc.)
-   - Tabla `proveedores` (calificacion, productos)
-   - Tabla `empleados` (cargo, departamento)
-
 5. **Optimización:**
-   - Índices parciales para soft delete
+   - Índices adicionales según patrones de uso
    - Particionamiento por organización (si escala)
    - Materialización de vistas frecuentes
 
