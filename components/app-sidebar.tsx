@@ -1,13 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import {
-  Building2,
-  GalleryVerticalEnd,
-  LayoutDashboard,
-  Settings2,
-  Users,
-} from 'lucide-react'
+import { GalleryVerticalEnd } from 'lucide-react'
 
 import { NavMain } from '@/components/nav-main'
 import { NavProjects } from '@/components/nav-projects'
@@ -20,6 +14,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '@/components/ui/sidebar'
+import { NAVIGATION_CONFIG } from '@/lib/navigation'
 
 // Navigation configuration for SOCIOS_ADMIN
 const data = {
@@ -30,53 +25,7 @@ const data = {
       plan: 'Enterprise',
     },
   ],
-  navMain: [
-    {
-      title: 'Dashboard',
-      url: '/admin',
-      icon: LayoutDashboard,
-      isActive: true,
-    },
-    {
-      title: 'Business Partners',
-      url: '/admin/socios',
-      icon: Users,
-      items: [
-        {
-          title: 'All Partners',
-          url: '/admin/socios',
-        },
-        {
-          title: 'Personas',
-          url: '/admin/socios/personas',
-        },
-        {
-          title: 'Empresas',
-          url: '/admin/socios/empresas',
-        },
-      ],
-    },
-    {
-      title: 'Organizations',
-      url: '/admin/organizations',
-      icon: Building2,
-    },
-    {
-      title: 'Settings',
-      url: '/admin/settings',
-      icon: Settings2,
-      items: [
-        {
-          title: 'Profile',
-          url: '/admin/settings/profile',
-        },
-        {
-          title: 'Account',
-          url: '/admin/settings/account',
-        },
-      ],
-    },
-  ],
+  navMain: NAVIGATION_CONFIG,
   projects: [],
 }
 

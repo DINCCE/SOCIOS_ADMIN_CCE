@@ -1,6 +1,8 @@
 "use client"
 
+import { usePathname } from "next/navigation"
 import { ChevronRight, type LucideIcon } from "lucide-react"
+import Link from "next/link"
 
 import {
   Collapsible,
@@ -32,41 +34,73 @@ export function NavMain({
     }[]
   }[]
 }) {
+  const pathname = usePathname()
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item) => (
-          <Collapsible
-            key={item.title}
-            asChild
-            defaultOpen={item.isActive}
-            className="group/collapsible"
-          >
-            <SidebarMenuItem>
-              <CollapsibleTrigger asChild>
-                <SidebarMenuButton tooltip={item.title}>
-                  {item.icon && <item.icon />}
-                  <span>{item.title}</span>
-                  <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                </SidebarMenuButton>
-              </CollapsibleTrigger>
+        {items.map((item) => {
+          // Check if current path matches this item or any of its sub-items
+          const isItemActive = pathname === item.url || item.items?.some(sub => pathname === sub.url)
+          const hasSubItems = item.items && item.items.length > 0
+
+          return hasSubItems ? (
+            <Collapsible
+              key={item.title}
+              asChild
+              defaultOpen={isItemActive}
+              className="group/collapsible"
+            >
+              <SidebarMenuItem>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton tooltip={item.title}>
+                    {item.icon && <item.icon />}
+                    <span>{item.title}</span>
+                    <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarMenuSub>
-                  {item.items?.map((subItem) => (
-                    <SidebarMenuSubItem key={subItem.title}>
-                      <SidebarMenuSubButton asChild>
-                        <a href={subItem.url}>
-                          <span>{subItem.title}</span>
-                        </a>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  ))}
+                  {item.items?.map((subItem) => {
+                    const isActive = pathname === subItem.url
+                    return (
+                      <SidebarMenuSubItem key={subItem.title}>
+                        <SidebarMenuSubButton asChild isActive={isActive}>
+                          <Link
+                            href={subItem.url}
+                            className={
+                              isActive
+                                ? "bg-primary/10 border-l-3 border-l-primary relative before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-primary"
+                                : ""
+                            }
+                          >
+                            <span>{subItem.title}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    )
+                  })}
                 </SidebarMenuSub>
               </CollapsibleContent>
             </SidebarMenuItem>
           </Collapsible>
-        ))}
+        ) : (
+          <SidebarMenuItem key={item.title}>
+            <SidebarMenuButton asChild isActive={pathname === item.url}>
+              <Link
+                href={item.url}
+                className={
+                  pathname === item.url
+                    ? "bg-primary/10 relative before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-primary"
+                    : ""
+                }
+              >
+                {item.icon && <item.icon />}
+                <span>{item.title}</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        )})}
       </SidebarMenu>
     </SidebarGroup>
   )

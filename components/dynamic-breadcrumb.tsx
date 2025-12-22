@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import { usePathname } from "next/navigation"
-import { ChevronRight } from "lucide-react"
+import { usePathname } from 'next/navigation'
+import { ChevronRight } from 'lucide-react'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,49 +9,35 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-
-const pathNameMap: Record<string, string> = {
-  admin: "SOCIOS ADMIN",
-  socios: "Socios",
-  personas: "Personas",
-  empresas: "Empresas",
-  organizations: "Organizaciones",
-  settings: "Configuración",
-}
+} from '@/components/ui/breadcrumb'
+import { buildBreadcrumbs, NAVIGATION_CONFIG } from '@/lib/navigation'
 
 export function DynamicBreadcrumb() {
   const pathname = usePathname()
-  const segments = pathname.split("/").filter(Boolean)
+  const breadcrumbs = buildBreadcrumbs(pathname, NAVIGATION_CONFIG)
 
-  // Build breadcrumb items
-  const breadcrumbItems = segments.map((segment, index) => {
-    const path = `/${segments.slice(0, index + 1).join("/")}`
-    const label = pathNameMap[segment] || segment
-    const isLast = index === segments.length - 1
-
-    return {
-      label,
-      path,
-      isLast,
-    }
-  })
+  // Don't render if no breadcrumbs (e.g., /admin root)
+  if (breadcrumbs.length === 0) {
+    return null
+  }
 
   return (
     <Breadcrumb>
       <BreadcrumbList>
-        {breadcrumbItems.map((item, index) => (
-          <div key={item.path} className="flex items-center">
+        {breadcrumbs.map((breadcrumb, index) => (
+          <div key={breadcrumb.url} className="flex items-center">
             {index > 0 && (
               <BreadcrumbSeparator>
                 <ChevronRight className="h-4 w-4" />
               </BreadcrumbSeparator>
             )}
-            <BreadcrumbItem className={index === 0 ? "hidden md:block" : ""}>
-              {item.isLast ? (
-                <BreadcrumbPage>{item.label}</BreadcrumbPage>
+            <BreadcrumbItem>
+              {breadcrumb.isCurrentPage ? (
+                <BreadcrumbPage>{breadcrumb.title}</BreadcrumbPage>
               ) : (
-                <BreadcrumbLink href={item.path}>{item.label}</BreadcrumbLink>
+                <BreadcrumbLink href={breadcrumb.url}>
+                  {breadcrumb.title}
+                </BreadcrumbLink>
               )}
             </BreadcrumbItem>
           </div>

@@ -13,8 +13,10 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
+import { AnimatePresence } from "framer-motion"
 
-import { Input } from "@/components/ui/input"
+import { CommandSearch } from "@/components/ui/command-search"
+import { FloatingActionBar } from "@/components/ui/floating-action-bar"
 import {
   Select,
   SelectContent,
@@ -74,16 +76,16 @@ export function PersonasDataTable<TData, TValue>({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex flex-1 items-center space-x-2">
-          <Input
+          <CommandSearch
             placeholder="Buscar por nombre, documento o email..."
             value={
               (table.getColumn("nombre_completo")?.getFilterValue() as string) ??
               ""
             }
-            onChange={(event) =>
-              table.getColumn("nombre_completo")?.setFilterValue(event.target.value)
+            onChange={(value) =>
+              table.getColumn("nombre_completo")?.setFilterValue(value)
             }
-            className="h-8 w-[250px] lg:w-[350px]"
+            aria-label="Buscar personas"
           />
           <Select
             value={
@@ -159,6 +161,29 @@ export function PersonasDataTable<TData, TValue>({
         </Table>
       </div>
       <DataTablePagination table={table} />
+
+      {/* Floating Action Bar */}
+      <AnimatePresence>
+        {table.getFilteredSelectedRowModel().rows.length > 0 && (
+          <FloatingActionBar
+            selectedCount={table.getFilteredSelectedRowModel().rows.length}
+            totalCount={table.getFilteredRowModel().rows.length}
+            onExport={() => {
+              const selectedRows = table.getFilteredSelectedRowModel().rows.map(row => row.original)
+              console.log('Export', selectedRows)
+              // Future: CSV/Excel export
+            }}
+            onChangeStatus={() => {
+              console.log('Change status')
+              // Future: Open dialog with estado dropdown
+            }}
+            onDelete={() => {
+              console.log('Delete')
+              // Future: Open confirmation dialog with soft delete
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -13,20 +13,20 @@ export default function AdminPage() {
           <div className="text-sm text-muted-foreground">
             Total Business Partners
           </div>
-          <div className="text-2xl font-bold">0</div>
+          <div className="text-2xl font-semibold">0</div>
         </div>
         <div className="flex flex-col gap-2 rounded-xl bg-muted/50 p-4">
           <div className="text-sm text-muted-foreground">Personas</div>
-          <div className="text-2xl font-bold">0</div>
+          <div className="text-2xl font-semibold">0</div>
         </div>
         <div className="flex flex-col gap-2 rounded-xl bg-muted/50 p-4">
           <div className="text-sm text-muted-foreground">Empresas</div>
-          <div className="text-2xl font-bold">0</div>
+          <div className="text-2xl font-semibold">0</div>
         </div>
       </div>
       <div className="flex min-h-[100vh] flex-1 flex-col gap-4 rounded-xl bg-muted/50 p-4 md:min-h-min">
         <div className="flex flex-col gap-2">
-          <h2 className="text-2xl font-bold">Welcome to SOCIOS ADMIN</h2>
+          <h2 className="text-2xl font-semibold">Welcome to SOCIOS ADMIN</h2>
           <p className="text-muted-foreground">
             Manage your business partners, organizations, and more from this
             dashboard.

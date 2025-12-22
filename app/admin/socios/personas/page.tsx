@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { PersonasDataTable } from "@/features/socios/personas/data-table"
 import { columns } from "@/features/socios/personas/columns"
+import { PageHeader } from "@/components/page-header"
 
 export const metadata = {
   title: "Personas | SOCIOS ADMIN",
@@ -13,19 +14,17 @@ export default async function PersonasPage() {
   const { data: personas, error } = await supabase
     .from("v_personas_completa")
     .select("*")
-    .is("eliminado_en", null)
+    .is("bp_eliminado_en", null)
     .order("nombre_completo", { ascending: true })
 
   if (error) {
     console.error("Error fetching personas:", error)
     return (
       <div className="container mx-auto py-10">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Personas</h1>
-          <p className="text-muted-foreground">
-            Gestiona las personas registradas como socios de negocio
-          </p>
-        </div>
+        <PageHeader
+          title="Personas"
+          description="Gestiona las personas registradas como socios de negocio"
+        />
         <div className="rounded-md bg-destructive/10 p-4">
           <p className="text-destructive">
             Error al cargar los datos. Por favor, intente nuevamente.
@@ -37,12 +36,11 @@ export default async function PersonasPage() {
 
   return (
     <div className="container mx-auto py-10">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Personas</h1>
-        <p className="text-muted-foreground">
-          Gestiona las personas registradas como socios de negocio
-        </p>
-      </div>
+      <PageHeader
+        title="Personas"
+        description="Gestiona las personas registradas como socios de negocio"
+        metadata={`${personas?.length || 0} total`}
+      />
       <PersonasDataTable columns={columns} data={personas || []} />
     </div>
   )

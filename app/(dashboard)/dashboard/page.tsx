@@ -2,15 +2,17 @@
 
 import { useUser } from '@/hooks/use-user'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageHeader } from '@/components/page-header'
 
 export default function DashboardPage() {
     const { data: user, isLoading } = useUser()
 
     return (
         <div className="p-8">
-            <div className="flex items-center justify-between space-y-2">
-                <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-            </div>
+            <PageHeader
+                title="Dashboard"
+                description="Bienvenido al panel de administración"
+            />
             <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -20,7 +22,7 @@ export default function DashboardPage() {
                         {isLoading ? (
                             <div className="h-6 w-24 rounded bg-slate-200 animate-pulse" />
                         ) : (
-                            <div className="text-2xl font-bold">
+                            <div className="text-2xl font-semibold">
                                 {user ? 'Active' : 'Guest'}
                             </div>
                         )}

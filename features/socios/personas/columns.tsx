@@ -6,6 +6,7 @@ import { MoreHorizontal } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { DataId } from "@/components/ui/data-id"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,11 +20,11 @@ import { Persona } from "@/features/socios/types/socios-schema"
 
 const estadoVariants: Record<
   string,
-  "default" | "secondary" | "destructive" | "outline"
+  "status-active" | "status-inactive" | "status-suspended"
 > = {
-  activo: "default",
-  inactivo: "secondary",
-  suspendido: "destructive",
+  activo: "status-active",
+  inactivo: "status-inactive",
+  suspendido: "status-suspended",
 }
 
 export const columns: ColumnDef<Persona>[] = [
@@ -50,12 +51,14 @@ export const columns: ColumnDef<Persona>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "codigo",
+    accessorKey: "codigo_bp",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Código" />
     ),
     cell: ({ row }) => (
-      <div className="font-medium">{row.getValue("codigo")}</div>
+      <div className="font-medium">
+        <DataId>{row.getValue("codigo_bp")}</DataId>
+      </div>
     ),
   },
   {
@@ -125,9 +128,15 @@ export const columns: ColumnDef<Persona>[] = [
     cell: ({ row }) => {
       const estado = row.getValue("estado") as string
       return (
-        <Badge variant={estadoVariants[estado] || "outline"}>
-          {estado.charAt(0).toUpperCase() + estado.slice(1)}
-        </Badge>
+        <div className="flex justify-center">
+          <Badge
+            variant={estadoVariants[estado] || "outline"}
+            showDot={true}
+            dotAnimation={estado === "activo" ? "pulse" : "none"}
+          >
+            {estado.charAt(0).toUpperCase() + estado.slice(1)}
+          </Badge>
+        </div>
       )
     },
     filterFn: (row, id, value) => {
@@ -152,7 +161,7 @@ export const columns: ColumnDef<Persona>[] = [
             <DropdownMenuItem
               onClick={() => navigator.clipboard.writeText(persona.id)}
             >
-              Copiar ID
+              Copiar ID: <DataId className="ml-1">{persona.id.substring(0, 8)}...</DataId>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>Ver detalles</DropdownMenuItem>
