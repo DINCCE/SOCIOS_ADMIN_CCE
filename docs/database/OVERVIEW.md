@@ -30,7 +30,7 @@ El sistema utiliza el patrón CTI donde:
 - **Tablas Especializadas (`personas`, `empresas`):** Contienen campos específicos de cada tipo
 - **Relación 1:1:** Cada registro en una tabla especializada tiene exactamente un registro correspondiente en `business_partners`
 - **Primary Key compartida:** `id` se comparte entre business_partners y sus especializaciones
-- **Validación de Integridad:** Trigger `validar_consistencia_tipo_actor()` garantiza que cada business_partner tenga exactamente una especialización
+- **Validación de Integridad:** Se garantiza el registro secuencial mediante `trigger_generar_codigo_bp()`.
 
 **Ventajas:**
 - Evita duplicación de datos comunes
@@ -95,18 +95,16 @@ El sistema tiene la ESTRUCTURA para multi-tenancy pero NO está totalmente imple
 
 ### 5. Triggers y Funciones
 
-El sistema incluye 5 funciones de base de datos:
+El sistema incluye 6 funciones de base de datos principales:
 
 **1. `actualizar_timestamp()`**
 - Actualiza `actualizado_en` automáticamente en UPDATE
 - Aplicado a todas las tablas con timestamp tracking
 - Trigger: `BEFORE UPDATE ON {table}`
 
-**2. `validar_consistencia_tipo_actor()`**
-- Valida que cada `business_partner` tenga exactamente una especialización
-- Previene socios "huérfanos" sin persona o empresa asociada
-- Se ejecuta AFTER INSERT/UPDATE/DELETE en `personas` y `empresas`
-- Retorna error si detecta inconsistencia
+**2. `generar_codigo_bp()`**
+- Asigna el código secuencial BP-000000X automáticamente.
+- Trigger: `BEFORE INSERT ON business_partners`.
 
 **3. `calcular_digito_verificacion_nit(nit TEXT)`**
 - Calcula el dígito de verificación para NITs colombianos
@@ -318,7 +316,7 @@ El sistema provee 4 vistas para simplificar queries:
 
 **Funciones y Triggers:**
 - `actualizar_timestamp()` en todas las tablas
-- `validar_consistencia_tipo_actor()` para integridad CTI
+- `trigger_generar_codigo_bp()` para asignación secuencial
 - `calcular_digito_verificacion_nit()` para NITs colombianos
 - `invertir_rol()` para relaciones bidireccionales
 - `validar_tipo_relacion_compatible()` para validar tipos de relaciones

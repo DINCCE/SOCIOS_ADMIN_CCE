@@ -100,6 +100,7 @@ erDiagram
         text cargo_representante
         text telefono_secundario
         text whatsapp
+        text email_secundario
         text website
         text linkedin_url
         text facebook_url
@@ -231,7 +232,7 @@ erDiagram
 
 **Triggers:**
 - `actualizar_timestamp` (BEFORE UPDATE)
-- `validar_consistencia_tipo_actor` (BEFORE INSERT/UPDATE)
+- `trigger_generar_codigo_bp` (BEFORE INSERT)
 
 **Ver:** [TABLES.md](./TABLES.md#business_partners) para diccionario completo.
 
@@ -543,24 +544,13 @@ $$ LANGUAGE plpgsql;
 
 ---
 
-### `validar_consistencia_tipo_actor()`
+### `trigger_generar_codigo_bp()`
 
-**Propósito:** Valida que cada `business_partner` tenga exactamente UNA especialización correspondiente a su `tipo_actor`. Previene registros "huérfanos".
+**Propósito:** Asigna automáticamente el código secuencial BP-000000X a los nuevos registros de business_partners antes de su inserción.
 
-**Tipo:** Trigger Function (BEFORE INSERT/UPDATE)
-
-**Retorna:** TRIGGER (NEW row si validación pasa, ERROR si falla)
-
-**Lógica:**
-1. Si `tipo_actor = 'persona'` → DEBE existir registro en `personas` con mismo `id`
-2. Si `tipo_actor = 'empresa'` → DEBE existir registro en `empresas` con mismo `id`
-3. NO puede existir en ambas tablas simultáneamente
+**Tipo:** Trigger Function (BEFORE INSERT)
 
 **Aplicado a:** `business_partners`
-
-**Errores que previene:**
-- Business partner tipo 'persona' sin registro en tabla `personas`
-- Business partner tipo 'empresa' sin registro en tabla `empresas`
 
 ---
 

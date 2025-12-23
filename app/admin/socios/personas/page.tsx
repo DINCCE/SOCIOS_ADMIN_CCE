@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { PersonasDataTable } from "@/features/socios/personas/data-table"
 import { columns } from "@/features/socios/personas/columns"
+import { NewPersonSheet } from "@/components/socios/personas/new-person-sheet"
 import { PageHeader } from "@/components/page-header"
 
 export const metadata = {
@@ -40,7 +41,9 @@ export default async function PersonasPage() {
         title="Personas"
         description="Gestiona las personas registradas como socios de negocio"
         metadata={`${personas?.length || 0} total`}
-      />
+      >
+        <NewPersonSheet />
+      </PageHeader>
       <PersonasDataTable columns={columns} data={personas || []} />
     </div>
   )

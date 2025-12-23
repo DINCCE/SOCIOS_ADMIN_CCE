@@ -5,6 +5,7 @@ interface PageHeaderProps {
   description?: string
   metadata?: string // e.g., "128 total"
   className?: string
+  children?: React.ReactNode
 }
 
 /**
@@ -27,20 +28,24 @@ export function PageHeader({
   description,
   metadata,
   className,
+  children,
 }: PageHeaderProps) {
   return (
-    <div className={cn("mb-6", className)}>
-      <div className="flex items-baseline gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-        {metadata && (
-          <span className="text-sm font-medium text-muted-foreground/60">
-            {metadata}
-          </span>
+    <div className={cn("mb-6 flex items-center justify-between", className)}>
+      <div>
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
+          {metadata && (
+            <span className="text-sm font-medium text-muted-foreground/60">
+              {metadata}
+            </span>
+          )}
+        </div>
+        {description && (
+          <p className="mt-1.5 text-muted-foreground">{description}</p>
         )}
       </div>
-      {description && (
-        <p className="mt-1.5 text-muted-foreground">{description}</p>
-      )}
+      {children && <div className="flex items-center gap-2">{children}</div>}
     </div>
   )
 }

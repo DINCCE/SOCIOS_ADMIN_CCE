@@ -161,7 +161,7 @@ Esta tabla **nunca se consulta directamente** para obtener datos completos. Siem
 ### Triggers
 
 - `actualizar_timestamp` (BEFORE UPDATE) - Actualiza `actualizado_en`
-- `validar_consistencia_tipo_actor` (BEFORE INSERT/UPDATE) - Valida que exista especialización
+- `trigger_generar_codigo_bp` (BEFORE INSERT) - Genera el código BP secuencial automático
 
 ### Relaciones
 
@@ -476,7 +476,8 @@ Todos los registros en esta tabla **DEBEN** tener un registro correspondiente en
 | `facebook_url` | `TEXT` | YES | NULL | URL de página Facebook |
 | `instagram_handle` | `TEXT` | YES | NULL | Usuario de Instagram |
 | `twitter_handle` | `TEXT` | YES | NULL | Usuario de Twitter/X |
-| `logo_url` | `TEXT` | YES | NULL | URL del logo |
+| `logo_url` | `TEXT` | YES | NULL | URL del logo de la empresa |
+| `email_secundario` | `TEXT` | YES | NULL | Email secundario corporativo |
 | `ingresos_anuales` | `NUMERIC` | YES | NULL | Ingresos anuales en moneda local |
 | `numero_empleados` | `INTEGER` | YES | NULL | Número de empleados |
 | `atributos` | `JSONB` | YES | `'{}'::jsonb` | Metadata adicional (sucursales, certificaciones) |
