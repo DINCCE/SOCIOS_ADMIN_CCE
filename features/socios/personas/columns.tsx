@@ -1,6 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
+import Link from "next/link"
 import { MoreHorizontal } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -67,11 +68,15 @@ export const columns: ColumnDef<Persona>[] = [
       <DataTableColumnHeader column={column} title="Nombre Completo" />
     ),
     cell: ({ row }) => {
+      const persona = row.original
       return (
         <div className="flex space-x-2">
-          <span className="max-w-[500px] truncate font-medium">
+          <Link
+            href={`/admin/socios/personas/${persona.id}`}
+            className="max-w-[500px] truncate font-medium hover:underline text-primary"
+          >
             {row.getValue("nombre_completo")}
-          </span>
+          </Link>
         </div>
       )
     },

@@ -1,1517 +1,1060 @@
-# Database Queries - Ejemplos y Patrones
+# SQL Cookbook & Query Patterns
 
-Este documento contiene ejemplos de queries SQL comunes organizados por caso de uso.
-
-## Índice
-
-- [Inserción de Datos](#inserción-de-datos)
-- [Consultas Básicas](#consultas-básicas)
-- [Consultas Avanzadas](#consultas-avanzadas)
-- [Relaciones entre Business Partners](#relaciones-entre-business-partners)
-- [Soft Delete](#soft-delete)
-- [Búsquedas JSONB](#búsquedas-jsonb)
-- [Agregaciones y Estadísticas](#agregaciones-y-estadísticas)
-- [Validaciones](#validaciones)
-- [Transacciones Complejas](#transacciones-complejas)
+> **Common query patterns and frontend integration examples**
+>
+> Last updated: 2025-12-28 | Auto-generated from live database schema
 
 ---
 
-## Inserción de Datos
+## Table of Contents
 
-### Crear una Persona
-
-```sql
--- Transacción completa para crear persona
-BEGIN;
-
--- 1. Insertar en business_partners
-INSERT INTO business_partners (
-  organizacion_id,
-  tipo_actor,
-  codigo_bp,
-  estado,
-  atributos
-)
-VALUES (
-  '00000000-0000-0000-0000-000000000001',  -- UUID de la organización
-  'persona',
-  'BP-2024-001',
-  'activo',
-  '{"tags": ["nuevo", "cliente"]}'::jsonb
-)
-RETURNING id;
--- Resultado: e.g., 'bp-uuid-12345'
-
--- 2. Insertar en personas (usar el UUID del paso anterior)
-INSERT INTO personas (
-  id,
-  primer_nombre,
-  segundo_nombre,
-  primer_apellido,
-  segundo_apellido,
-  tipo_documento,
-  numero_documento,
-  fecha_nacimiento,
-  genero,
-  telefono,
-  email,
-  direccion
-)
-VALUES (
-  'bp-uuid-12345',  -- Mismo UUID del business_partner
-  'Juan',
-  'Carlos',
-  'Pérez',
-  'González',
-  'cedula_ciudadania',
-  '1234567890',
-  '1990-05-15',
-  'masculino',
-  '+57 300 123 4567',
-  'juan.perez@example.com',
-  '{"calle": "Calle 123 # 45-67", "ciudad": "Bogotá", "pais": "Colombia"}'::jsonb
-);
-
-COMMIT;
-```
-
-### Crear una Persona con Contacto de Emergencia
-
-```sql
-BEGIN;
-
--- 1. Primero crear la persona que será el contacto de emergencia
-INSERT INTO business_partners (organizacion_id, tipo_actor, estado)
-VALUES ('org-uuid', 'persona', 'activo')
-RETURNING id;
--- Guardar este id como 'persona_contacto_id'
-
-INSERT INTO personas (
-  id,
-  primer_nombre,
-  primer_apellido,
-  tipo_documento,
-  numero_documento
-)
-VALUES (
-  'persona_contacto_id',
-  'Pedro',
-  'Pérez',
-  'cedula_ciudadania',
-  '1111111111'
-);
-
--- 2. Crear la persona principal con referencia al contacto
-INSERT INTO business_partners (organizacion_id, tipo_actor, estado)
-VALUES ('org-uuid', 'persona', 'activo')
-RETURNING id;
--- Guardar este id como 'persona_principal_id'
-
-INSERT INTO personas (
-  id,
-  primer_nombre,
-  segundo_nombre,
-  primer_apellido,
-  tipo_documento,
-  numero_documento,
-  contacto_emergencia_id,  -- ← Referencia al contacto
-  nombre_contacto_emergencia,
-  relacion_emergencia,
-  telefono_emergencia
-)
-VALUES (
-  'persona_principal_id',
-  'María',
-  'Elena',
-  'López',
-  'cedula_ciudadania',
-  '9876543210',
-  'persona_contacto_id',  -- UUID de la persona contacto de emergencia
-  'Pedro Pérez',
-  'Hermano',
-  '+57 300 999 8888'
-);
-
-COMMIT;
-```
-
-### Crear una Empresa
-
-```sql
-BEGIN;
-
--- 1. Insertar en business_partners
-INSERT INTO business_partners (
-  organizacion_id,
-  tipo_actor,
-  codigo_bp,
-  estado
-)
-VALUES (
-  'org-uuid',
-  'empresa',
-  'EMP-2024-001',
-  'activo'
-)
-RETURNING id;
--- Resultado: 'empresa-bp-uuid'
-
--- 2. Calcular dígito de verificación del NIT
-SELECT calcular_digito_verificacion_nit('900123456');
--- Resultado: '8'
-
--- 3. Insertar en empresas
-INSERT INTO empresas (
-  id,
-  razon_social,
-  nombre_comercial,
-  nit,
-  digito_verificacion,
-  tipo_sociedad,
-  fecha_constitucion,
-  telefono,
-  email,
-  direccion,
-  representante_legal_id
-)
-VALUES (
-  'empresa-bp-uuid',
-  'Tecnología Avanzada S.A.S.',
-  'TechAdvance',
-  '900123456',
-  '8',  -- DV calculado
-  'sas',
-  '2020-01-15',
-  '+57 1 234 5678',
-  'info@techadvance.com',
-  '{"calle": "Carrera 7 # 71-21", "ciudad": "Bogotá", "pais": "Colombia"}'::jsonb,
-  'persona-uuid-representante'  -- UUID de una persona existente
-);
-
-COMMIT;
-```
+- [Introduction](#introduction)
+- [Frontend Integration Patterns](#frontend-integration-patterns)
+  - [Server Actions Pattern](#server-actions-pattern)
+  - [TanStack Query Pattern](#tanstack-query-pattern)
+- [Business Partner Queries](#business-partner-queries)
+  - [Creating Business Partners](#creating-business-partners)
+  - [Querying with CTI Pattern](#querying-with-cti-pattern)
+  - [Unified Queries (Personas + Empresas)](#unified-queries-personas--empresas)
+  - [Filtering and Search](#filtering-and-search)
+- [Relationship Queries](#relationship-queries)
+  - [Creating Relationships](#creating-relationships)
+  - [Bidirectional Queries](#bidirectional-queries)
+  - [Relationship History](#relationship-history)
+- [Acciones Queries](#acciones-queries)
+  - [Assignment Operations](#assignment-operations)
+  - [Ownership Tracking](#ownership-tracking)
+  - [Historical Queries](#historical-queries)
+- [Soft Delete Patterns](#soft-delete-patterns)
+- [JSONB Queries](#jsonb-queries)
+- [Aggregation Queries](#aggregation-queries)
+- [Transaction Patterns](#transaction-patterns)
+- [Performance Tips](#performance-tips)
+- [Related Documentation](#related-documentation)
 
 ---
 
-## Consultas Básicas
+## Introduction
 
-### Buscar Persona por Documento
+This cookbook provides practical SQL examples and TypeScript integration patterns for common operations in the business partner management system.
 
-```sql
--- Usando la vista completa (recomendado)
-SELECT * FROM v_personas_completa
-WHERE numero_documento = '1234567890'
-  AND bp_eliminado_en IS NULL;
+### Key Concepts
 
--- Sin vista (manual)
-SELECT
-  p.*,
-  bp.estado,
-  bp.codigo_bp,
-  o.nombre AS organizacion_nombre
-FROM personas p
-INNER JOIN business_partners bp ON p.id = bp.id
-INNER JOIN organizations o ON bp.organizacion_id = o.id
-WHERE p.numero_documento = '1234567890'
-  AND p.eliminado_en IS NULL
-  AND bp.eliminado_en IS NULL;
-```
+- **CTI Pattern** - Class Table Inheritance requires JOINs between base and specialization tables
+- **RLS Enforcement** - All queries automatically filtered by Row Level Security
+- **Soft Delete** - Always filter by `eliminado_en IS NULL` for active records
+- **JSONB Flexibility** - Use JSONB operators for custom metadata queries
+- **Temporal Tracking** - Query historical data with `fecha_inicio` / `fecha_fin`
 
-### Buscar Empresa por NIT
+### Query Categories
 
-```sql
--- Usando la vista completa (recomendado)
-SELECT * FROM v_empresas_completa
-WHERE nit = '900123456'
-  AND bp_eliminado_en IS NULL;
-
--- Sin vista
-SELECT
-  e.*,
-  bp.estado,
-  bp.codigo_bp,
-  o.nombre AS organizacion_nombre,
-  (p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
-   p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '')) AS nombre_representante
-FROM empresas e
-INNER JOIN business_partners bp ON e.id = bp.id
-INNER JOIN organizations o ON bp.organizacion_id = o.id
-LEFT JOIN personas p ON e.representante_legal_id = p.id
-WHERE e.nit = '900123456'
-  AND e.eliminado_en IS NULL
-  AND bp.eliminado_en IS NULL;
-```
-
-### Listar Todas las Personas de una Organización
-
-```sql
-SELECT
-  p.numero_documento,
-  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
-    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_completo,
-  p.email,
-  p.telefono,
-  bp.estado,
-  bp.codigo_bp
-FROM personas p
-INNER JOIN business_partners bp ON p.id = bp.id
-WHERE bp.organizacion_id = 'org-uuid'
-  AND p.eliminado_en IS NULL
-  AND bp.eliminado_en IS NULL
-ORDER BY p.primer_apellido, p.primer_nombre;
-```
-
-### Listar Todas las Empresas de una Organización
-
-```sql
-SELECT
-  e.nit || '-' || e.digito_verificacion AS nit_completo,
-  e.razon_social,
-  e.nombre_comercial,
-  e.email,
-  bp.estado,
-  bp.codigo_bp
-FROM empresas e
-INNER JOIN business_partners bp ON e.id = bp.id
-WHERE bp.organizacion_id = 'org-uuid'
-  AND e.eliminado_en IS NULL
-  AND bp.eliminado_en IS NULL
-ORDER BY e.razon_social;
-```
-
-### Buscar Personas por Nombre (case-insensitive)
-
-```sql
-SELECT
-  numero_documento,
-  nombre_completo,
-  email,
-  telefono,
-  estado
-FROM v_personas_completa
-WHERE nombre_completo ILIKE '%juan%'
-  AND bp_eliminado_en IS NULL
-ORDER BY primer_apellido, primer_nombre;
-```
-
-### Buscar Cualquier Actor (Persona o Empresa)
-
-```sql
--- Usando la vista unificada
-SELECT
-  tipo_actor,
-  nombre,
-  identificacion,
-  email,
-  telefono,
-  estado
-FROM v_actores_unificados
-WHERE nombre ILIKE '%tech%'
-   OR identificacion = '1234567890'
-  AND eliminado_en IS NULL
-ORDER BY nombre;
-```
+| Category | Examples | Complexity |
+|----------|----------|------------|
+| Business Partners | Create, read, update personas/empresas | Medium (CTI) |
+| Relationships | Bidirectional queries, history | Medium |
+| Acciones | Assignment tracking, ownership transfer | High (temporal) |
+| Soft Delete | Active/archived filtering | Low |
+| JSONB | Metadata search and filtering | Medium |
+| Aggregations | Counts, summaries, analytics | Medium-High |
 
 ---
 
-## Consultas Avanzadas
+## Frontend Integration Patterns
 
-### Personas con sus Contactos de Emergencia
+### Server Actions Pattern
 
-```sql
-SELECT
-  p.numero_documento,
-  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
-    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_persona,
-  p.telefono AS telefono_persona,
-  ce.numero_documento AS doc_contacto,
-  ce.primer_nombre || COALESCE(' ' || ce.segundo_nombre, '') || ' ' ||
-    ce.primer_apellido || COALESCE(' ' || ce.segundo_apellido, '') AS nombre_contacto,
-  ce.telefono AS telefono_contacto,
-  p.relacion_emergencia,
-  p.telefono_emergencia
-FROM personas p
-INNER JOIN business_partners bp ON p.id = bp.id
-LEFT JOIN personas ce ON p.contacto_emergencia_id = ce.id
-WHERE p.eliminado_en IS NULL
-  AND bp.organizacion_id = 'org-uuid'
-ORDER BY p.primer_apellido;
-```
+**When to use:** Form submissions, authenticated operations, server-side data mutations
 
-### Empresas con sus Representantes Legales
-
-```sql
-SELECT
-  e.nit || '-' || e.digito_verificacion AS nit_completo,
-  e.razon_social,
-  e.email AS email_empresa,
-  p.numero_documento AS doc_representante,
-  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
-    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_representante,
-  p.email AS email_representante,
-  p.telefono AS telefono_representante,
-  e.cargo_representante
-FROM empresas e
-INNER JOIN business_partners bp ON e.id = bp.id
-LEFT JOIN personas p ON e.representante_legal_id = p.id
-WHERE e.eliminado_en IS NULL
-  AND bp.organizacion_id = 'org-uuid'
-ORDER BY e.razon_social;
-```
-
-### Actores por Estado (Activos, Inactivos, Suspendidos)
-
-```sql
--- Contar actores por estado
-SELECT
-  bp.estado,
-  bp.tipo_actor,
-  COUNT(*) AS total
-FROM business_partners bp
-WHERE bp.organizacion_id = 'org-uuid'
-  AND bp.eliminado_en IS NULL
-GROUP BY bp.estado, bp.tipo_actor
-ORDER BY bp.estado, bp.tipo_actor;
-```
-
-### Personas sin Contacto de Emergencia
-
-```sql
-SELECT
-  p.numero_documento,
-  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
-    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_completo,
-  p.telefono,
-  p.email
-FROM personas p
-INNER JOIN business_partners bp ON p.id = bp.id
-WHERE p.contacto_emergencia_id IS NULL
-  AND p.eliminado_en IS NULL
-  AND bp.organizacion_id = 'org-uuid'
-ORDER BY p.primer_apellido;
-```
-
-### Empresas sin Representante Legal
-
-```sql
-SELECT
-  e.nit || '-' || e.digito_verificacion AS nit_completo,
-  e.razon_social,
-  e.email,
-  e.telefono
-FROM empresas e
-INNER JOIN business_partners bp ON e.id = bp.id
-WHERE e.representante_legal_id IS NULL
-  AND e.eliminado_en IS NULL
-  AND bp.organizacion_id = 'org-uuid'
-ORDER BY e.razon_social;
-```
-
----
-
-## Relaciones entre Business Partners
-
-### Inserción de Relaciones
-
-#### Crear Relación Familiar (Padre-Hijo)
-
-```sql
-INSERT INTO bp_relaciones (
-  organizacion_id,
-  bp_origen_id,
-  bp_destino_id,
-  tipo_relacion,
-  rol_origen,
-  rol_destino,
-  atributos,
-  fecha_inicio,
-  es_bidireccional,
-  notas
-)
-VALUES (
-  'org-uuid',
-  'persona-padre-uuid',
-  'persona-hijo-uuid',
-  'familiar',
-  'Padre',
-  'Hijo',
-  jsonb_build_object(
-    'parentesco', 'Padre',
-    'linea', 'paterna',
-    'convive', true
-  ),
-  '1990-05-15',  -- Fecha de nacimiento del hijo
-  true,  -- Bidireccional: permite consultar desde ambos lados
-  'Relación padre-hijo, conviven en la misma ciudad'
-);
-```
-
-#### Crear Relación Laboral (Empleado-Empresa)
-
-```sql
-INSERT INTO bp_relaciones (
-  organizacion_id,
-  bp_origen_id,
-  bp_destino_id,
-  tipo_relacion,
-  rol_origen,
-  rol_destino,
-  atributos,
-  fecha_inicio,
-  es_bidireccional
-)
-VALUES (
-  'org-uuid',
-  'persona-empleado-uuid',
-  'empresa-empleador-uuid',
-  'laboral',
-  'Empleado',
-  'Empleador',
-  jsonb_build_object(
-    'cargo', 'Desarrollador Senior',
-    'departamento', 'Ingeniería',
-    'tipo_contrato', 'indefinido',
-    'salario_rango', 'alto',
-    'activo', true
-  ),
-  '2020-01-15',
-  false  -- No bidireccional: la empresa no es "empleado" de la persona
-);
-```
-
-#### Crear Relación Bidireccional (Hermanos)
-
-```sql
--- Solo se inserta UNA vez, la vista genera la relación inversa automáticamente
-INSERT INTO bp_relaciones (
-  organizacion_id,
-  bp_origen_id,
-  bp_destino_id,
-  tipo_relacion,
-  rol_origen,
-  rol_destino,
-  atributos,
-  fecha_inicio,
-  es_bidireccional
-)
-VALUES (
-  'org-uuid',
-  'persona-a-uuid',
-  'persona-b-uuid',
-  'familiar',
-  'Hermano',
-  'Hermano',
-  jsonb_build_object(
-    'parentesco', 'Hermano',
-    'linea', 'paterna'
-  ),
-  NULL,  -- Fecha inicio opcional
-  true   -- ¡IMPORTANTE! Genera registro inverso automático en la vista
-);
-```
-
-### Consultas de Relaciones
-
-#### Ver Todas las Relaciones de un Business Partner
-
-```sql
--- Opción 1: Solo relaciones donde es ORIGEN
-SELECT
-  r.id,
-  r.tipo_relacion,
-  r.rol_origen,
-  r.rol_destino,
-  r.fecha_inicio,
-  r.fecha_fin,
-  r.es_actual,
-  -- Datos del BP destino
-  bp_dest.tipo_actor AS tipo_destino,
-  CASE
-    WHEN bp_dest.tipo_actor = 'persona' THEN
-      p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
-      p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '')
-    WHEN bp_dest.tipo_actor = 'empresa' THEN e.razon_social
-  END AS nombre_destino
-FROM bp_relaciones r
-INNER JOIN business_partners bp_dest ON r.bp_destino_id = bp_dest.id
-LEFT JOIN personas p ON bp_dest.id = p.id
-LEFT JOIN empresas e ON bp_dest.id = e.id
-WHERE r.bp_origen_id = 'bp-uuid'
-  AND r.eliminado_en IS NULL
-ORDER BY r.es_actual DESC, r.fecha_inicio DESC;
-
--- Opción 2: TODAS las relaciones (dirección agnóstica) usando vista bidireccional
-SELECT
-  vr.tipo_relacion,
-  vr.rol_origen,
-  vr.rol_destino,
-  vr.fecha_inicio,
-  vr.fecha_fin,
-  vr.es_actual,
-  vr.direccion,  -- 'directo' o 'inverso'
-  -- Datos del BP destino
-  bp_dest.tipo_actor AS tipo_destino,
-  CASE
-    WHEN bp_dest.tipo_actor = 'persona' THEN
-      p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
-      p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '')
-    WHEN bp_dest.tipo_actor = 'empresa' THEN e.razon_social
-  END AS nombre_destino
-FROM v_relaciones_bidireccionales vr
-INNER JOIN business_partners bp_dest ON vr.bp_destino_id = bp_dest.id
-LEFT JOIN personas p ON bp_dest.id = p.id
-LEFT JOIN empresas e ON bp_dest.id = e.id
-WHERE vr.bp_origen_id = 'bp-uuid'
-ORDER BY vr.es_actual DESC, vr.fecha_inicio DESC;
-```
-
-#### Ver Relaciones Familiares de una Persona
-
-```sql
-SELECT
-  r.rol_origen,
-  r.rol_destino,
-  r.atributos->>'parentesco' AS parentesco,
-  r.atributos->>'linea' AS linea,
-  r.fecha_inicio,
-  r.es_actual,
-  -- Datos del familiar
-  p_dest.numero_documento,
-  p_dest.primer_nombre || COALESCE(' ' || p_dest.segundo_nombre, '') || ' ' ||
-    p_dest.primer_apellido || COALESCE(' ' || p_dest.segundo_apellido, '') AS nombre_familiar,
-  p_dest.telefono,
-  p_dest.email
-FROM bp_relaciones r
-INNER JOIN personas p_dest ON r.bp_destino_id = p_dest.id
-WHERE r.bp_origen_id = 'persona-uuid'
-  AND r.tipo_relacion = 'familiar'
-  AND r.eliminado_en IS NULL
-ORDER BY
-  CASE r.rol_destino
-    WHEN 'Cónyuge' THEN 1
-    WHEN 'Hijo' THEN 2
-    WHEN 'Hija' THEN 3
-    WHEN 'Padre' THEN 4
-    WHEN 'Madre' THEN 5
-    ELSE 6
-  END;
-```
-
-#### Ver Empleados de una Empresa
-
-```sql
-SELECT
-  r.fecha_inicio,
-  r.fecha_fin,
-  r.es_actual,
-  r.atributos->>'cargo' AS cargo,
-  r.atributos->>'departamento' AS departamento,
-  r.atributos->>'tipo_contrato' AS tipo_contrato,
-  -- Datos del empleado
-  p.numero_documento,
-  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
-    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_empleado,
-  p.telefono,
-  p.email
-FROM bp_relaciones r
-INNER JOIN personas p ON r.bp_origen_id = p.id
-WHERE r.bp_destino_id = 'empresa-uuid'
-  AND r.tipo_relacion = 'laboral'
-  AND r.rol_destino = 'Empleador'
-  AND r.eliminado_en IS NULL
-ORDER BY r.es_actual DESC, r.fecha_inicio DESC;
-```
-
-#### Historial Laboral Completo de una Persona
-
-```sql
-SELECT
-  e.razon_social AS empresa,
-  e.nit || '-' || e.digito_verificacion AS nit_empresa,
-  r.fecha_inicio,
-  r.fecha_fin,
-  r.es_actual,
-  CASE
-    WHEN r.fecha_fin IS NULL THEN 'Actual'
-    ELSE EXTRACT(YEAR FROM AGE(r.fecha_fin, r.fecha_inicio))::TEXT || ' años ' ||
-         EXTRACT(MONTH FROM AGE(r.fecha_fin, r.fecha_inicio))::TEXT || ' meses'
-  END AS duracion,
-  r.atributos->>'cargo' AS cargo,
-  r.atributos->>'departamento' AS departamento,
-  r.atributos->>'tipo_contrato' AS tipo_contrato
-FROM bp_relaciones r
-INNER JOIN empresas e ON r.bp_destino_id = e.id
-WHERE r.bp_origen_id = 'persona-uuid'
-  AND r.tipo_relacion = 'laboral'
-  AND r.eliminado_en IS NULL
-ORDER BY
-  r.es_actual DESC,
-  r.fecha_inicio DESC;
-```
-
-#### Ver Relaciones Bidireccionales (Hermanos, Cónyuges, etc.)
-
-```sql
--- Esta query aprovecha la vista v_relaciones_bidireccionales
--- para mostrar relaciones simétricas como "Hermano ↔ Hermano"
-
-SELECT
-  vr.direccion,  -- 'directo' o 'inverso'
-  CASE
-    WHEN vr.direccion = 'directo' THEN 'Persona A → Persona B'
-    ELSE 'Persona B → Persona A (auto-generado)'
-  END AS tipo_registro,
-  p_origen.primer_nombre || COALESCE(' ' || p_origen.segundo_nombre, '') || ' ' ||
-    p_origen.primer_apellido || COALESCE(' ' || p_origen.segundo_apellido, '') AS persona_origen,
-  vr.rol_origen,
-  p_destino.primer_nombre || COALESCE(' ' || p_destino.segundo_nombre, '') || ' ' ||
-    p_destino.primer_apellido || COALESCE(' ' || p_destino.segundo_apellido, '') AS persona_destino,
-  vr.rol_destino,
-  vr.atributos->>'parentesco' AS parentesco
-FROM v_relaciones_bidireccionales vr
-INNER JOIN personas p_origen ON vr.bp_origen_id = p_origen.id
-INNER JOIN personas p_destino ON vr.bp_destino_id = p_destino.id
-WHERE vr.es_bidireccional = true
-  AND vr.tipo_relacion = 'familiar'
-  AND vr.bp_origen_id = 'persona-a-uuid'
-ORDER BY vr.direccion;
-
--- Resultado esperado (2 filas):
--- directo  | Persona A → Persona B                | Juan Pérez    | Hermano | Pedro Pérez   | Hermano | Hermano
--- inverso  | Persona B → Persona A (auto-generado)| Pedro Pérez   | Hermano | Juan Pérez    | Hermano | Hermano
-```
-
-### Modificación de Relaciones
-
-#### Finalizar Relación Laboral (Mantener Historial)
-
-```sql
--- NO eliminar, sino marcar fecha_fin para mantener historial
-UPDATE bp_relaciones
-SET
-  fecha_fin = CURRENT_DATE,
-  atributos = atributos || jsonb_build_object('activo', false),
-  notas = COALESCE(notas, '') || E'\n' || 'Finalizada el ' || CURRENT_DATE::TEXT,
-  actualizado_en = NOW()
-WHERE id = 'relacion-uuid'
-  AND eliminado_en IS NULL;
-
--- La columna GENERATED 'es_actual' se actualiza automáticamente a FALSE
-```
-
-#### Soft Delete de una Relación
-
-```sql
--- Soft delete: marcar como eliminado sin borrar datos
-UPDATE bp_relaciones
-SET
-  eliminado_en = NOW(),
-  actualizado_en = NOW()
-WHERE id = 'relacion-uuid';
-
--- Para recuperar:
-UPDATE bp_relaciones
-SET
-  eliminado_en = NULL,
-  actualizado_en = NOW()
-WHERE id = 'relacion-uuid';
-```
-
-### Consultas Avanzadas de Relaciones
-
-#### Árbol Genealógico (Padres → Hijos)
-
-```sql
-WITH RECURSIVE arbol_familiar AS (
-  -- Caso base: persona raíz
-  SELECT
-    r.bp_origen_id,
-    r.bp_destino_id,
-    r.rol_origen,
-    r.rol_destino,
-    p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
-      p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre,
-    1 AS nivel
-  FROM bp_relaciones r
-  INNER JOIN personas p ON r.bp_origen_id = p.id
-  WHERE r.bp_origen_id = 'persona-raiz-uuid'
-    AND r.tipo_relacion = 'familiar'
-    AND r.rol_destino IN ('Hijo', 'Hija')
-    AND r.eliminado_en IS NULL
-
-  UNION ALL
-
-  -- Caso recursivo: hijos de cada nivel
-  SELECT
-    r.bp_origen_id,
-    r.bp_destino_id,
-    r.rol_origen,
-    r.rol_destino,
-    p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
-      p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre,
-    af.nivel + 1
-  FROM bp_relaciones r
-  INNER JOIN arbol_familiar af ON r.bp_origen_id = af.bp_destino_id
-  INNER JOIN personas p ON r.bp_destino_id = p.id
-  WHERE r.tipo_relacion = 'familiar'
-    AND r.rol_destino IN ('Hijo', 'Hija')
-    AND r.eliminado_en IS NULL
-)
-SELECT
-  nivel,
-  REPEAT('  ', nivel - 1) || '└─ ' || nombre AS arbol,
-  rol_origen,
-  rol_destino
-FROM arbol_familiar
-ORDER BY nivel, nombre;
-```
-
-#### Empresas donde Trabajan Miembros de una Familia
-
-```sql
--- Encontrar todas las empresas donde trabajan personas relacionadas familiarmente
-SELECT DISTINCT
-  e.razon_social AS empresa,
-  e.nit,
-  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
-    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS empleado,
-  rel_lab.atributos->>'cargo' AS cargo,
-  rel_fam.rol_origen AS parentesco_con_referencia
-FROM bp_relaciones rel_fam
--- Join para obtener relaciones laborales de familiares
-INNER JOIN bp_relaciones rel_lab ON rel_fam.bp_destino_id = rel_lab.bp_origen_id
-INNER JOIN empresas e ON rel_lab.bp_destino_id = e.id
-INNER JOIN personas p ON rel_lab.bp_origen_id = p.id
-WHERE rel_fam.bp_origen_id = 'persona-referencia-uuid'
-  AND rel_fam.tipo_relacion = 'familiar'
-  AND rel_lab.tipo_relacion = 'laboral'
-  AND rel_lab.es_actual = true
-  AND rel_fam.eliminado_en IS NULL
-  AND rel_lab.eliminado_en IS NULL
-ORDER BY e.razon_social, p.primer_apellido;
-```
-
-#### Estadísticas de Relaciones por Tipo
-
-```sql
-SELECT
-  tipo_relacion,
-  COUNT(*) AS total_relaciones,
-  COUNT(*) FILTER (WHERE es_actual = true) AS relaciones_activas,
-  COUNT(*) FILTER (WHERE es_actual = false) AS relaciones_finalizadas,
-  COUNT(*) FILTER (WHERE es_bidireccional = true) AS bidireccionales,
-  ROUND(AVG(EXTRACT(EPOCH FROM (COALESCE(fecha_fin, NOW()) - fecha_inicio)) / 86400), 0)::INTEGER AS duracion_promedio_dias
-FROM bp_relaciones
-WHERE eliminado_en IS NULL
-  AND fecha_inicio IS NOT NULL
-GROUP BY tipo_relacion
-ORDER BY total_relaciones DESC;
-```
-
-#### Validar Integridad: Relaciones Familiares Solo Entre Personas
-
-```sql
--- Query de validación: Detectar violaciones (no debería retornar filas)
-SELECT
-  r.id,
-  r.tipo_relacion,
-  bp_origen.tipo_actor AS tipo_origen,
-  bp_destino.tipo_actor AS tipo_destino,
-  'ERROR: Relación familiar con empresa' AS problema
-FROM bp_relaciones r
-INNER JOIN business_partners bp_origen ON r.bp_origen_id = bp_origen.id
-INNER JOIN business_partners bp_destino ON r.bp_destino_id = bp_destino.id
-WHERE r.tipo_relacion = 'familiar'
-  AND (bp_origen.tipo_actor != 'persona' OR bp_destino.tipo_actor != 'persona')
-  AND r.eliminado_en IS NULL;
-```
-
-#### Validar Integridad: Relaciones Laborales Persona → Empresa
-
-```sql
--- Query de validación: Detectar violaciones
-SELECT
-  r.id,
-  r.tipo_relacion,
-  bp_origen.tipo_actor AS tipo_origen,
-  bp_destino.tipo_actor AS tipo_destino,
-  CASE
-    WHEN bp_origen.tipo_actor != 'persona' THEN 'ERROR: Origen debe ser persona'
-    WHEN bp_destino.tipo_actor != 'empresa' THEN 'ERROR: Destino debe ser empresa'
-  END AS problema
-FROM bp_relaciones r
-INNER JOIN business_partners bp_origen ON r.bp_origen_id = bp_origen.id
-INNER JOIN business_partners bp_destino ON r.bp_destino_id = bp_destino.id
-WHERE r.tipo_relacion = 'laboral'
-  AND (bp_origen.tipo_actor != 'persona' OR bp_destino.tipo_actor != 'empresa')
-  AND r.eliminado_en IS NULL;
-```
-
-#### Detectar Relaciones Duplicadas Activas
-
-```sql
--- No debería retornar filas gracias al índice UNIQUE
-SELECT
-  bp_origen_id,
-  bp_destino_id,
-  tipo_relacion,
-  COUNT(*) AS duplicados,
-  ARRAY_AGG(id) AS ids_duplicados
-FROM bp_relaciones
-WHERE eliminado_en IS NULL
-  AND es_actual = true
-GROUP BY bp_origen_id, bp_destino_id, tipo_relacion
-HAVING COUNT(*) > 1;
-```
-
-### Ejemplo de Uso desde Frontend
-
-#### Server Action: Crear Relación Laboral
-
+**Pattern:**
 ```typescript
-// app/actions/relaciones.ts
+// app/actions/personas.ts
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
 
-export async function crearRelacionLaboral(data: {
-  organizacion_id: string
-  empleado_id: string
-  empresa_id: string
-  cargo: string
-  departamento: string
-  fecha_inicio: string
-}) {
+export async function createPersona(params: PersonaParams) {
   const supabase = await createClient()
 
-  const { data: relacion, error } = await supabase
-    .from('bp_relaciones')
-    .insert({
-      organizacion_id: data.organizacion_id,
-      bp_origen_id: data.empleado_id,
-      bp_destino_id: data.empresa_id,
-      tipo_relacion: 'laboral',
-      rol_origen: 'Empleado',
-      rol_destino: 'Empleador',
-      atributos: {
-        cargo: data.cargo,
-        departamento: data.departamento,
-        tipo_contrato: 'indefinido',
-        activo: true,
-      },
-      fecha_inicio: data.fecha_inicio,
-      es_bidireccional: false,
-    })
-    .select()
-    .single()
+  const { data, error } = await supabase.rpc('crear_persona', {
+    organizacion_id: params.organizacionId,
+    nombres: params.nombres,
+    apellidos: params.apellidos,
+    email_principal: params.email,
+    // ... other fields
+  })
 
-  if (error) throw error
-  return relacion
+  if (error) {
+    console.error('Failed to create persona:', error)
+    return { success: false, error: error.message }
+  }
+
+  revalidatePath('/admin/socios/personas')
+  return { success: true, data }
 }
 ```
 
-#### Client Component: Listar Empleados
-
+**Usage in component:**
 ```typescript
-// components/lista-empleados.tsx
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { createPersona } from '@/app/actions/personas'
+import { toast } from 'sonner'
+
+function PersonaForm() {
+  const handleSubmit = async (formData: FormData) => {
+    const result = await createPersona({
+      organizacionId: formData.get('org_id') as string,
+      nombres: formData.get('nombres') as string,
+      apellidos: formData.get('apellidos') as string,
+      email: formData.get('email') as string,
+    })
+
+    if (result.success) {
+      toast.success('Persona created successfully')
+    } else {
+      toast.error(result.error)
+    }
+  }
+
+  return <form action={handleSubmit}>...</form>
+}
+```
+
+---
+
+### TanStack Query Pattern
+
+**When to use:** Complex client state, optimistic updates, background refetching
+
+**Pattern:**
+```typescript
+// hooks/use-personas.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 
-export function ListaEmpleados({ empresaId }: { empresaId: string }) {
-  const { data: empleados, isLoading } = useQuery({
-    queryKey: ['empleados', empresaId],
+const supabase = createClient()
+
+// Query hook
+export function usePersonas(organizacionId: string) {
+  return useQuery({
+    queryKey: ['personas', organizacionId],
     queryFn: async () => {
-      const supabase = createClient()
       const { data, error } = await supabase
-        .from('bp_relaciones')
-        .select(`
-          id,
-          fecha_inicio,
-          fecha_fin,
-          es_actual,
-          atributos,
-          personas:bp_origen_id (
-            numero_documento,
-            primer_nombre,
-            segundo_nombre,
-            primer_apellido,
-            segundo_apellido,
-            telefono,
-            email
-          )
-        `)
-        .eq('bp_destino_id', empresaId)
-        .eq('tipo_relacion', 'laboral')
-        .is('eliminado_en', null)
-        .order('es_actual', { ascending: false })
-        .order('fecha_inicio', { ascending: false })
+        .from('v_personas_org')
+        .select('*')
+        .eq('organizacion_id', organizacionId)
+        .order('apellidos', { ascending: true })
 
       if (error) throw error
       return data
     },
+    staleTime: 60 * 1000, // 1 minute
   })
+}
 
-  // ... render UI
+// Mutation hook
+export function useCreatePersona() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (params: PersonaParams) => {
+      const { data, error } = await supabase.rpc('crear_persona', params)
+      if (error) throw error
+      return data
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({
+        queryKey: ['personas', variables.organizacion_id]
+      })
+
+      // Or optimistically update cache
+      queryClient.setQueryData(
+        ['personas', variables.organizacion_id],
+        (old: any[]) => [...(old || []), data]
+      )
+    },
+  })
 }
 ```
 
----
-
-## Soft Delete
-
-### Eliminar (Soft Delete) una Persona
-
-```sql
--- El soft delete se hace en ambas tablas (personas y business_partners)
-BEGIN;
-
-UPDATE personas
-SET eliminado_en = NOW()
-WHERE id = 'persona-uuid';
-
-UPDATE business_partners
-SET eliminado_en = NOW()
-WHERE id = 'persona-uuid';
-
-COMMIT;
-```
-
-### Eliminar (Soft Delete) una Empresa
-
-```sql
-BEGIN;
-
-UPDATE empresas
-SET eliminado_en = NOW()
-WHERE id = 'empresa-uuid';
-
-UPDATE business_partners
-SET eliminado_en = NOW()
-WHERE id = 'empresa-uuid';
-
-COMMIT;
-```
-
-### Recuperar Registro Eliminado
-
-```sql
--- Recuperar persona eliminada
-BEGIN;
-
-UPDATE personas
-SET eliminado_en = NULL
-WHERE id = 'persona-uuid';
-
-UPDATE business_partners
-SET eliminado_en = NULL
-WHERE id = 'persona-uuid';
-
-COMMIT;
-```
-
-### Listar Registros Eliminados
-
-```sql
--- Personas eliminadas
-SELECT
-  p.numero_documento,
-  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
-    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_completo,
-  bp.eliminado_en,
-  bp.estado AS estado_anterior
-FROM personas p
-INNER JOIN business_partners bp ON p.id = bp.id
-WHERE bp.eliminado_en IS NOT NULL
-  AND bp.organizacion_id = 'org-uuid'
-ORDER BY bp.eliminado_en DESC;
-```
-
-### Purgar Registros Eliminados (Hard Delete)
-
-⚠️ **PRECAUCIÓN:** Esto elimina permanentemente los datos.
-
-```sql
--- Eliminar permanentemente registros soft-deleted hace más de 1 año
-BEGIN;
-
--- Primero eliminar las especializaciones (por CASCADE se eliminará business_partners)
-DELETE FROM personas
-WHERE eliminado_en < NOW() - INTERVAL '1 year';
-
-DELETE FROM empresas
-WHERE eliminado_en < NOW() - INTERVAL '1 year';
-
-COMMIT;
-```
-
----
-
-## Búsquedas JSONB
-
-### Buscar por Tag en Atributos de Business Partner
-
-```sql
-SELECT
-  bp.id,
-  bp.tipo_actor,
-  bp.codigo_bp,
-  bp.atributos
-FROM business_partners bp
-WHERE bp.atributos @> '{"tags": ["vip"]}'::jsonb
-  AND bp.eliminado_en IS NULL;
-```
-
-### Buscar Personas por Profesión
-
-```sql
-SELECT
-  p.numero_documento,
-  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
-    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_completo,
-  p.profesion
-FROM personas p
-WHERE p.profesion = 'Ingeniero'
-  AND p.eliminado_en IS NULL;
-```
-
-### Buscar Empresas por Sector
-
-```sql
-SELECT
-  e.razon_social,
-  e.nit,
-  e.sector_industria
-FROM empresas e
-WHERE e.sector_industria = 'Tecnología'
-  AND e.eliminado_en IS NULL;
-```
-
-### Buscar por Dirección (JSONB)
-
-```sql
--- Buscar personas en una ciudad específica
-SELECT
-  p.primer_nombre || COALESCE(' ' || p.segundo_nombre, '') || ' ' ||
-    p.primer_apellido || COALESCE(' ' || p.segundo_apellido, '') AS nombre_completo,
-  p.direccion
-FROM personas p
-WHERE p.direccion->>'ciudad' = 'Bogotá'
-  AND p.eliminado_en IS NULL;
-
--- Buscar empresas en un país específico
-SELECT
-  e.razon_social,
-  e.direccion->>'ciudad' AS ciudad,
-  e.direccion->>'pais' AS pais
-FROM empresas e
-WHERE e.direccion->>'pais' = 'Colombia'
-  AND e.eliminado_en IS NULL;
-```
-
-### Actualizar Campo JSONB (Preservando Otros Campos)
-
-```sql
--- Actualizar dirección de persona
-UPDATE personas
-SET direccion = direccion || '{"apartamento": "301"}'::jsonb
-WHERE id = 'persona-uuid';
-
--- Agregar tag a business_partner
-UPDATE business_partners
-SET atributos = jsonb_set(
-  atributos,
-  '{tags}',
-  (atributos->'tags') || '["preferencial"]'::jsonb
-)
-WHERE id = 'bp-uuid';
-```
-
----
-
-## Agregaciones y Estadísticas
-
-### Contar Actores por Tipo y Estado
-
-```sql
-SELECT
-  tipo_actor,
-  estado,
-  COUNT(*) AS total
-FROM business_partners
-WHERE organizacion_id = 'org-uuid'
-  AND eliminado_en IS NULL
-GROUP BY tipo_actor, estado
-ORDER BY tipo_actor, estado;
-```
-
-### Distribución por Tipo de Documento
-
-```sql
-SELECT
-  tipo_documento,
-  COUNT(*) AS total,
-  ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS porcentaje
-FROM personas
-WHERE eliminado_en IS NULL
-GROUP BY tipo_documento
-ORDER BY total DESC;
-```
-
-### Distribución por Tipo de Sociedad
-
-```sql
-SELECT
-  tipo_sociedad,
-  COUNT(*) AS total
-FROM empresas
-WHERE eliminado_en IS NULL
-GROUP BY tipo_sociedad
-ORDER BY total DESC;
-```
-
-### Edad Promedio de Personas
-
-```sql
-SELECT
-  AVG(EXTRACT(YEAR FROM AGE(fecha_nacimiento)))::INTEGER AS edad_promedio,
-  MIN(EXTRACT(YEAR FROM AGE(fecha_nacimiento)))::INTEGER AS edad_minima,
-  MAX(EXTRACT(YEAR FROM AGE(fecha_nacimiento)))::INTEGER AS edad_maxima
-FROM personas
-WHERE fecha_nacimiento IS NOT NULL
-  AND eliminado_en IS NULL;
-```
-
-### Top 10 Empresas Más Antiguas
-
-```sql
-SELECT
-  razon_social,
-  nit || '-' || digito_verificacion AS nit_completo,
-  fecha_constitucion,
-  EXTRACT(YEAR FROM AGE(fecha_constitucion))::INTEGER AS antiguedad_anos
-FROM empresas
-WHERE fecha_constitucion IS NOT NULL
-  AND eliminado_en IS NULL
-ORDER BY fecha_constitucion ASC
-LIMIT 10;
-```
-
-### Resumen General de la Organización
-
-```sql
-SELECT
-  (SELECT COUNT(*) FROM business_partners WHERE organizacion_id = 'org-uuid' AND eliminado_en IS NULL) AS total_actores,
-  (SELECT COUNT(*) FROM personas p INNER JOIN business_partners bp ON p.id = bp.id WHERE bp.organizacion_id = 'org-uuid' AND p.eliminado_en IS NULL) AS total_personas,
-  (SELECT COUNT(*) FROM empresas e INNER JOIN business_partners bp ON e.id = bp.id WHERE bp.organizacion_id = 'org-uuid' AND e.eliminado_en IS NULL) AS total_empresas,
-  (SELECT COUNT(*) FROM business_partners WHERE organizacion_id = 'org-uuid' AND estado = 'activo' AND eliminado_en IS NULL) AS activos,
-  (SELECT COUNT(*) FROM business_partners WHERE organizacion_id = 'org-uuid' AND estado = 'inactivo' AND eliminado_en IS NULL) AS inactivos;
-```
-
----
-
-## Validaciones
-
-### Validar Consistencia de Tipo Actor
-
-```sql
--- Verificar que todos los business_partners tengan su especialización
-SELECT
-  bp.id,
-  bp.tipo_actor,
-  CASE
-    WHEN bp.tipo_actor = 'persona' AND p.id IS NULL THEN 'FALTA PERSONA'
-    WHEN bp.tipo_actor = 'empresa' AND e.id IS NULL THEN 'FALTA EMPRESA'
-    ELSE 'OK'
-  END AS validacion
-FROM business_partners bp
-LEFT JOIN personas p ON bp.id = p.id AND bp.tipo_actor = 'persona'
-LEFT JOIN empresas e ON bp.id = e.id AND bp.tipo_actor = 'empresa'
-WHERE bp.eliminado_en IS NULL
-  AND (
-    (bp.tipo_actor = 'persona' AND p.id IS NULL) OR
-    (bp.tipo_actor = 'empresa' AND e.id IS NULL)
-  );
-```
-
-### Validar NITs con Dígito Verificador Incorrecto
-
-```sql
-SELECT
-  nit,
-  digito_verificacion AS dv_actual,
-  calcular_digito_verificacion_nit(nit) AS dv_correcto,
-  CASE
-    WHEN digito_verificacion = calcular_digito_verificacion_nit(nit)
-    THEN 'VÁLIDO'
-    ELSE 'INVÁLIDO'
-  END AS estado
-FROM empresas
-WHERE eliminado_en IS NULL
-  AND digito_verificacion != calcular_digito_verificacion_nit(nit);
-```
-
-### Validar Documentos Duplicados
-
-```sql
--- Verificar si hay documentos duplicados (no debería haber por el UNIQUE constraint)
-SELECT
-  numero_documento,
-  COUNT(*) AS veces_usado,
-  ARRAY_AGG(id) AS ids
-FROM personas
-WHERE eliminado_en IS NULL
-GROUP BY numero_documento
-HAVING COUNT(*) > 1;
-```
-
-### Validar NITs Duplicados
-
-```sql
-SELECT
-  nit,
-  COUNT(*) AS veces_usado,
-  ARRAY_AGG(id) AS ids
-FROM empresas
-WHERE eliminado_en IS NULL
-GROUP BY nit
-HAVING COUNT(*) > 1;
-```
-
-### Validar Contactos de Emergencia Circulares
-
-```sql
--- Detectar si una persona es su propio contacto de emergencia
-SELECT
-  id,
-  primer_nombre || COALESCE(' ' || segundo_nombre, '') || ' ' ||
-    primer_apellido || COALESCE(' ' || segundo_apellido, '') AS nombre,
-  contacto_emergencia_id
-FROM personas
-WHERE id = contacto_emergencia_id
-  AND eliminado_en IS NULL;
-```
-
----
-
-## Transacciones Complejas
-
-### Transferir Representante Legal de una Empresa a Otra
-
-```sql
-BEGIN;
-
--- Cambiar representante legal de una empresa
-UPDATE empresas
-SET
-  representante_legal_id = 'nueva-persona-uuid',
-  actualizado_en = NOW()
-WHERE id = 'empresa-uuid';
-
-COMMIT;
-```
-
-### Cambiar Estado de Múltiples Actores
-
-```sql
-BEGIN;
-
--- Cambiar a inactivo todos los actores de una organización
-UPDATE business_partners
-SET
-  estado = 'inactivo',
-  actualizado_en = NOW()
-WHERE organizacion_id = 'org-uuid'
-  AND estado = 'activo'
-  AND eliminado_en IS NULL;
-
-COMMIT;
-```
-
-### Migrar Actor de una Organización a Otra
-
-⚠️ **PRECAUCIÓN:** Esto cambia la organización del actor.
-
-```sql
-BEGIN;
-
--- Cambiar organización de un business partner y su especialización
-UPDATE business_partners
-SET
-  organizacion_id = 'nueva-org-uuid',
-  actualizado_en = NOW()
-WHERE id = 'actor-uuid';
-
--- El cambio se propaga automáticamente a personas/empresas por las FK
-
-COMMIT;
-```
-
-### Crear Empresa con Representante Legal en una Sola Transacción
-
-```sql
-BEGIN;
-
--- 1. Crear representante legal (persona)
-INSERT INTO business_partners (organizacion_id, tipo_actor, estado)
-VALUES ('org-uuid', 'persona', 'activo')
-RETURNING id INTO representante_id;
-
-INSERT INTO personas (
-  id, primer_nombre, primer_apellido, tipo_documento, numero_documento
-)
-VALUES (
-  representante_id,
-  'Carlos',
-  'Ramírez',
-  'cedula_ciudadania',
-  '7777777777'
-);
-
--- 2. Crear empresa
-INSERT INTO business_partners (organizacion_id, tipo_actor, estado)
-VALUES ('org-uuid', 'empresa', 'activo')
-RETURNING id INTO empresa_id;
-
-INSERT INTO empresas (
-  id,
-  razon_social,
-  nit,
-  digito_verificacion,
-  representante_legal_id
-)
-VALUES (
-  empresa_id,
-  'Nueva Empresa S.A.S.',
-  '900999888',
-  calcular_digito_verificacion_nit('900999888'),
-  representante_id  -- Referencia al representante creado
-);
-
-COMMIT;
-```
-
----
-
-## Patrones de Uso con TanStack Query (Frontend)
-
-### Server Action para Buscar Persona
-
+**Usage in component:**
 ```typescript
-// app/actions/personas.ts
-'use server'
-
-import { createClient } from '@/lib/supabase/server'
-
-export async function buscarPersonaPorDocumento(documento: string) {
-  const supabase = await createClient()
-
-  const { data, error } = await supabase
-    .from('v_personas_completa')
-    .select('*')
-    .eq('numero_documento', documento)
-    .is('bp_eliminado_en', null)
-    .single()
-
-  if (error) throw error
-  return data
-}
-```
-
-### Client Component con TanStack Query
-
-```typescript
-// components/buscar-persona-form.tsx
 'use client'
 
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { buscarPersonaPorDocumento } from '@/app/actions/personas'
+import { usePersonas, useCreatePersona } from '@/hooks/use-personas'
 
-export function BuscarPersonaForm() {
-  const [documento, setDocumento] = useState('')
+function PersonasPage({ organizacionId }: Props) {
+  const { data: personas, isLoading, error } = usePersonas(organizacionId)
+  const createPersona = useCreatePersona()
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['persona', documento],
-    queryFn: () => buscarPersonaPorDocumento(documento),
-    enabled: documento.length > 0,
-  })
+  const handleCreate = (params: PersonaParams) => {
+    createPersona.mutate(params, {
+      onSuccess: () => toast.success('Persona created'),
+      onError: (error) => toast.error(error.message)
+    })
+  }
 
-  // ... render UI
+  if (isLoading) return <Spinner />
+  if (error) return <Error error={error} />
+
+  return (
+    <div>
+      {personas?.map(p => <PersonaCard key={p.id} persona={p} />)}
+      <PersonaForm onSubmit={handleCreate} isPending={createPersona.isPending} />
+    </div>
+  )
 }
 ```
 
-### Mutation para Crear Persona
+---
 
-```typescript
-// app/actions/personas.ts
-'use server'
+## Business Partner Queries
 
-import { createClient } from '@/lib/supabase/server'
+### Creating Business Partners
 
-interface PersonaInput {
-  organizacion_id: string
-  primer_nombre: string
-  segundo_nombre?: string
-  primer_apellido: string
-  segundo_apellido?: string
-  tipo_documento: string
-  numero_documento: string
-}
+#### Create Persona via RPC (Recommended)
 
-export async function crearPersona(data: PersonaInput) {
-  const supabase = await createClient()
-
-  // Iniciar transacción usando RPC o múltiples queries
-  const { data: bp, error: bpError } = await supabase
-    .from('business_partners')
-    .insert({
-      organizacion_id: data.organizacion_id,
-      tipo_actor: 'persona',
-      estado: 'activo',
-    })
-    .select('id')
-    .single()
-
-  if (bpError) throw bpError
-
-  const { data: persona, error: personaError } = await supabase
-    .from('personas')
-    .insert({
-      id: bp.id,
-      primer_nombre: data.primer_nombre,
-      segundo_nombre: data.segundo_nombre,
-      primer_apellido: data.primer_apellido,
-      segundo_apellido: data.segundo_apellido,
-      tipo_documento: data.tipo_documento,
-      numero_documento: data.numero_documento,
-    })
-    .select()
-    .single()
-
-  if (personaError) throw personaError
-  return persona
-}
+**SQL:**
+```sql
+SELECT crear_persona(
+  organizacion_id := '..org-uuid..',
+  nombres := 'Juan Carlos',
+  apellidos := 'García López',
+  email_principal := 'juan.garcia@example.com',
+  celular_principal := '+57 300 123 4567',
+  tipo_documento := 'CC',
+  numero_documento := '1234567890',
+  perfil_persona := '{"fecha_nacimiento": "1990-05-15", "ciudad": "Bogotá"}'::jsonb,
+  atributos := '{"categoria_socio": "fundador"}'::jsonb
+);
 ```
 
+**TypeScript (Server Action):**
 ```typescript
-// Client component
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-
-const queryClient = useQueryClient()
-
-const mutation = useMutation({
-  mutationFn: crearPersona,
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['personas'] })
+const { data, error } = await supabase.rpc('crear_persona', {
+  organizacion_id: orgId,
+  nombres: 'Juan Carlos',
+  apellidos: 'García López',
+  email_principal: 'juan.garcia@example.com',
+  celular_principal: '+57 300 123 4567',
+  tipo_documento: 'CC',
+  numero_documento: '1234567890',
+  perfil_persona: {
+    fecha_nacimiento: '1990-05-15',
+    ciudad: 'Bogotá'
   },
+  atributos: {
+    categoria_socio: 'fundador'
+  }
+})
+```
+
+#### Create Empresa via RPC (Recommended)
+
+**SQL:**
+```sql
+SELECT crear_empresa(
+  organizacion_id := '..org-uuid..',
+  razon_social := 'Tech Solutions SAS',
+  nombre_comercial := 'TechSol',
+  email_principal := 'info@techsol.com',
+  telefono_principal := '+57 1 234 5678',
+  nit := '900123456',
+  digito_verificacion := NULL, -- Auto-calculated
+  representante_legal_id := '..bp-uuid..',
+  perfil_empresa := '{"industria": "tecnologia", "tamano": "mediana"}'::jsonb,
+  atributos := '{"patrocinador": true}'::jsonb
+);
+```
+
+**TypeScript (TanStack Query):**
+```typescript
+const createEmpresa = useMutation({
+  mutationFn: async (params: EmpresaParams) => {
+    const { data, error } = await supabase.rpc('crear_empresa', {
+      organizacion_id: params.orgId,
+      razon_social: params.razonSocial,
+      nombre_comercial: params.nombreComercial,
+      nit: params.nit,
+      // digito_verificacion auto-calculated
+      representante_legal_id: params.repLegalId,
+      perfil_empresa: params.perfil,
+      atributos: params.atributos
+    })
+    if (error) throw error
+    return data
+  }
 })
 ```
 
 ---
 
-**Ver también:**
-- [SCHEMA.md](./SCHEMA.md) - Arquitectura de tablas
-- [TABLES.md](./TABLES.md) - Diccionario de datos
-- [RLS.md](./RLS.md) - Políticas de seguridad
+### Querying with CTI Pattern
+
+#### Get All Personas (with Base Table Data)
+
+**SQL:**
+```sql
+SELECT
+  bp.id,
+  bp.codigo_bp,
+  bp.organizacion_id,
+  bp.email_principal,
+  bp.celular_principal,
+  p.nombres,
+  p.apellidos,
+  p.tipo_documento,
+  p.numero_documento,
+  p.perfil_persona,
+  bp.atributos,
+  bp.creado_en
+FROM business_partners bp
+JOIN personas p ON bp.id = p.id
+WHERE bp.tipo_actor = 'persona'
+  AND bp.eliminado_en IS NULL
+  AND bp.organizacion_id = '..org-uuid..'
+ORDER BY p.apellidos, p.nombres;
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('business_partners')
+  .select(`
+    id,
+    codigo_bp,
+    organizacion_id,
+    email_principal,
+    celular_principal,
+    atributos,
+    creado_en,
+    personas (
+      nombres,
+      apellidos,
+      tipo_documento,
+      numero_documento,
+      perfil_persona
+    )
+  `)
+  .eq('tipo_actor', 'persona')
+  .is('eliminado_en', null)
+  .eq('organizacion_id', orgId)
+  .order('apellidos', { foreignTable: 'personas' })
+```
+
+#### Get All Empresas (with Base Table Data)
+
+**SQL:**
+```sql
+SELECT
+  bp.id,
+  bp.codigo_bp,
+  bp.email_principal,
+  bp.telefono_principal,
+  e.razon_social,
+  e.nombre_comercial,
+  e.nit,
+  e.digito_verificacion,
+  e.representante_legal_id,
+  e.perfil_empresa,
+  bp.atributos
+FROM business_partners bp
+JOIN empresas e ON bp.id = e.id
+WHERE bp.tipo_actor = 'empresa'
+  AND bp.eliminado_en IS NULL
+  AND bp.organizacion_id = '..org-uuid..'
+ORDER BY e.razon_social;
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('business_partners')
+  .select(`
+    id,
+    codigo_bp,
+    email_principal,
+    atributos,
+    empresas (
+      razon_social,
+      nombre_comercial,
+      nit,
+      digito_verificacion,
+      representante_legal_id,
+      perfil_empresa
+    )
+  `)
+  .eq('tipo_actor', 'empresa')
+  .is('eliminado_en', null)
+  .eq('organizacion_id', orgId)
+```
+
+---
+
+### Unified Queries (Personas + Empresas)
+
+#### Get All Business Partners (Combined)
+
+**Using View (Recommended):**
+```sql
+SELECT *
+FROM v_actores_unificados
+WHERE organizacion_id = '..org-uuid..'
+ORDER BY nombre_completo;
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('v_actores_unificados')
+  .select('*')
+  .eq('organizacion_id', orgId)
+  .order('nombre_completo')
+```
+
+**Manual UNION (Alternative):**
+```sql
+SELECT
+  bp.id,
+  bp.codigo_bp,
+  bp.tipo_actor,
+  p.nombres || ' ' || p.apellidos AS nombre_completo,
+  bp.email_principal,
+  bp.celular_principal AS telefono,
+  p.numero_documento AS identificacion
+FROM business_partners bp
+JOIN personas p ON bp.id = p.id
+WHERE bp.tipo_actor = 'persona'
+  AND bp.eliminado_en IS NULL
+
+UNION ALL
+
+SELECT
+  bp.id,
+  bp.codigo_bp,
+  bp.tipo_actor,
+  e.razon_social AS nombre_completo,
+  bp.email_principal,
+  bp.telefono_principal AS telefono,
+  e.nit || '-' || e.digito_verificacion AS identificacion
+FROM business_partners bp
+JOIN empresas e ON bp.id = e.id
+WHERE bp.tipo_actor = 'empresa'
+  AND bp.eliminado_en IS NULL
+
+ORDER BY nombre_completo;
+```
+
+---
+
+### Filtering and Search
+
+#### Search by Name/Email
+
+**Personas:**
+```sql
+SELECT bp.*, p.*
+FROM business_partners bp
+JOIN personas p ON bp.id = p.id
+WHERE bp.tipo_actor = 'persona'
+  AND bp.eliminado_en IS NULL
+  AND bp.organizacion_id = '..org-uuid..'
+  AND (
+    p.nombres ILIKE '%juan%'
+    OR p.apellidos ILIKE '%garcia%'
+    OR bp.email_principal ILIKE '%juan%'
+  );
+```
+
+**TypeScript:**
+```typescript
+const searchTerm = 'juan'
+
+const { data, error } = await supabase
+  .from('v_personas_org')
+  .select('*')
+  .eq('organizacion_id', orgId)
+  .or(`nombres.ilike.%${searchTerm}%,apellidos.ilike.%${searchTerm}%,email_principal.ilike.%${searchTerm}%`)
+```
+
+#### Filter by Document Type
+
+```sql
+SELECT bp.*, p.*
+FROM business_partners bp
+JOIN personas p ON bp.id = p.id
+WHERE bp.tipo_actor = 'persona'
+  AND bp.eliminado_en IS NULL
+  AND p.tipo_documento = 'CC'
+  AND bp.organizacion_id = '..org-uuid..';
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('business_partners')
+  .select('*, personas(*)')
+  .eq('tipo_actor', 'persona')
+  .is('eliminado_en', null)
+  .eq('personas.tipo_documento', 'CC')
+  .eq('organizacion_id', orgId)
+```
+
+---
+
+## Relationship Queries
+
+### Creating Relationships
+
+#### Create Relationship via RPC (Recommended)
+
+**SQL:**
+```sql
+SELECT crear_relacion_bp(
+  bp_origen_id := '..persona-uuid..',
+  bp_destino_id := '..empresa-uuid..',
+  tipo_relacion := 'laboral',
+  descripcion := 'Gerente General',
+  fecha_inicio := '2024-01-01',
+  atributos := '{"salario_rango": "alto", "dedicacion": "tiempo_completo"}'::jsonb
+);
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase.rpc('crear_relacion_bp', {
+  bp_origen_id: personaId,
+  bp_destino_id: empresaId,
+  tipo_relacion: 'laboral',
+  descripcion: 'Gerente General',
+  fecha_inicio: '2024-01-01',
+  atributos: {
+    salario_rango: 'alto',
+    dedicacion: 'tiempo_completo'
+  }
+})
+```
+
+---
+
+### Bidirectional Queries
+
+#### Get All Relationships for a Business Partner
+
+**Using RPC (Recommended):**
+```sql
+SELECT * FROM obtener_relaciones_bp(
+  bp_id := '..bp-uuid..',
+  solo_vigentes := TRUE
+);
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase.rpc('obtener_relaciones_bp', {
+  bp_id: bpId,
+  solo_vigentes: true
+})
+```
+
+**Manual Query (Alternative):**
+```sql
+SELECT
+  r.*,
+  CASE
+    WHEN r.bp_origen_id = '..bp-uuid..' THEN r.bp_destino_id
+    ELSE r.bp_origen_id
+  END AS bp_relacionado_id
+FROM bp_relaciones r
+WHERE (r.bp_origen_id = '..bp-uuid..' OR r.bp_destino_id = '..bp-uuid..')
+  AND r.eliminado_en IS NULL
+  AND r.es_vigente = TRUE;
+```
+
+---
+
+### Relationship History
+
+#### Get All Historical Relationships (Including Finalized)
+
+```sql
+SELECT
+  r.*,
+  bp_origen.codigo_bp AS origen_codigo,
+  bp_destino.codigo_bp AS destino_codigo,
+  CASE
+    WHEN r.fecha_fin IS NULL THEN 'Vigente'
+    ELSE 'Finalizada'
+  END AS estado
+FROM bp_relaciones r
+JOIN business_partners bp_origen ON r.bp_origen_id = bp_origen.id
+JOIN business_partners bp_destino ON r.bp_destino_id = bp_destino.id
+WHERE r.eliminado_en IS NULL
+  AND (r.bp_origen_id = '..bp-uuid..' OR r.bp_destino_id = '..bp-uuid..')
+ORDER BY r.fecha_inicio DESC;
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('bp_relaciones')
+  .select(`
+    *,
+    bp_origen:business_partners!bp_origen_id(codigo_bp),
+    bp_destino:business_partners!bp_destino_id(codigo_bp)
+  `)
+  .is('eliminado_en', null)
+  .or(`bp_origen_id.eq.${bpId},bp_destino_id.eq.${bpId}`)
+  .order('fecha_inicio', { ascending: false })
+```
+
+---
+
+## Acciones Queries
+
+### Assignment Operations
+
+#### Create Assignment via RPC (Recommended)
+
+**SQL:**
+```sql
+SELECT crear_asignacion_accion(
+  accion_id := '..accion-uuid..',
+  persona_id := '..bp-uuid..',
+  tipo_asignacion := 'dueño',
+  subcodigo := NULL, -- Auto-generated
+  fecha_inicio := CURRENT_DATE,
+  atributos := '{"modo_adquisicion": "compra"}'::jsonb
+);
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase.rpc('crear_asignacion_accion', {
+  accion_id: accionId,
+  persona_id: personaId,
+  tipo_asignacion: 'dueño',
+  // subcodigo auto-generated
+  fecha_inicio: new Date().toISOString().split('T')[0],
+  atributos: { modo_adquisicion: 'compra' }
+})
+```
+
+#### Transfer Ownership
+
+**SQL:**
+```sql
+SELECT transferir_accion(
+  accion_id := '..accion-uuid..',
+  nuevo_dueno_id := '..new-bp-uuid..',
+  fecha_transferencia := CURRENT_DATE,
+  atributos := '{"tipo_transferencia": "venta", "precio": 50000000}'::jsonb
+);
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase.rpc('transferir_accion', {
+  accion_id: accionId,
+  nuevo_dueno_id: nuevoDuenoId,
+  fecha_transferencia: new Date().toISOString().split('T')[0],
+  atributos: {
+    tipo_transferencia: 'venta',
+    precio: 50000000
+  }
+})
+```
+
+---
+
+### Ownership Tracking
+
+#### Get Current Owner of Action
+
+**Using View:**
+```sql
+SELECT *
+FROM v_asignaciones_vigentes
+WHERE accion_id = '..accion-uuid..'
+  AND tipo_asignacion = 'dueño';
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('v_asignaciones_vigentes')
+  .select('*')
+  .eq('accion_id', accionId)
+  .eq('tipo_asignacion', 'dueño')
+  .single()
+```
+
+#### Get All Beneficiaries
+
+**SQL:**
+```sql
+SELECT
+  aa.*,
+  bp.codigo_bp,
+  COALESCE(p.nombres || ' ' || p.apellidos, e.razon_social) AS nombre_persona
+FROM asignaciones_acciones aa
+JOIN business_partners bp ON aa.persona_id = bp.id
+LEFT JOIN personas p ON bp.id = p.id
+LEFT JOIN empresas e ON bp.id = e.id
+WHERE aa.accion_id = '..accion-uuid..'
+  AND aa.tipo_asignacion = 'beneficiario'
+  AND aa.es_vigente = TRUE
+  AND aa.eliminado_en IS NULL;
+```
+
+---
+
+### Historical Queries
+
+#### Get Complete Ownership History
+
+**Using View:**
+```sql
+SELECT *
+FROM v_asignaciones_historial
+WHERE accion_id = '..accion-uuid..'
+ORDER BY fecha_inicio DESC;
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('v_asignaciones_historial')
+  .select('*')
+  .eq('accion_id', accionId)
+  .order('fecha_inicio', { ascending: false })
+```
+
+#### Get Assignments by Date Range
+
+```sql
+SELECT *
+FROM asignaciones_acciones
+WHERE accion_id = '..accion-uuid..'
+  AND fecha_inicio >= '2024-01-01'
+  AND (fecha_fin IS NULL OR fecha_fin <= '2024-12-31')
+  AND eliminado_en IS NULL;
+```
+
+---
+
+## Soft Delete Patterns
+
+### Soft Delete Record
+
+**Business Partner:**
+```sql
+UPDATE business_partners
+SET eliminado_en = NOW() -- eliminado_por auto-set by trigger
+WHERE id = '..bp-uuid..';
+```
+
+**TypeScript:**
+```typescript
+const { error } = await supabase
+  .from('business_partners')
+  .update({ eliminado_en: new Date().toISOString() })
+  .eq('id', bpId)
+```
+
+### Query Only Active Records
+
+**Always include:**
+```sql
+WHERE eliminado_en IS NULL
+```
+
+**TypeScript:**
+```typescript
+.is('eliminado_en', null)
+```
+
+### Query Archived Records
+
+```sql
+SELECT *
+FROM business_partners
+WHERE eliminado_en IS NOT NULL
+ORDER BY eliminado_en DESC;
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('business_partners')
+  .select('*')
+  .not('eliminado_en', 'is', null)
+  .order('eliminado_en', { ascending: false })
+```
+
+### Restore Soft-Deleted Record
+
+```sql
+UPDATE business_partners
+SET eliminado_en = NULL,
+    eliminado_por = NULL
+WHERE id = '..bp-uuid..';
+```
+
+---
+
+## JSONB Queries
+
+### Query by JSONB Field
+
+**Check if field exists:**
+```sql
+SELECT *
+FROM business_partners
+WHERE atributos ? 'categoria_socio';
+```
+
+**TypeScript:**
+```typescript
+.contains('atributos', { categoria_socio: 'fundador' })
+```
+
+**Get specific value:**
+```sql
+SELECT *
+FROM personas
+WHERE perfil_persona->>'ciudad' = 'Bogotá';
+```
+
+**TypeScript:**
+```typescript
+.eq('perfil_persona->ciudad', 'Bogotá')
+```
+
+### Query by Nested JSONB
+
+```sql
+SELECT *
+FROM empresas
+WHERE perfil_empresa->'contacto'->>'email' = 'contacto@empresa.com';
+```
+
+### Update JSONB Field
+
+**Merge new fields:**
+```sql
+UPDATE business_partners
+SET atributos = atributos || '{"vip": true}'::jsonb
+WHERE id = '..bp-uuid..';
+```
+
+**TypeScript:**
+```typescript
+const { data: current } = await supabase
+  .from('business_partners')
+  .select('atributos')
+  .eq('id', bpId)
+  .single()
+
+const { error } = await supabase
+  .from('business_partners')
+  .update({
+    atributos: {
+      ...current.atributos,
+      vip: true
+    }
+  })
+  .eq('id', bpId)
+```
+
+---
+
+## Aggregation Queries
+
+### Count Business Partners by Type
+
+```sql
+SELECT
+  tipo_actor,
+  COUNT(*) AS total
+FROM business_partners
+WHERE eliminado_en IS NULL
+  AND organizacion_id = '..org-uuid..'
+GROUP BY tipo_actor;
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('business_partners')
+  .select('tipo_actor')
+  .is('eliminado_en', null)
+  .eq('organizacion_id', orgId)
+
+const counts = data?.reduce((acc, row) => {
+  acc[row.tipo_actor] = (acc[row.tipo_actor] || 0) + 1
+  return acc
+}, {} as Record<string, number>)
+```
+
+### Count Active Relationships by Type
+
+```sql
+SELECT
+  tipo_relacion,
+  COUNT(*) AS total
+FROM bp_relaciones
+WHERE eliminado_en IS NULL
+  AND es_vigente = TRUE
+GROUP BY tipo_relacion
+ORDER BY total DESC;
+```
+
+### Get Assignment Statistics
+
+```sql
+SELECT
+  a.codigo AS accion,
+  COUNT(*) FILTER (WHERE aa.tipo_asignacion = 'dueño') AS duenos,
+  COUNT(*) FILTER (WHERE aa.tipo_asignacion = 'titular') AS titulares,
+  COUNT(*) FILTER (WHERE aa.tipo_asignacion = 'beneficiario') AS beneficiarios
+FROM acciones a
+LEFT JOIN asignaciones_acciones aa ON a.id = aa.accion_id
+  AND aa.es_vigente = TRUE
+  AND aa.eliminado_en IS NULL
+WHERE a.eliminado_en IS NULL
+GROUP BY a.id, a.codigo;
+```
+
+---
+
+## Transaction Patterns
+
+### Multi-Table Insert (CTI Pattern)
+
+**PostgreSQL Transaction:**
+```sql
+BEGIN;
+
+-- Insert into base table
+INSERT INTO business_partners (
+  organizacion_id, tipo_actor, email_principal
+) VALUES (
+  '..org-uuid..', 'persona', 'example@email.com'
+) RETURNING id;
+
+-- Insert into specialization table
+INSERT INTO personas (
+  id, nombres, apellidos
+) VALUES (
+  '..bp-id-from-above..', 'John', 'Doe'
+);
+
+COMMIT;
+```
+
+**Note:** Use `crear_persona` RPC instead - it handles the transaction automatically.
+
+### Conditional Update
+
+```sql
+-- Only update if not soft-deleted
+UPDATE business_partners
+SET email_principal = 'new@email.com'
+WHERE id = '..bp-uuid..'
+  AND eliminado_en IS NULL;
+```
+
+---
+
+## Performance Tips
+
+### 1. Use Views for Common Queries
+
+**Instead of:**
+```typescript
+// Slow: Multiple JOINs every time
+const { data } = await supabase
+  .from('business_partners')
+  .select('*, personas(*), empresas(*)')
+```
+
+**Use:**
+```typescript
+// Fast: Pre-optimized view
+const { data } = await supabase
+  .from('v_actores_unificados')
+  .select('*')
+```
+
+### 2. Limit Results
+
+```typescript
+.select('*')
+.limit(50)
+.range(0, 49) // Pagination
+```
+
+### 3. Select Only Needed Fields
+
+```typescript
+// Instead of SELECT *
+.select('id, codigo_bp, email_principal')
+```
+
+### 4. Use Indexes for Filters
+
+The database has indexes on:
+- `codigo_bp` (unique)
+- `organizacion_id` (foreign key)
+- `nit` (unique for empresas)
+- `bp_origen_id`, `bp_destino_id` (relationships)
+
+Always filter by indexed columns when possible.
+
+### 5. Avoid N+1 Queries
+
+**Instead of:**
+```typescript
+// N+1: One query per relationship
+for (const bp of businessPartners) {
+  const relations = await supabase.rpc('obtener_relaciones_bp', { bp_id: bp.id })
+}
+```
+
+**Use:**
+```typescript
+// Single query with JOIN
+const { data } = await supabase
+  .from('bp_relaciones')
+  .select('*, bp_origen:business_partners!bp_origen_id(*), bp_destino:business_partners!bp_destino_id(*)')
+  .in('bp_origen_id', businessPartnerIds)
+```
+
+---
+
+## Related Documentation
+
+### Database Documentation
+- **[OVERVIEW.md](./OVERVIEW.md)** - Architecture patterns and concepts
+- **[SCHEMA.md](./SCHEMA.md)** - Complete schema with ERD diagrams
+- **[TABLES.md](./TABLES.md)** - Data dictionary for all tables
+- **[FUNCTIONS.md](./FUNCTIONS.md)** - All database functions
+- **[VIEWS.md](./VIEWS.md)** - Pre-built views reference
+- **[RLS.md](./RLS.md)** - Row Level Security policies
+
+### API Documentation
+- **[../api/README.md](../api/README.md)** - API overview and RPC index
+- **[../api/CREAR_PERSONA.md](../api/CREAR_PERSONA.md)** - Create natural person API
+- **[../api/CREAR_EMPRESA.md](../api/CREAR_EMPRESA.md)** - Create company API
+- **[../api/BP_RELACIONES.md](../api/BP_RELACIONES.md)** - Relationship management API
+- **[../api/ACCIONES.md](../api/ACCIONES.md)** - Club shares management API
+
+---
+
+**Last Generated:** 2025-12-28
+**Total Query Examples:** 40+
+**Frontend Patterns:** Server Actions + TanStack Query
+

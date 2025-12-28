@@ -13,6 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
+import { useRouter } from "next/navigation"
 import { AnimatePresence } from "framer-motion"
 
 import { CommandSearch } from "@/components/ui/command-search"
@@ -44,6 +45,7 @@ export function PersonasDataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+  const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -121,9 +123,9 @@ export function PersonasDataTable<TData, TValue>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   )
                 })}
@@ -136,6 +138,20 @@ export function PersonasDataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  className="cursor-pointer transition-colors hover:bg-muted/50"
+                  onClick={(e) => {
+                    // Don't navigate if clicking checkbox or action button
+                    const target = e.target as HTMLElement
+                    if (
+                      target.closest('button') ||
+                      target.closest('input') ||
+                      target.closest('a') ||
+                      target.getAttribute('role') === 'checkbox'
+                    ) {
+                      return
+                    }
+                    router.push(`/admin/socios/personas/${(row.original as any).id}`)
+                  }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

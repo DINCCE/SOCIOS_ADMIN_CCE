@@ -161,7 +161,7 @@ export function NewPersonSheet() {
                                         name="primer_nombre"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Primer Nombre</FormLabel>
+                                                <FormLabel>Primer Nombre <span className="text-destructive">*</span></FormLabel>
                                                 <FormControl>
                                                     <Input placeholder="Juan" {...field} />
                                                 </FormControl>
@@ -190,7 +190,7 @@ export function NewPersonSheet() {
                                         name="primer_apellido"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Primer Apellido</FormLabel>
+                                                <FormLabel>Primer Apellido <span className="text-destructive">*</span></FormLabel>
                                                 <FormControl>
                                                     <Input placeholder="Pérez" {...field} />
                                                 </FormControl>
@@ -219,7 +219,7 @@ export function NewPersonSheet() {
                                         name="tipo_documento"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Tipo Documento</FormLabel>
+                                                <FormLabel>Tipo Documento <span className="text-destructive">*</span></FormLabel>
                                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                     <FormControl>
                                                         <SelectTrigger>
@@ -248,7 +248,7 @@ export function NewPersonSheet() {
                                         name="numero_documento"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Número Documento</FormLabel>
+                                                <FormLabel>Número Documento <span className="text-destructive">*</span></FormLabel>
                                                 <FormControl>
                                                     <Input className="font-mono" placeholder="123456789" {...field} />
                                                 </FormControl>
@@ -264,7 +264,7 @@ export function NewPersonSheet() {
                                         name="fecha_nacimiento"
                                         render={({ field }) => (
                                             <FormItem className="flex flex-col">
-                                                <FormLabel>Fecha Nacimiento</FormLabel>
+                                                <FormLabel>Fecha Nacimiento <span className="text-destructive">*</span></FormLabel>
                                                 <Popover>
                                                     <PopoverTrigger asChild>
                                                         <FormControl>
@@ -315,7 +315,7 @@ export function NewPersonSheet() {
                                         name="genero"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Género</FormLabel>
+                                                <FormLabel>Género <span className="text-destructive">*</span></FormLabel>
                                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                     <FormControl>
                                                         <SelectTrigger>
