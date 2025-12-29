@@ -3,6 +3,7 @@ import { Persona } from "@/features/socios/types/socios-schema"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 
 interface PersonIdentityPanelProps {
     persona: Persona
@@ -27,35 +28,47 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
                             <p className="text-xs font-medium text-muted-foreground">Emails</p>
                             <p className="text-sm font-medium break-all">{persona.email_principal || "Principal no reg."}</p>
                             {persona.email_secundario && (
-                                <p className="text-sm text-muted-foreground break-all">{persona.email_secundario}</p>
+                                <p className="text-xs text-muted-foreground break-all">{persona.email_secundario}</p>
                             )}
                         </div>
                     </div>
 
                     <div className="flex items-start gap-3">
-                        <div className="mt-0.5 rounded-md bg-primary/10 p-1.5 text-primary">
-                            <Phone className="h-4 w-4" />
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Teléfonos</p>
-                            <p className="text-sm font-medium">{persona.telefono_principal || "Principal no reg."}</p>
-                            {persona.telefono_secundario && (
-                                <p className="text-sm text-muted-foreground">{persona.telefono_secundario}</p>
-                            )}
-                        </div>
-                    </div>
-
-                    {persona.whatsapp && (
-                        <div className="flex items-start gap-3">
+                        {persona.whatsapp && (persona.whatsapp === persona.telefono_principal || persona.whatsapp === persona.telefono_secundario) ? (
                             <div className="mt-0.5 rounded-md bg-green-500/10 p-1.5 text-green-600">
                                 <Globe className="h-4 w-4" />
                             </div>
+                        ) : (
+                            <div className="mt-0.5 rounded-md bg-primary/10 p-1.5 text-primary">
+                                <Phone className="h-4 w-4" />
+                            </div>
+                        )}
+                        <div className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground">Teléfonos / WhatsApp</p>
                             <div className="space-y-1">
-                                <p className="text-xs font-medium text-muted-foreground">WhatsApp</p>
-                                <p className="text-sm font-medium">{persona.whatsapp}</p>
+                                <p className="text-sm font-medium flex items-center gap-2">
+                                    {persona.telefono_principal || "Principal no reg."}
+                                    {persona.whatsapp && persona.whatsapp === persona.telefono_principal && (
+                                        <Badge variant="outline" className="text-[9px] h-4 py-0 bg-green-50 text-green-700 border-green-200">WA</Badge>
+                                    )}
+                                </p>
+                                {persona.telefono_secundario && (
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                        {persona.telefono_secundario}
+                                        {persona.whatsapp && persona.whatsapp === persona.telefono_secundario && (
+                                            <Badge variant="outline" className="text-[9px] h-4 py-0 bg-green-50 text-green-700 border-green-200">WA</Badge>
+                                        )}
+                                    </p>
+                                )}
+                                {persona.whatsapp && persona.whatsapp !== persona.telefono_principal && persona.whatsapp !== persona.telefono_secundario && (
+                                    <p className="text-sm font-medium text-green-700 flex items-center gap-2">
+                                        {persona.whatsapp}
+                                        <Badge variant="outline" className="text-[9px] h-4 py-0 bg-green-50 text-green-700 border-green-200">WA</Badge>
+                                    </p>
+                                )}
                             </div>
                         </div>
-                    )}
+                    </div>
                 </div>
 
                 <Separator className="bg-border/60" />

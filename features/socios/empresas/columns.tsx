@@ -7,6 +7,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DataId } from "@/components/ui/data-id"
+import { IdentityCell } from "@/components/ui/identity-cell"
+import { NullCell } from "@/components/ui/null-cell"
+import { DataDate } from "@/components/ui/data-date"
+import { DataEnum } from "@/components/ui/data-enum"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,11 +24,12 @@ import { Empresa } from "@/features/socios/types/socios-schema"
 
 const estadoVariants: Record<
   string,
-  "status-active" | "status-inactive" | "status-suspended"
+  "status-success" | "current-status-muted" | "status-destructive" | "status-inactive" | "status-warning"
 > = {
-  activo: "status-active",
+  activo: "status-success",
   inactivo: "status-inactive",
-  suspendido: "status-suspended",
+  suspendido: "status-destructive",
+  mora: "status-warning",
 }
 
 const tipoEmpresaVariants: Record<
@@ -78,18 +83,12 @@ export const columns: ColumnDef<Empresa>[] = [
       <DataTableColumnHeader column={column} title="Razón Social" />
     ),
     cell: ({ row }) => {
-      const nombreComercial = row.original.nombre_comercial
+      const empresa = row.original
       return (
-        <div className="flex flex-col">
-          <span className="max-w-[500px] truncate font-medium">
-            {row.getValue("razon_social")}
-          </span>
-          {nombreComercial && (
-            <span className="text-muted-foreground max-w-[500px] truncate text-xs">
-              {nombreComercial}
-            </span>
-          )}
-        </div>
+        <IdentityCell
+          name={empresa.razon_social}
+          subtitle={empresa.email_principal}
+        />
       )
     },
   },
@@ -113,13 +112,11 @@ export const columns: ColumnDef<Empresa>[] = [
     ),
     cell: ({ row }) => {
       const email = row.getValue("email_principal") as string | null
-      return (
-        <div className="max-w-[200px] truncate">
-          {email || (
-            <span className="text-muted-foreground italic">Sin email</span>
-          )}
+      return email ? (
+        <div className="max-w-[200px] truncate tabular-nums text-muted-foreground/80">
+          {email}
         </div>
-      )
+      ) : <NullCell />
     },
   },
   {
@@ -129,9 +126,9 @@ export const columns: ColumnDef<Empresa>[] = [
     ),
     cell: ({ row }) => {
       const telefono = row.getValue("telefono_principal") as string | null
-      return telefono || (
-        <span className="text-muted-foreground italic">Sin teléfono</span>
-      )
+      return telefono ? (
+        <span className="tabular-nums text-muted-foreground/80">{telefono}</span>
+      ) : <NullCell />
     },
   },
   {
@@ -140,16 +137,15 @@ export const columns: ColumnDef<Empresa>[] = [
       <DataTableColumnHeader column={column} title="Tipo" />
     ),
     cell: ({ row }) => {
-      const tipoSociedad = row.getValue("tipo_sociedad") as string
-      return (
+      const val = row.getValue("tipo_sociedad") as string
+      return val ? (
         <Badge
-          variant={tipoEmpresaVariants[tipoSociedad] || "type-outline"}
-          showDot={true}
-          dotAnimation="none"
+          variant="status-neutral"
+          className="font-medium"
         >
-          {tipoSociedad}
+          <DataEnum value={val} />
         </Badge>
-      )
+      ) : <NullCell />
     },
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id))
@@ -244,13 +240,14 @@ export const columns: ColumnDef<Empresa>[] = [
       <DataTableColumnHeader column={column} title="Estado" />
     ),
     cell: ({ row }) => {
-      const estado = row.getValue("estado") as string
+      const estado = (row.getValue("estado") as string)?.toLowerCase()
+      // "Activo" is neutral/subtle in SaaS 2025
+      const variant = estado === "activo" ? "status-neutral" : (estadoVariants[estado] as any || "outline")
       return (
         <div className="flex justify-center">
           <Badge
-            variant={estadoVariants[estado] || "outline"}
-            showDot={true}
-            dotAnimation={estado === "activo" ? "pulse" : "none"}
+            variant={variant}
+            showDot={estado !== "activo"} // Dots only for non-default states
           >
             {estado.charAt(0).toUpperCase() + estado.slice(1)}
           </Badge>

@@ -65,6 +65,7 @@ export const personaSchema = z.object({
   // Computed fields
   nombre_completo: z.string(),
   nombre_contacto_emergencia: z.string().nullable(),
+  deuda: z.number().optional().nullable(),
 })
 
 export type Persona = z.infer<typeof personaSchema>

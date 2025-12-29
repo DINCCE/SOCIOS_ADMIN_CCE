@@ -23,8 +23,8 @@ export const personSchema = z.object({
     lugar_expedicion: z.string().optional(),
 
     // Personal Info
-    genero: z.enum(["masculino", "femenino", "otro", "no_especifica"]),
-    fecha_nacimiento: z.string().min(1, "La fecha de nacimiento es obligatoria"),
+    genero: z.enum(["masculino", "femenino", "otro", "no_especifica"]).optional().default("no_especifica"),
+    fecha_nacimiento: z.string().optional().or(z.literal("")),
     lugar_nacimiento: z.string().optional(),
     nacionalidad: z.string().default("CO"),
     estado_civil: z.enum([

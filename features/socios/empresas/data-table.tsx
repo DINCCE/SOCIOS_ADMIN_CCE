@@ -13,6 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
+import { useRouter } from "next/navigation"
 import { AnimatePresence } from "framer-motion"
 
 import { CommandSearch } from "@/components/ui/command-search"
@@ -44,12 +45,26 @@ export function EmpresasDataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+  const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
+    React.useState<VisibilityState>({
+      codigo: false,
+      nombre_comercial: false,
+      sector_industria: false,
+      tamano_empresa: false,
+      actividad_economica: false,
+      nombre_representante_legal: false,
+      cargo_representante: false,
+      ingresos_anuales: false,
+      numero_empleados: false,
+      website: false,
+      whatsapp: false,
+      organizacion_nombre: false,
+    })
   const [rowSelection, setRowSelection] = React.useState({})
 
   const table = useReactTable({
@@ -145,9 +160,9 @@ export function EmpresasDataTable<TData, TValue>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   )
                 })}
@@ -160,6 +175,20 @@ export function EmpresasDataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  className="cursor-pointer transition-colors hover:bg-muted/50"
+                  onClick={(e) => {
+                    // Don't navigate if clicking checkbox or action button
+                    const target = e.target as HTMLElement
+                    if (
+                      target.closest('button') ||
+                      target.closest('input') ||
+                      target.closest('a') ||
+                      target.getAttribute('role') === 'checkbox'
+                    ) {
+                      return
+                    }
+                    router.push(`/admin/socios/empresas/${(row.original as any).id}`)
+                  }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

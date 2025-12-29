@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { cn } from "@/lib/utils"
 import { ChevronRight, Edit, MessageSquare, MoreVertical, Plus } from "lucide-react"
 import { Persona } from "@/features/socios/types/socios-schema"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -31,18 +32,30 @@ export function PersonDetailHeader({ persona }: PersonDetailHeaderProps) {
                     </Avatar>
 
                     <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <h1 className="text-2xl font-bold tracking-tight">{persona.nombre_completo}</h1>
                             <Badge
-                                variant={persona.estado === "activo" ? "status-active" : persona.estado === "suspendido" ? "status-suspended" : "status-inactive"}
-                                showDot
-                                dotAnimation={persona.estado === "activo" ? "pulse" : "none"}
+                                variant={persona.estado === "activo" ? "secondary" : persona.estado === "suspendido" ? "status-destructive" : "status-muted"}
+                                className={cn(persona.estado === "activo" && "rounded-full font-medium px-3")}
+                                showDot={persona.estado !== "activo"}
                             >
                                 {persona.estado.charAt(0).toUpperCase() + persona.estado.slice(1)}
                             </Badge>
+                            <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground/60 px-2 ml-2 border-l">
+                                <span className="font-semibold text-foreground/80 uppercase tracking-wider text-[10px]">Titular</span>
+                                <span className="text-border">|</span>
+                                <span className={cn(
+                                    "font-semibold",
+                                    (persona.deuda ?? 0) > 0 ? "text-red-500" : "text-emerald-600"
+                                )}>
+                                    Deuda: ${(persona.deuda ?? 0).toLocaleString()}
+                                </span>
+                            </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                            {persona.tipo_documento} {persona.numero_documento} • {persona.codigo}
+                        <p className="text-sm text-muted-foreground flex items-center gap-2">
+                            <span>{persona.tipo_documento} {persona.numero_documento}</span>
+                            <span className="opacity-40">•</span>
+                            <span>{persona.codigo}</span>
                         </p>
                     </div>
                 </div>

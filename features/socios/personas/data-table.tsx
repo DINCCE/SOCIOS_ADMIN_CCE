@@ -16,6 +16,8 @@ import {
 import { useRouter } from "next/navigation"
 import { AnimatePresence } from "framer-motion"
 
+import { cn } from "@/lib/utils"
+
 import { CommandSearch } from "@/components/ui/command-search"
 import { FloatingActionBar } from "@/components/ui/floating-action-bar"
 import {
@@ -51,7 +53,19 @@ export function PersonasDataTable<TData, TValue>({
     []
   )
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
+    React.useState<VisibilityState>({
+      codigo: false,
+      genero: false,
+      fecha_nacimiento: false,
+      nacionalidad: false,
+      tipo_sangre: false,
+      eps: false,
+      ocupacion: false,
+      fecha_socio: false,
+      estado_vital: false,
+      whatsapp: false,
+      organizacion_nombre: false,
+    })
   const [rowSelection, setRowSelection] = React.useState({})
 
   const table = useReactTable({
@@ -119,7 +133,13 @@ export function PersonasDataTable<TData, TValue>({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead
+                      key={header.id}
+                      className={cn(
+                        header.column.id === "select" && "sticky left-0 z-20 bg-background/90 backdrop-blur-sm",
+                        header.column.id === "nombre_completo" && "sticky left-[48px] z-20 bg-background/90 backdrop-blur-sm shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+                      )}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -154,7 +174,13 @@ export function PersonasDataTable<TData, TValue>({
                   }}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell
+                      key={cell.id}
+                      className={cn(
+                        cell.column.id === "select" && "sticky left-0 z-10 bg-inherit",
+                        cell.column.id === "nombre_completo" && "sticky left-[48px] z-10 bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+                      )}
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
