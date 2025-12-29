@@ -49,14 +49,14 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
                                 <div className="text-sm font-medium flex items-center gap-2">
                                     {persona.telefono_principal || "Principal no reg."}
                                     {persona.whatsapp && persona.whatsapp === persona.telefono_principal && (
-                                        <Badge variant="outline" className="text-[9px] h-4 py-0 bg-green-50 text-green-700 border-green-200">WA</Badge>
+                                        <Badge variant="metadata-outline">WA</Badge>
                                     )}
                                 </div>
                                 {persona.telefono_secundario && (
                                     <div className="text-sm text-muted-foreground flex items-center gap-2">
                                         {persona.telefono_secundario}
                                         {persona.whatsapp && persona.whatsapp === persona.telefono_secundario && (
-                                            <Badge variant="outline" className="text-[9px] h-4 py-0 bg-green-50 text-green-700 border-green-200">WA</Badge>
+                                            <Badge variant="metadata-outline">WA</Badge>
                                         )}
                                     </div>
                                 )}

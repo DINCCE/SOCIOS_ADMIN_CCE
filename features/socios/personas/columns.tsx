@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { DataId } from "@/components/ui/data-id"
 import { IdentityCell } from "@/components/ui/identity-cell"
 import { NullCell } from "@/components/ui/null-cell"
+import { FormattedNumber } from "@/components/ui/formatted-number"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,11 +25,8 @@ import { formatRelativeDate, formatShortDate, TABULAR_NUMS } from "@/lib/format"
 import { User, UserMinus } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const estadoVariants: Record<
-  string,
-  "status-success" | "current-status-muted" | "status-destructive" | "status-inactive" | "status-warning"
-> = {
-  activo: "status-success", // will be overridden in cell
+const estadoVariants: Record<string, string> = {
+  activo: "status-active",
   inactivo: "status-inactive",
   suspendido: "status-destructive",
   mora: "status-warning",
@@ -93,7 +91,7 @@ export const columns: ColumnDef<Persona>[] = [
   {
     accessorKey: "numero_documento",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Documento" />
+      <DataTableColumnHeader column={column} title="Documento" className="text-left" />
     ),
     cell: ({ row }) => {
       const tipoDocumento = row.original.tipo_documento
@@ -101,14 +99,14 @@ export const columns: ColumnDef<Persona>[] = [
       return (
         <div className="flex items-center gap-2">
           <Badge
-            variant="outline"
-            className="h-5 px-1.5 text-[10px] bg-slate-100 text-slate-700 border-slate-200 font-medium shrink-0"
+            variant="metadata-outline"
           >
             {tipoDocumento}
           </Badge>
-          <span className="font-mono text-sm tabular-nums text-foreground">
-            {numeroDocumento}
-          </span>
+          <FormattedNumber
+            value={numeroDocumento}
+            type="document"
+          />
         </div>
       )
     },
@@ -125,7 +123,7 @@ export const columns: ColumnDef<Persona>[] = [
         <div className="flex flex-wrap gap-1 max-w-[200px]">
           {tags.length > 0 ? (
             tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-[10px] px-1 py-0">
+              <Badge key={tag} variant="metadata-outline">
                 {tag}
               </Badge>
             ))
@@ -141,14 +139,11 @@ export const columns: ColumnDef<Persona>[] = [
   {
     accessorKey: "telefono_principal",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Teléfono" />
+      <DataTableColumnHeader column={column} title="Teléfono" className="text-left" />
     ),
-    cell: ({ row }) => {
-      const telefono = row.getValue("telefono_principal") as string | null
-      return telefono ? (
-        <span className="tabular-nums text-muted-foreground/80">{telefono}</span>
-      ) : <NullCell />
-    },
+    cell: ({ row }) => (
+      <FormattedNumber value={row.getValue("phone_principal") || row.getValue("telefono_principal")} type="phone" />
+    ),
   },
   // --- Optional Columns (Hidden by default) ---
   {
@@ -157,14 +152,17 @@ export const columns: ColumnDef<Persona>[] = [
       <DataTableColumnHeader column={column} title="Género" />
     ),
     cell: ({ row }) => {
-      const val = (row.getValue("genero") as string)?.toLowerCase()
-      return val ? (
-        <span className="font-medium text-muted-foreground" title={val}>
-          {generoIcons[val] || val}
-        </span>
-      ) : <NullCell />
+      const genero = row.getValue("genero") as string
+      if (!genero) return <NullCell />
+      const displayGenero = genero.charAt(0).toUpperCase() + genero.slice(1)
+      const icon = generoIcons[genero.toLowerCase()]
+      return (
+        <div className="flex items-center gap-1.5">
+          {icon && <span className="text-sm">{icon}</span>}
+          <span className="text-xs text-slate-600">{displayGenero}</span>
+        </div>
+      )
     },
-    enableHiding: true,
   },
   {
     accessorKey: "fecha_nacimiento",
@@ -174,7 +172,7 @@ export const columns: ColumnDef<Persona>[] = [
     cell: ({ row }) => {
       const val = row.getValue("fecha_nacimiento") as string
       return val ? (
-        <span className="tabular-nums text-muted-foreground/80" style={{ fontVariantNumeric: 'tabular-nums' }}>
+        <span className="tabular-nums text-xs tracking-wide text-slate-600 whitespace-nowrap" style={{ fontVariantNumeric: 'tabular-nums' }}>
           {formatShortDate(val)}
         </span>
       ) : <NullCell />
@@ -186,6 +184,12 @@ export const columns: ColumnDef<Persona>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Nacionalidad" />
     ),
+    cell: ({ row }) => {
+      const val = row.getValue("nacionalidad") as string
+      return val ? (
+        <span className="text-xs text-slate-600">{val}</span>
+      ) : <NullCell />
+    },
     enableHiding: true,
   },
   {
@@ -193,6 +197,12 @@ export const columns: ColumnDef<Persona>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="RH" />
     ),
+    cell: ({ row }) => {
+      const val = row.getValue("tipo_sangre") as string
+      return val ? (
+        <span className="text-xs text-slate-600">{val}</span>
+      ) : <NullCell />
+    },
     enableHiding: true,
   },
   {
@@ -200,6 +210,12 @@ export const columns: ColumnDef<Persona>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="EPS" />
     ),
+    cell: ({ row }) => {
+      const val = row.getValue("eps") as string
+      return val ? (
+        <span className="text-xs text-slate-600">{val}</span>
+      ) : <NullCell />
+    },
     enableHiding: true,
   },
   {
@@ -207,6 +223,12 @@ export const columns: ColumnDef<Persona>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Ocupación" />
     ),
+    cell: ({ row }) => {
+      const val = row.getValue("ocupacion") as string
+      return val ? (
+        <span className="text-xs text-slate-600">{val}</span>
+      ) : <NullCell />
+    },
     enableHiding: true,
   },
   {
@@ -217,7 +239,7 @@ export const columns: ColumnDef<Persona>[] = [
     cell: ({ row }) => {
       const val = row.getValue("fecha_socio") as string
       return val ? (
-        <span className="tabular-nums text-muted-foreground/80">
+        <span className="tabular-nums text-xs tracking-wide text-slate-600 whitespace-nowrap">
           {formatShortDate(val)}
         </span>
       ) : <NullCell />
@@ -260,22 +282,19 @@ export const columns: ColumnDef<Persona>[] = [
   {
     accessorKey: "estado",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Estado" />
+      <DataTableColumnHeader column={column} title="Estado" className="text-left" />
     ),
     cell: ({ row }) => {
       const estado = (row.getValue("estado") as string)?.toLowerCase()
       // "Activo" is neutral secondary in SaaS 2025
-      const variant = estado === "activo" ? "secondary" : (estadoVariants[estado] as any || "outline")
+      const variant = estadoVariants[estado] || "status-neutral"
       return (
-        <div className="flex justify-center">
-          <Badge
-            variant={variant}
-            className={cn(estado === "activo" && "rounded-full font-medium px-3")}
-            showDot={estado !== "activo"} // Dots only for non-default states
-          >
-            {estado.charAt(0).toUpperCase() + estado.slice(1)}
-          </Badge>
-        </div>
+        <Badge
+          variant={variant as any}
+          showDot
+        >
+          {estado.charAt(0).toUpperCase() + estado.slice(1)}
+        </Badge>
       )
     },
     filterFn: (row, id, value) => {

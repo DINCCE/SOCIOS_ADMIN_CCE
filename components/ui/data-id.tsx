@@ -50,7 +50,7 @@ export function DataId({ children, className, copyable = true }: DataIdProps) {
 
   if (!copyable) {
     return (
-      <span className={cn("font-mono text-xs font-medium tracking-tight", className)}>
+      <span className={cn("text-xs font-medium tracking-wide text-slate-600", className)}>
         {children}
       </span>
     )
@@ -63,7 +63,7 @@ export function DataId({ children, className, copyable = true }: DataIdProps) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "group inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 font-mono text-xs font-medium tracking-tight transition-colors hover:bg-muted",
+        "group inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs font-medium tracking-wide text-slate-600 transition-colors hover:bg-muted",
         className
       )}
       aria-label={`Copiar ${children}`}

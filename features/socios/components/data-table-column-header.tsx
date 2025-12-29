@@ -20,22 +20,20 @@ export function DataTableColumnHeader<TData, TValue>({
   if (!column.getCanSort()) {
     return (
       <div className={cn(className)}>
-        <span className="uppercase tracking-wider text-[10px] font-semibold text-muted-foreground/50">
-          {title}
-        </span>
+        {title}
       </div>
     )
   }
 
   return (
-    <div className={cn("flex items-center space-x-2", className)}>
+    <div className={cn("flex items-center", className)}>
       <Button
         variant="ghost"
         size="sm"
-        className="-ml-3 h-8 data-[state=open]:bg-accent"
+        className="h-8 data-[state=open]:bg-accent hover:bg-transparent px-0 hover:text-foreground group"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <span className="uppercase tracking-wider text-[10px] font-semibold text-muted-foreground/50">
+        <span className="font-semibold uppercase tracking-wider text-xs">
           {title}
         </span>
         {column.getIsSorted() === "desc" ? (
@@ -43,7 +41,7 @@ export function DataTableColumnHeader<TData, TValue>({
         ) : column.getIsSorted() === "asc" ? (
           <ArrowUp className="ml-2 h-4 w-4" />
         ) : (
-          <ChevronsUpDown className="ml-2 h-4 w-4" />
+          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
         )}
       </Button>
     </div>

@@ -24,9 +24,9 @@ export function PersonDetailHeader({ persona }: PersonDetailHeaderProps) {
             {/* Main Identity Area */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
-                    <Avatar className="h-16 w-16 border-2 border-background shadow-sm">
+                    <Avatar className="h-16 w-16 border border-slate-200/60 shadow-sm">
                         <AvatarImage src={persona.foto_url || undefined} alt={persona.nombre_completo} />
-                        <AvatarFallback className="bg-primary/10 text-xl font-semibold text-primary">
+                        <AvatarFallback className="text-xl">
                             {initials}
                         </AvatarFallback>
                     </Avatar>
@@ -35,9 +35,8 @@ export function PersonDetailHeader({ persona }: PersonDetailHeaderProps) {
                         <div className="flex items-center gap-2 flex-wrap">
                             <h1 className="text-2xl font-bold tracking-tight">{persona.nombre_completo}</h1>
                             <Badge
-                                variant={persona.estado === "activo" ? "secondary" : persona.estado === "suspendido" ? "status-destructive" : "status-muted"}
-                                className={cn(persona.estado === "activo" && "rounded-full font-medium px-3")}
-                                showDot={persona.estado !== "activo"}
+                                variant={persona.estado === "activo" ? "status-active" : persona.estado === "suspendido" ? "status-destructive" : "status-warning"}
+                                showDot
                             >
                                 {persona.estado.charAt(0).toUpperCase() + persona.estado.slice(1)}
                             </Badge>

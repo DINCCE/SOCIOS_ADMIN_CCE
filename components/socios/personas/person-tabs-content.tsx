@@ -153,14 +153,14 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                                     <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold">ML</div>
                                     <span className="font-medium truncate max-w-[100px]">María López</span>
                                 </div>
-                                <Badge variant="secondary" className="text-[9px] h-4">CÓNYUGE</Badge>
+                                <Badge variant="metadata-outline">CÓNYUGE</Badge>
                             </div>
                             <div className="flex items-center justify-between text-sm">
                                 <div className="flex items-center gap-2">
                                     <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold">CP</div>
                                     <span className="font-medium truncate max-w-[100px]">Camilo Pérez</span>
                                 </div>
-                                <Badge variant="secondary" className="text-[9px] h-4">HIJO</Badge>
+                                <Badge variant="metadata-outline">HIJO</Badge>
                             </div>
                             <Button variant="ghost" size="sm" className="w-full text-[10px] h-7 mt-2" asChild>
                                 <button onClick={() => { }}>Gestionar Relaciones</button>
@@ -257,7 +257,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                         <ProfileField
                             label="Estado Vital"
                             value={
-                                <Badge variant={persona.estado_vital === 'vivo' ? 'outline' : 'destructive'} className="text-[10px] py-0 font-semibold h-5">
+                                <Badge variant={persona.estado_vital === 'vivo' ? 'status-active' : 'status-destructive'} showDot>
                                     {persona.estado_vital?.toUpperCase()}
                                 </Badge>
                             }
@@ -288,7 +288,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                         <ProfileField
                             label="Estado del Socio"
                             value={
-                                <Badge className="text-[10px] py-0 h-5" variant={persona.estado === 'activo' ? 'status-neutral' : 'status-inactive'}>
+                                <Badge variant={persona.estado === 'activo' ? 'status-active' : 'status-inactive'} showDot>
                                     <DataEnum value={persona.estado} />
                                 </Badge>
                             }
@@ -299,7 +299,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                                 <div className="flex flex-wrap gap-1.5">
                                     {(persona.tags || []).length > 0 ? (
                                         persona.tags.map(tag => (
-                                            <Badge key={tag} variant="secondary" className="text-[10px] font-medium bg-secondary/50">{tag}</Badge>
+                                            <Badge key={tag} variant="metadata-outline">{tag}</Badge>
                                         ))
                                     ) : (
                                         <NullCell />
@@ -365,9 +365,9 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                             label="Redes Sociales"
                             value={
                                 <div className="flex gap-2">
-                                    {persona.linkedin_url && <Badge variant="outline" className="text-[10px]">LinkedIn</Badge>}
-                                    {persona.facebook_url && <Badge variant="outline" className="text-[10px]">Facebook</Badge>}
-                                    {persona.instagram_handle && <Badge variant="outline" className="text-[10px]">@{persona.instagram_handle}</Badge>}
+                                    {persona.linkedin_url && <Badge variant="metadata-outline">LinkedIn</Badge>}
+                                    {persona.facebook_url && <Badge variant="metadata-outline">Facebook</Badge>}
+                                    {persona.instagram_handle && <Badge variant="metadata-outline">@{persona.instagram_handle}</Badge>}
                                     {!persona.linkedin_url && !persona.facebook_url && !persona.instagram_handle && <NullCell />}
                                 </div>
                             }
@@ -533,7 +533,7 @@ function ActivityItem({ icon, title, description, date, user }: { icon: React.Re
                 <p className="text-sm font-semibold">{title}</p>
                 <p className="text-sm text-muted-foreground">{description}</p>
                 <div className="flex items-center gap-2 pt-1">
-                    <Badge variant="secondary" className="text-[10px] py-0 px-1 font-normal opacity-70">@{user}</Badge>
+                    <Badge variant="metadata-outline">@{user}</Badge>
                     <span className="text-[11px] text-muted-foreground">{date}</span>
                 </div>
             </div>

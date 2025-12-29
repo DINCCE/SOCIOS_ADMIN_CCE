@@ -55,7 +55,7 @@ export function PersonContextPanel({ persona }: PersonContextPanelProps) {
                     </div>
                     <div className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">Categoría</span>
-                        <Badge variant="outline" className="text-[10px] font-bold">TITULAR</Badge>
+                        <Badge variant="metadata-outline">TITULAR</Badge>
                     </div>
                 </CardContent>
             </Card>

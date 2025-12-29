@@ -15,23 +15,18 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
         outline: "text-foreground",
-        // SaaS 2025 Status Patterns
+        // SaaS 2025 Standardized Statuses
+        "status-active": "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100",
+        "status-inactive": "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200",
+        "status-warning": "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100",
+        "status-destructive": "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100",
+
+        // Metadata / Secondary Info
+        "metadata-outline": "bg-transparent border border-slate-200 text-slate-500 font-mono text-[10px] h-5 px-1.5 shadow-none",
+
+        // Compatibility / Utility variants
         "status-neutral": "border text-muted-foreground border-border bg-transparent shadow-none font-medium",
         "status-muted": "border bg-secondary/30 text-muted-foreground/80 border-transparent shadow-none",
-        "status-warning": "border bg-amber-500/10 text-amber-700 dark:text-amber-500 border-amber-500/20 shadow-none",
-        "status-destructive": "border bg-destructive/10 text-destructive border-destructive/20 shadow-none",
-        "status-success": "border bg-emerald-500/10 text-emerald-700 dark:text-emerald-500 border-emerald-500/20 shadow-none",
-        "status-info": "border bg-blue-500/10 text-blue-700 dark:text-blue-500 border-blue-500/20 shadow-none",
-        // Legacy Soft Radiance (keep for compatibility, but prefer new ones)
-        "status-active": "border bg-emerald-500/10 text-emerald-700 dark:text-emerald-600 border-emerald-500/20",
-        "status-inactive": "border bg-rose-500/10 text-rose-700 dark:text-rose-600 border-rose-500/20",
-        "status-pending": "border bg-amber-500/10 text-amber-700 dark:text-amber-600 border-amber-500/20",
-        "status-suspended": "border bg-rose-500/10 text-rose-700 dark:text-rose-600 border-rose-500/20",
-        "status-draft": "border bg-slate-500/10 text-slate-700 dark:text-slate-600 border-slate-500/20",
-        // Soft Radiance Type Variants
-        "type-primary": "border bg-blue-500/10 text-blue-700 dark:text-blue-600 border-blue-500/20",
-        "type-secondary": "border bg-violet-500/10 text-violet-700 dark:text-violet-600 border-violet-500/20",
-        "type-outline": "border bg-slate-500/10 text-slate-700 dark:text-slate-600 border-slate-500/20",
       },
     },
     defaultVariants: {
@@ -56,10 +51,10 @@ function Badge({ className, variant, showDot = false, dotAnimation = "none", chi
             "mr-1.5 h-1.5 w-1.5 rounded-full",
             dotAnimation === "pulse" && "animate-pulse",
             // Match dot color to text color based on variant
-            variant?.includes("emerald") && "bg-emerald-600",
-            variant?.includes("rose") && "bg-rose-600",
-            variant?.includes("amber") && "bg-amber-600",
-            variant?.includes("slate") && "bg-slate-600",
+            (variant === "status-active" || variant?.includes("emerald")) && "bg-emerald-600",
+            (variant === "status-destructive" || variant?.includes("rose") || variant?.includes("destructive")) && "bg-rose-600",
+            (variant === "status-warning" || variant?.includes("amber")) && "bg-amber-600",
+            (variant === "status-inactive" || variant?.includes("slate")) && "bg-slate-600",
             variant?.includes("blue") && "bg-blue-600",
             variant?.includes("violet") && "bg-violet-600"
           )}

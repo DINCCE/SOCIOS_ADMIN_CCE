@@ -68,6 +68,15 @@ export function PersonasDataTable<TData, TValue>({
     })
   const [rowSelection, setRowSelection] = React.useState({})
 
+  // Dynamic visibility for "tags" column
+  React.useEffect(() => {
+    const hasTags = data.some((item: any) => (item.tags || []).length > 0)
+    setColumnVisibility(prev => ({
+      ...prev,
+      tags: hasTags
+    }))
+  }, [data])
+
   const table = useReactTable({
     data,
     columns,
@@ -137,7 +146,8 @@ export function PersonasDataTable<TData, TValue>({
                       key={header.id}
                       className={cn(
                         header.column.id === "select" && "sticky left-0 z-20 bg-background/90 backdrop-blur-sm",
-                        header.column.id === "nombre_completo" && "sticky left-[48px] z-20 bg-background/90 backdrop-blur-sm shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+                        header.column.id === "nombre_completo" && "min-w-[250px] sticky left-[48px] z-20 bg-background/90 backdrop-blur-sm shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]",
+                        header.column.id !== "nombre_completo" && header.column.id !== "select" && "w-auto whitespace-nowrap"
                       )}
                     >
                       {header.isPlaceholder

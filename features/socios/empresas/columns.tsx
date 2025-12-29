@@ -11,6 +11,7 @@ import { IdentityCell } from "@/components/ui/identity-cell"
 import { NullCell } from "@/components/ui/null-cell"
 import { DataDate } from "@/components/ui/data-date"
 import { DataEnum } from "@/components/ui/data-enum"
+import { FormattedNumber } from "@/components/ui/formatted-number"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,26 +23,14 @@ import {
 import { DataTableColumnHeader } from "@/features/socios/components/data-table-column-header"
 import { Empresa } from "@/features/socios/types/socios-schema"
 
-const estadoVariants: Record<
-  string,
-  "status-success" | "current-status-muted" | "status-destructive" | "status-inactive" | "status-warning"
-> = {
-  activo: "status-success",
+const estadoVariants: Record<string, string> = {
+  activo: "status-active",
   inactivo: "status-inactive",
   suspendido: "status-destructive",
   mora: "status-warning",
 }
 
-const tipoEmpresaVariants: Record<
-  string,
-  "type-primary" | "type-secondary" | "type-outline"
-> = {
-  SA: "type-primary",
-  SAS: "type-primary",
-  LTDA: "type-secondary",
-  UNIPERSONAL: "type-outline",
-  OTRA: "type-outline",
-}
+// Variants for tipo_sociedad are now handled by metadata-outline directly
 
 export const columns: ColumnDef<Empresa>[] = [
   {
@@ -95,12 +84,15 @@ export const columns: ColumnDef<Empresa>[] = [
   {
     accessorKey: "nit_completo",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="NIT" />
+      <DataTableColumnHeader column={column} title="NIT" className="text-left" />
     ),
     cell: ({ row }) => {
       return (
-        <div className="font-medium">
-          <DataId>{row.getValue("nit_completo")}</DataId>
+        <div className="font-medium whitespace-nowrap">
+          <FormattedNumber
+            value={row.getValue("nit_completo")}
+            type="document"
+          />
         </div>
       )
     },
@@ -113,7 +105,7 @@ export const columns: ColumnDef<Empresa>[] = [
     cell: ({ row }) => {
       const email = row.getValue("email_principal") as string | null
       return email ? (
-        <div className="max-w-[200px] truncate tabular-nums text-muted-foreground/80">
+        <div className="max-w-[200px] truncate tabular-nums text-xs tracking-wide text-slate-600 whitespace-nowrap">
           {email}
         </div>
       ) : <NullCell />
@@ -122,14 +114,11 @@ export const columns: ColumnDef<Empresa>[] = [
   {
     accessorKey: "telefono_principal",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Teléfono" />
+      <DataTableColumnHeader column={column} title="Teléfono" className="text-left" />
     ),
-    cell: ({ row }) => {
-      const telefono = row.getValue("telefono_principal") as string | null
-      return telefono ? (
-        <span className="tabular-nums text-muted-foreground/80">{telefono}</span>
-      ) : <NullCell />
-    },
+    cell: ({ row }) => (
+      <FormattedNumber value={row.getValue("telefono_principal") as string} type="phone" />
+    ),
   },
   {
     accessorKey: "tipo_sociedad",
@@ -140,8 +129,7 @@ export const columns: ColumnDef<Empresa>[] = [
       const val = row.getValue("tipo_sociedad") as string
       return val ? (
         <Badge
-          variant="status-neutral"
-          className="font-medium"
+          variant="metadata-outline"
         >
           <DataEnum value={val} />
         </Badge>
@@ -201,7 +189,11 @@ export const columns: ColumnDef<Empresa>[] = [
     ),
     cell: ({ row }) => {
       const val = row.getValue("ingresos_anuales") as number
-      return val ? `$${val.toLocaleString()}` : "$0"
+      return val ? (
+        <span className="tabular-nums text-xs tracking-wide text-slate-600">
+          ${val.toLocaleString()}
+        </span>
+      ) : <span className="text-xs tracking-wide text-slate-600">$0</span>
     },
     enableHiding: true,
   },
@@ -210,6 +202,14 @@ export const columns: ColumnDef<Empresa>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Nro. Empleados" />
     ),
+    cell: ({ row }) => {
+      const val = row.getValue("numero_empleados")
+      return val ? (
+        <span className="tabular-nums text-xs tracking-wide text-slate-600">
+          {val as string}
+        </span>
+      ) : <NullCell />
+    },
     enableHiding: true,
   },
   {
@@ -217,6 +217,14 @@ export const columns: ColumnDef<Empresa>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Sitio Web" />
     ),
+    cell: ({ row }) => {
+      const val = row.getValue("website") as string
+      return val ? (
+        <span className="text-xs tracking-wide text-slate-600 truncate max-w-[150px]" title={val}>
+          {val}
+        </span>
+      ) : <NullCell />
+    },
     enableHiding: true,
   },
   {
@@ -224,34 +232,30 @@ export const columns: ColumnDef<Empresa>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="WhatsApp" />
     ),
+    cell: ({ row }) => {
+      const val = row.getValue("whatsapp") as string
+      return val ? (
+        <FormattedNumber value={val} type="phone" />
+      ) : <NullCell />
+    },
     enableHiding: true,
   },
-  {
-    accessorKey: "organizacion_nombre",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Organización" />
-    ),
-    enableHiding: true,
-  },
-  // --- Status Column ---
   {
     accessorKey: "estado",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Estado" />
+      <DataTableColumnHeader column={column} title="Estado" className="text-left" />
     ),
     cell: ({ row }) => {
       const estado = (row.getValue("estado") as string)?.toLowerCase()
       // "Activo" is neutral/subtle in SaaS 2025
-      const variant = estado === "activo" ? "status-neutral" : (estadoVariants[estado] as any || "outline")
+      const variant = estadoVariants[estado] || "status-neutral"
       return (
-        <div className="flex justify-center">
-          <Badge
-            variant={variant}
-            showDot={estado !== "activo"} // Dots only for non-default states
-          >
-            {estado.charAt(0).toUpperCase() + estado.slice(1)}
-          </Badge>
-        </div>
+        <Badge
+          variant={variant as any}
+          showDot
+        >
+          {estado.charAt(0).toUpperCase() + estado.slice(1)}
+        </Badge>
       )
     },
     filterFn: (row, id, value) => {
