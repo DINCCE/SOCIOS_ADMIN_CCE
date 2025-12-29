@@ -299,7 +299,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                     >
                         <DataRow label="Grupo Sanguíneo" value={<span className="text-red-600 font-bold">{persona.tipo_sangre || "—"}</span>} />
                         <DataRow label="EPS" value={persona.eps} />
-                        <DataRow label="Alergias Conocidas" value={Array.isArray((persona.atributos?.informacion_medica as any)?.alergias) ? (persona.atributos?.informacion_medica as any).alergias.join(", ") : "Ninguna"} />
+                        <DataRow label="Intereses Médicos" value={Object.keys(persona.perfil_intereses || {}).length > 0 ? Object.keys(persona.perfil_intereses).join(", ") : "Sin registrar"} />
                     </AccordionSection>
 
                     {/* SECCIÓN 6: EMERGENCIA */}
@@ -312,7 +312,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                     >
                         <DataRow label="Nombre del Contacto" value={persona.nombre_contacto_emergencia} bold />
                         <DataRow label="Parentesco / Relación" value={persona.relacion_emergencia} />
-                        <DataRow label="Condiciones Médicas" value={Array.isArray((persona.atributos?.informacion_medica as any)?.condiciones) ? (persona.atributos?.informacion_medica as any).condiciones.join(", ") : "Ninguna"} />
+                        <DataRow label="Protocolo Emergencia" value={(persona.perfil_preferencias as any)?.protocolo_emergencia || "Estándar"} />
                     </AccordionSection>
 
                     {/* SECCIÓN 7: UBICACIÓN */}
@@ -323,10 +323,10 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                         isOpen={openSection === "location"}
                         onToggle={() => setOpenSection(openSection === "location" ? null : "location")}
                     >
-                        <DataRow label="Dirección Principal" value={(persona.atributos?.direccion_residencia as any)?.direccion} />
-                        <DataRow label="Barrio" value={(persona.atributos?.direccion_residencia as any)?.barrio} />
-                        <DataRow label="Ciudad" value={(persona.atributos?.direccion_residencia as any)?.ciudad} />
-                        <DataRow label="Dirección de Correspondencia" value={(persona.atributos?.direccion_correspondencia as any)?.direccion || "Misma que residencia"} />
+                        <DataRow label="Dirección Principal" value={(persona.perfil_preferencias as any)?.direccion_residencia?.direccion} />
+                        <DataRow label="Barrio" value={(persona.perfil_preferencias as any)?.direccion_residencia?.barrio} />
+                        <DataRow label="Ciudad" value={(persona.perfil_preferencias as any)?.direccion_residencia?.ciudad} />
+                        <DataRow label="Dirección de Correspondencia" value={(persona.perfil_preferencias as any)?.direccion_correspondencia?.direccion || "Misma que residencia"} />
                     </AccordionSection>
 
                     {/* SECCIÓN 8: PRESENCIA DIGITAL */}

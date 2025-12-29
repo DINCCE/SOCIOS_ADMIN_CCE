@@ -2,84 +2,38 @@
 // Used for RPC function parameters and form validation
 
 export interface CrearPersonaParams {
-  // Required Business Partner fields
   p_organizacion_id: string
-  p_codigo_bp: string
-
-  // Required Persona fields
   p_primer_nombre: string
   p_primer_apellido: string
-  p_tipo_documento: TipoDocumento
+  p_tipo_documento: string
   p_numero_documento: string
-
-  // Optional Business Partner fields
-  p_atributos?: Record<string, unknown>
-
-  // Optional Persona name fields
+  p_genero: string
+  p_fecha_nacimiento: string
+  p_email_principal?: string
+  p_telefono_principal?: string
   p_segundo_nombre?: string
   p_segundo_apellido?: string
-
-  // Optional Persona contact fields
-  p_email?: string
-  p_telefono?: string
-  p_celular?: string
-
-  // Optional Persona personal info
-  p_fecha_nacimiento?: string // YYYY-MM-DD
-  p_genero?: string
-  p_estado_civil?: string
+  p_tipo_sangre?: string
+  p_eps?: string
+  p_fecha_socio?: string
+  p_fecha_aniversario?: string
+  p_tags?: string[]
   p_nacionalidad?: string
-
-  // Optional Persona location
-  p_direccion?: Record<string, unknown>
-  p_ciudad?: string
-  p_departamento?: string
-  p_pais?: string
-
-  // Optional Persona professional
-  p_profesion?: string
-  p_cargo?: string
-  p_empresa_trabaja?: string
-
-  // Optional Persona identification
-  p_lugar_expedicion_documento?: string
-  p_fecha_expedicion_documento?: string // YYYY-MM-DD
-
-  // Optional Persona financial
-  p_ingresos_mensuales?: number
-  p_egresos_mensuales?: number
-  p_patrimonio?: number
-  p_actividad_economica?: string
-
-  // Optional Persona banking
-  p_informacion_bancaria?: Record<string, unknown>
-
-  // Optional Persona legal
-  p_persona_expuesta_politicamente?: boolean
-  p_declarante_renta?: boolean
-  p_tipo_contribuyente?: string
-
-  // Optional Persona social
-  p_referencias?: Record<string, unknown>
-  p_contacto_emergencia?: Record<string, unknown>
-
-  // Optional Persona additional
-  p_notas?: string
+  p_email_secundario?: string
+  p_telefono_secundario?: string
+  p_whatsapp?: string
 }
 
 export interface CrearEmpresaParams {
-  // Required fields
   p_organizacion_id: string
   p_razon_social: string
   p_nit: string
   p_tipo_sociedad: string
   p_email_principal: string
   p_telefono_principal: string
-
-  // Optional fields
   p_nombre_comercial?: string
   p_digito_verificacion?: string
-  p_fecha_constitucion?: string // YYYY-MM-DD
+  p_fecha_constitucion?: string
   p_ciudad_constitucion?: string
   p_sector_industria?: string
   p_actividad_economica?: string

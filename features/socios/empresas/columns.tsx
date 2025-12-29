@@ -62,13 +62,13 @@ export const columns: ColumnDef<Empresa>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "codigo_bp",
+    accessorKey: "codigo",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Código" />
     ),
     cell: ({ row }) => (
       <div className="font-medium">
-        <DataId>{row.getValue("codigo_bp")}</DataId>
+        <DataId>{row.getValue("codigo")}</DataId>
       </div>
     ),
   },
@@ -155,6 +155,89 @@ export const columns: ColumnDef<Empresa>[] = [
       return value.includes(row.getValue(id))
     },
   },
+  // --- Optional Columns (Hidden by default) ---
+  {
+    accessorKey: "nombre_comercial",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Nombre Comercial" />
+    ),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "sector_industria",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Sector" />
+    ),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "tamano_empresa",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Tamaño" />
+    ),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "actividad_economica",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Actividad Económica" />
+    ),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "nombre_representante_legal",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Representante Legal" />
+    ),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "cargo_representante",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Cargo Repr." />
+    ),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "ingresos_anuales",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Ingresos Anuales" />
+    ),
+    cell: ({ row }) => {
+      const val = row.getValue("ingresos_anuales") as number
+      return val ? `$${val.toLocaleString()}` : "$0"
+    },
+    enableHiding: true,
+  },
+  {
+    accessorKey: "numero_empleados",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Nro. Empleados" />
+    ),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "website",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Sitio Web" />
+    ),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "whatsapp",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="WhatsApp" />
+    ),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "organizacion_nombre",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Organización" />
+    ),
+    enableHiding: true,
+  },
+  // --- Status Column ---
   {
     accessorKey: "estado",
     header: ({ column }) => (

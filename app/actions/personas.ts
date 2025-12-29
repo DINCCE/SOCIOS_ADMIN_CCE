@@ -52,6 +52,25 @@ export async function crearPersonaFromPersonFormValues(
     genero: formData.genero || undefined,
     estadoCivil: formData.estado_civil || undefined,
     nacionalidad: formData.nacionalidad || undefined,
+    lugarNacimiento: formData.lugar_nacimiento || undefined,
+    ocupacion: formData.ocupacion || undefined,
+    profesion: formData.profesion || undefined,
+    nivelEducacion: formData.nivel_educacion || undefined,
+    tipoSangre: formData.tipo_sangre || undefined,
+    eps: formData.eps || undefined,
+    fechaSocio: formData.fecha_socio || undefined,
+    fechaAniversario: formData.fecha_aniversario || undefined,
+    estadoVital: formData.estado_vital || undefined,
+    tags: formData.tags || undefined,
+    emailSecundario: formData.email_secundario || undefined,
+    telefonoSecundario: formData.telefono_secundario || undefined,
+    whatsapp: formData.whatsapp || undefined,
+    linkedinUrl: formData.linkedin_url || undefined,
+    facebookUrl: formData.facebook_url || undefined,
+    instagramHandle: formData.instagram_handle || undefined,
+    twitterHandle: formData.twitter_handle || undefined,
+    contactoEmergenciaId: formData.contacto_emergencia_id || undefined,
+    relacionEmergencia: formData.relacion_emergencia || undefined,
   })
 }
 
@@ -73,7 +92,25 @@ export async function crearPersonaFromForm(data: {
   genero?: string
   estadoCivil?: string
   nacionalidad?: string
-  // Add other optional fields if needed: emailSecundario, telefonoSecundario, whatsapp, ocupacion, profesion, nivelEducacion
+  lugarNacimiento?: string
+  ocupacion?: string
+  profesion?: string
+  nivelEducacion?: string
+  tipoSangre?: string
+  eps?: string
+  fechaSocio?: string
+  fechaAniversario?: string
+  estadoVital?: string
+  tags?: string[]
+  emailSecundario?: string
+  telefonoSecundario?: string
+  whatsapp?: string
+  linkedinUrl?: string
+  facebookUrl?: string
+  instagramHandle?: string
+  twitterHandle?: string
+  contactoEmergenciaId?: string
+  relacionEmergencia?: string
 }) {
   const supabase = await createClient()
 
@@ -95,6 +132,25 @@ export async function crearPersonaFromForm(data: {
     p_segundo_apellido: data.segundoApellido,
     p_estado_civil: data.estadoCivil,
     p_nacionalidad: data.nacionalidad,
+    p_lugar_nacimiento: data.lugarNacimiento,
+    p_ocupacion: data.ocupacion,
+    p_profesion: data.profesion,
+    p_nivel_educacion: data.nivelEducacion,
+    p_tipo_sangre: data.tipoSangre,
+    p_eps: data.eps,
+    p_fecha_socio: data.fechaSocio,
+    p_fecha_aniversario: data.fechaAniversario,
+    p_estado_vital: data.estadoVital,
+    p_tags: data.tags,
+    p_email_secundario: data.emailSecundario,
+    p_telefono_secundario: data.telefonoSecundario,
+    p_whatsapp: data.whatsapp,
+    p_linkedin_url: data.linkedinUrl,
+    p_facebook_url: data.facebookUrl,
+    p_instagram_handle: data.instagramHandle,
+    p_twitter_handle: data.twitterHandle,
+    p_contacto_emergencia_id: data.contactoEmergenciaId,
+    p_relacion_emergencia: data.relacionEmergencia,
   })
 
   if (error) {

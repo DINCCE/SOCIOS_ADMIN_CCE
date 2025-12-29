@@ -57,9 +57,32 @@ export function NewCompanySheet() {
         defaultValues: {
             razon_social: "",
             nit: "",
+            digito_verificacion: "",
             tipo_sociedad: "SAS",
+            nombre_comercial: "",
+            fecha_constitucion: "",
+            ciudad_constitucion: "",
+            pais_constitucion: "CO",
+            numero_registro: "",
+            codigo_ciiu: "",
+            sector_industria: "",
+            actividad_economica: "",
+            tamano_empresa: "",
+            representante_legal_id: "",
+            cargo_representante: "",
             email_principal: "",
             telefono_principal: "",
+            email_secundario: "",
+            telefono_secundario: "",
+            whatsapp: "",
+            website: "",
+            linkedin_url: "",
+            facebook_url: "",
+            instagram_handle: "",
+            twitter_handle: "",
+            logo_url: "",
+            ingresos_anuales: 0,
+            numero_empleados: 0,
             estado: "activo",
         },
     })
@@ -174,6 +197,22 @@ export function NewCompanySheet() {
                                         />
                                         <FormField
                                             control={form.control}
+                                            name="digito_verificacion"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>DV</FormLabel>
+                                                    <FormControl>
+                                                        <Input className="font-mono" placeholder="0" {...field} maxLength={1} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
                                             name="tipo_sociedad"
                                             render={({ field }) => (
                                                 <FormItem>
@@ -190,10 +229,26 @@ export function NewCompanySheet() {
                                                             <SelectItem value="LTDA">Ltda.</SelectItem>
                                                             <SelectItem value="EU">E.U.</SelectItem>
                                                             <SelectItem value="COOP">Cooperativa</SelectItem>
-                                                            <SelectItem value="ESAL">ESAL</SelectItem>
+                                                            <SelectItem value="FUNDACION">Fundación</SelectItem>
+                                                            <SelectItem value="CORP">Corporación</SelectItem>
+                                                            <SelectItem value="ONG">ONG</SelectItem>
+                                                            <SelectItem value="SUCURSAL">Sucursal Extranjera</SelectItem>
                                                             <SelectItem value="OTRO">Otro</SelectItem>
                                                         </SelectContent>
                                                     </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="nombre_comercial"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Nombre Comercial</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="Nombre de Marca" {...field} />
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
@@ -229,6 +284,225 @@ export function NewCompanySheet() {
                                                     <FormLabel>Teléfono Principal <span className="text-destructive">*</span></FormLabel>
                                                     <FormControl>
                                                         <Input type="tel" placeholder="601..." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="email_secundario"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Email Secundario</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="email" placeholder="secundario@empresa.com" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="telefono_secundario"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Teléfono Secundario</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="tel" placeholder="601..." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="whatsapp"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>WhatsApp</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="300..." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="website"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Sitio Web</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="https://..." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Corporate Information */}
+                                <div className="space-y-4">
+                                    <h3 className="font-medium text-sm flex items-center gap-2">
+                                        Información Corporativa
+                                        <Separator className="flex-1" />
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="fecha_constitucion"
+                                            render={({ field }) => (
+                                                <FormItem className="flex flex-col">
+                                                    <FormLabel>Fecha de Constitución</FormLabel>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <FormControl>
+                                                                <Button
+                                                                    variant={"outline"}
+                                                                    className={cn(
+                                                                        "w-full pl-3 text-left font-normal",
+                                                                        !field.value && "text-muted-foreground"
+                                                                    )}
+                                                                >
+                                                                    {field.value ? (
+                                                                        format(new Date(field.value), "PPP", { locale: es })
+                                                                    ) : (
+                                                                        <span>Seleccione fecha</span>
+                                                                    )}
+                                                                    <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+                                                                </Button>
+                                                            </FormControl>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0" align="start">
+                                                            <Calendar
+                                                                mode="single"
+                                                                selected={field.value ? new Date(field.value) : undefined}
+                                                                onSelect={(date) => field.onChange(date?.toISOString().split('T')[0])}
+                                                                initialFocus
+                                                            />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="ciudad_constitucion"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Ciudad de Constitución</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="Bogotá, etc." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="sector_industria"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Sector / Industria</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="Tecnología, etc." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="actividad_economica"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Actividad Económica</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="Desarrollo de software, etc." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="tamano_empresa"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Tamaño Empresa</FormLabel>
+                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Seleccione..." />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            <SelectItem value="micro">Microempresa</SelectItem>
+                                                            <SelectItem value="pequena">Pequeña</SelectItem>
+                                                            <SelectItem value="mediana">Mediana</SelectItem>
+                                                            <SelectItem value="grande">Grande</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="representante_legal_id"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>ID Representante Legal</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="UUID..." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Social Networks */}
+                                <div className="space-y-4 pb-4">
+                                    <h3 className="font-medium text-sm flex items-center gap-2">
+                                        Redes Sociales
+                                        <Separator className="flex-1" />
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="linkedin_url"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>LinkedIn</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="https://..." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="instagram_handle"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Instagram</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="@usuario" {...field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>

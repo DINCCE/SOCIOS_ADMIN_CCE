@@ -52,13 +52,13 @@ export const columns: ColumnDef<Persona>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "codigo_bp",
+    accessorKey: "codigo",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Código" />
     ),
     cell: ({ row }) => (
       <div className="font-medium">
-        <DataId>{row.getValue("codigo_bp")}</DataId>
+        <DataId>{row.getValue("codigo")}</DataId>
       </div>
     ),
   },
@@ -114,6 +114,32 @@ export const columns: ColumnDef<Persona>[] = [
     },
   },
   {
+    accessorKey: "tags",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Etiquetas" />
+    ),
+    cell: ({ row }) => {
+      const tags = (row.getValue("tags") as string[]) || []
+      return (
+        <div className="flex flex-wrap gap-1 max-w-[200px]">
+          {tags.length > 0 ? (
+            tags.map((tag) => (
+              <Badge key={tag} variant="secondary" className="text-[10px] px-1 py-0">
+                {tag}
+              </Badge>
+            ))
+          ) : (
+            <span className="text-muted-foreground text-xs italic">Sin tags</span>
+          )}
+        </div>
+      )
+    },
+    filterFn: (row, id, value) => {
+      const rowTags = row.getValue(id) as string[]
+      return value.some((tag: string) => rowTags.includes(tag))
+    },
+  },
+  {
     accessorKey: "telefono_principal",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Teléfono" />
@@ -125,6 +151,81 @@ export const columns: ColumnDef<Persona>[] = [
       )
     },
   },
+  // --- Optional Columns (Hidden by default) ---
+  {
+    accessorKey: "genero",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Género" />
+    ),
+    cell: ({ row }) => <span className="capitalize">{row.getValue("genero")}</span>,
+    enableHiding: true,
+  },
+  {
+    accessorKey: "fecha_nacimiento",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Fecha Nacimiento" />
+    ),
+    cell: ({ row }) => row.getValue("fecha_nacimiento"),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "nacionalidad",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Nacionalidad" />
+    ),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "tipo_sangre",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="RH" />
+    ),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "eps",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="EPS" />
+    ),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "ocupacion",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Ocupación" />
+    ),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "fecha_socio",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Fecha Socio" />
+    ),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "estado_vital",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Estado Vital" />
+    ),
+    cell: ({ row }) => <span className="capitalize">{row.getValue("estado_vital")}</span>,
+    enableHiding: true,
+  },
+  {
+    accessorKey: "whatsapp",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="WhatsApp" />
+    ),
+    enableHiding: true,
+  },
+  {
+    accessorKey: "organizacion_nombre",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Organización" />
+    ),
+    enableHiding: true,
+  },
+  // --- Status Column ---
   {
     accessorKey: "estado",
     header: ({ column }) => (

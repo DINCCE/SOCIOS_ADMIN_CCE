@@ -24,8 +24,11 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
                             <Mail className="h-4 w-4" />
                         </div>
                         <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Email Principal</p>
-                            <p className="text-sm font-medium break-all">{persona.email_principal || "No registrado"}</p>
+                            <p className="text-xs font-medium text-muted-foreground">Emails</p>
+                            <p className="text-sm font-medium break-all">{persona.email_principal || "Principal no reg."}</p>
+                            {persona.email_secundario && (
+                                <p className="text-sm text-muted-foreground break-all">{persona.email_secundario}</p>
+                            )}
                         </div>
                     </div>
 
@@ -34,8 +37,11 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
                             <Phone className="h-4 w-4" />
                         </div>
                         <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Teléfono Principal</p>
-                            <p className="text-sm font-medium">{persona.telefono_principal || "No registrado"}</p>
+                            <p className="text-xs font-medium text-muted-foreground">Teléfonos</p>
+                            <p className="text-sm font-medium">{persona.telefono_principal || "Principal no reg."}</p>
+                            {persona.telefono_secundario && (
+                                <p className="text-sm text-muted-foreground">{persona.telefono_secundario}</p>
+                            )}
                         </div>
                     </div>
 
@@ -61,8 +67,12 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
                             <MapPin className="h-4 w-4" />
                         </div>
                         <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Nacionalidad</p>
+                            <p className="text-xs font-medium text-muted-foreground">Nacionalidad y Documento</p>
                             <p className="text-sm font-medium">{persona.nacionalidad === 'CO' ? 'Colombiana 🇨🇴' : persona.nacionalidad || "No registrada"}</p>
+                            <p className="text-sm text-muted-foreground">{persona.tipo_documento} {persona.numero_documento}</p>
+                            {persona.lugar_expedicion && (
+                                <p className="text-xs text-muted-foreground italic">Exp. en {persona.lugar_expedicion}</p>
+                            )}
                         </div>
                     </div>
 
@@ -71,8 +81,16 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
                             <Calendar className="h-4 w-4" />
                         </div>
                         <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Fecha de Nacimiento</p>
-                            <p className="text-sm font-medium">{persona.fecha_nacimiento}</p>
+                            <p className="text-xs font-medium text-muted-foreground">Fechas Clave</p>
+                            <div className="space-y-0.5">
+                                <p className="text-sm font-medium"><span className="text-muted-foreground">Nacimiento:</span> {persona.fecha_nacimiento}</p>
+                                {persona.fecha_expedicion && (
+                                    <p className="text-xs text-muted-foreground"><span className="font-medium">Expedición:</span> {persona.fecha_expedicion}</p>
+                                )}
+                                {persona.fecha_aniversario && (
+                                    <p className="text-xs text-muted-foreground"><span className="font-medium">Aniversario:</span> {persona.fecha_aniversario}</p>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
