@@ -124,9 +124,11 @@ export async function crearPersonaFromForm(data: {
     p_tipo_documento: data.tipoDocumento,
     p_numero_documento: data.numeroDocumento,
     p_genero: data.genero,
-    p_fecha_nacimiento: data.fechaNacimiento,
+    p_fecha_nacimiento: data.fechaNacimiento || null,
     p_email_principal: data.emailPrincipal,
     p_telefono_principal: data.telefonoPrincipal,
+    p_fecha_expedicion: null,
+    p_lugar_expedicion: null,
     // Optional parameters
     p_segundo_nombre: data.segundoNombre,
     p_segundo_apellido: data.segundoApellido,
@@ -140,7 +142,6 @@ export async function crearPersonaFromForm(data: {
     p_eps: data.eps,
     p_fecha_socio: data.fechaSocio,
     p_fecha_aniversario: data.fechaAniversario,
-    p_estado_vital: data.estadoVital,
     p_tags: data.tags,
     p_email_secundario: data.emailSecundario,
     p_telefono_secundario: data.telefonoSecundario,
@@ -149,8 +150,10 @@ export async function crearPersonaFromForm(data: {
     p_facebook_url: data.facebookUrl,
     p_instagram_handle: data.instagramHandle,
     p_twitter_handle: data.twitterHandle,
+    p_foto_url: null,
     p_contacto_emergencia_id: data.contactoEmergenciaId,
     p_relacion_emergencia: data.relacionEmergencia,
+    // Note: JSONB fields (p_perfil_*) are omitted to use database DEFAULT '{}'::jsonb
   })
 
   if (error) {
@@ -179,4 +182,38 @@ export async function crearPersonaFromForm(data: {
   }
 
   return result
+}
+
+/**
+ * Update persona data
+ *
+ * @param id - The UUID of the persona
+ * @param data - Partial persona data to update
+ * @returns Object with { success, message, error? }
+ */
+export async function actualizarPersona(id: string, data: any) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('personas')
+    .update(data)
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error updating persona:', error)
+    return {
+      success: false,
+      message: `Error al actualizar: ${error.message}`,
+      error
+    }
+  }
+
+  // Revalidate both list and detail page
+  revalidatePath('/admin/socios/personas')
+  revalidatePath(`/admin/socios/personas/${id}`)
+
+  return {
+    success: true,
+    message: 'Persona actualizada correctamente'
+  }
 }

@@ -4,8 +4,12 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, Plus } from "lucide-react"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
+import { ChevronDown, Loader2, Plus } from "lucide-react"
 import { toast } from "sonner"
+
+import { cn } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -17,6 +21,12 @@ import {
     SheetTrigger,
     SheetFooter,
 } from "@/components/ui/sheet"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import {
     Form,
     FormControl,
@@ -53,8 +63,10 @@ export function NewPersonSheet() {
             tipo_documento: "CC",
             numero_documento: "",
             email_principal: "",
+            telefono_principal: "",
             estado: "activo",
             genero: "no_especifica",
+            fecha_nacimiento: "",
             estado_vital: "vivo",
             tags: [],
         },
@@ -121,12 +133,12 @@ export function NewPersonSheet() {
                                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                                         <span className="text-primary font-bold text-sm">1</span>
                                     </div>
-                                    <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Identidad Legal</h3>
+                                    <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Documento de Identidad</h3>
                                     <Separator className="flex-1" />
                                 </div>
 
                                 <div className="grid grid-cols-10 gap-4">
-                                    <div className="col-span-3">
+                                    <div className="col-span-5">
                                         <FormField
                                             control={form.control}
                                             name="tipo_documento"
@@ -153,7 +165,7 @@ export function NewPersonSheet() {
                                             )}
                                         />
                                     </div>
-                                    <div className="col-span-7">
+                                    <div className="col-span-5">
                                         <FormField
                                             control={form.control}
                                             name="numero_documento"
@@ -172,6 +184,76 @@ export function NewPersonSheet() {
                                             )}
                                         />
                                     </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="fecha_nacimiento"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-col">
+                                                <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Fecha de Nacimiento</FormLabel>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <FormControl>
+                                                            <Button
+                                                                variant={"outline"}
+                                                                className={cn(
+                                                                    "h-11 bg-muted/30 border-muted-foreground/20 focus:ring-primary/20 w-full pl-3 text-left font-normal",
+                                                                    !field.value && "text-muted-foreground"
+                                                                )}
+                                                            >
+                                                                {field.value ? (
+                                                                    format(new Date(field.value + "T12:00:00"), "PPP", { locale: es })
+                                                                ) : (
+                                                                    <span>Seleccionar fecha</span>
+                                                                )}
+                                                                <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+                                                            </Button>
+                                                        </FormControl>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-0" align="start">
+                                                        <Calendar
+                                                            mode="single"
+                                                            captionLayout="dropdown-buttons"
+                                                            fromYear={1900}
+                                                            toYear={new Date().getFullYear()}
+                                                            selected={field.value ? new Date(field.value + "T12:00:00") : undefined}
+                                                            onSelect={(date) => {
+                                                                if (date) {
+                                                                    field.onChange(format(date, "yyyy-MM-dd"))
+                                                                }
+                                                            }}
+                                                            initialFocus
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
+                                                <FormMessage className="text-[10px]" />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="genero"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Género</FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger className="h-11 bg-muted/30 border-muted-foreground/20 focus:ring-primary/20">
+                                                            <SelectValue placeholder="Seleccionar" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="masculino">Masculino</SelectItem>
+                                                        <SelectItem value="femenino">Femenino</SelectItem>
+                                                        <SelectItem value="otro">Otro</SelectItem>
+                                                        <SelectItem value="no_especifica">No especifica</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage className="text-[10px]" />
+                                            </FormItem>
+                                        )}
+                                    />
                                 </div>
                             </div>
 
@@ -250,28 +332,47 @@ export function NewPersonSheet() {
                                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                                         <span className="text-primary font-bold text-sm">3</span>
                                     </div>
-                                    <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Contacto Inicial</h3>
+                                    <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Datos de Contacto</h3>
                                     <Separator className="flex-1" />
                                 </div>
 
-                                <FormField
-                                    control={form.control}
-                                    name="email_principal"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Correo Electrónico</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    className="h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20"
-                                                    type="email"
-                                                    placeholder="usuario@ejemplo.com"
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage className="text-[10px]" />
-                                        </FormItem>
-                                    )}
-                                />
+                                <div className="grid grid-cols-2 gap-6">
+                                    <FormField
+                                        control={form.control}
+                                        name="email_principal"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Correo Electrónico</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        className="h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20"
+                                                        type="email"
+                                                        placeholder="usuario@ejemplo.com"
+                                                        {...field}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage className="text-[10px]" />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="telefono_principal"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Teléfono / WhatsApp</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        className="h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20"
+                                                        placeholder="+57 3..."
+                                                        {...field}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage className="text-[10px]" />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
                             </div>
                         </form>
                     </Form>
@@ -292,7 +393,7 @@ export function NewPersonSheet() {
                                     Procesando Alta...
                                 </>
                             ) : (
-                                "Guardar Persona"
+                                "Crear Persona"
                             )}
                         </Button>
                     </SheetFooter>

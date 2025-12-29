@@ -46,25 +46,25 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
                         <div className="space-y-1">
                             <p className="text-xs font-medium text-muted-foreground">Teléfonos / WhatsApp</p>
                             <div className="space-y-1">
-                                <p className="text-sm font-medium flex items-center gap-2">
+                                <div className="text-sm font-medium flex items-center gap-2">
                                     {persona.telefono_principal || "Principal no reg."}
                                     {persona.whatsapp && persona.whatsapp === persona.telefono_principal && (
                                         <Badge variant="outline" className="text-[9px] h-4 py-0 bg-green-50 text-green-700 border-green-200">WA</Badge>
                                     )}
-                                </p>
+                                </div>
                                 {persona.telefono_secundario && (
-                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                    <div className="text-sm text-muted-foreground flex items-center gap-2">
                                         {persona.telefono_secundario}
                                         {persona.whatsapp && persona.whatsapp === persona.telefono_secundario && (
                                             <Badge variant="outline" className="text-[9px] h-4 py-0 bg-green-50 text-green-700 border-green-200">WA</Badge>
                                         )}
-                                    </p>
+                                    </div>
                                 )}
                                 {persona.whatsapp && persona.whatsapp !== persona.telefono_principal && persona.whatsapp !== persona.telefono_secundario && (
-                                    <p className="text-sm font-medium text-green-700 flex items-center gap-2">
+                                    <div className="text-sm font-medium text-green-700 flex items-center gap-2">
                                         {persona.whatsapp}
                                         <Badge variant="outline" className="text-[9px] h-4 py-0 bg-green-50 text-green-700 border-green-200">WA</Badge>
-                                    </p>
+                                    </div>
                                 )}
                             </div>
                         </div>

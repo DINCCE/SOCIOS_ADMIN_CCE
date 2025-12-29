@@ -12,6 +12,13 @@ import { DataDate } from "@/components/ui/data-date"
 import { DataEnum } from "@/components/ui/data-enum"
 import { NullCell } from "@/components/ui/null-cell"
 import { cn } from "@/lib/utils"
+import { EditSectionSheet } from "./edit-section-sheet"
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, Star } from "lucide-react"
@@ -22,7 +29,13 @@ interface PersonTabsContentProps {
 
 export function PersonTabsContent({ persona }: PersonTabsContentProps) {
     const [activeTab, setActiveTab] = useState("overview")
-    const [openSection, setOpenSection] = useState<string | null>(null)
+    const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
+    const [editingSection, setEditingSection] = useState<string | null>(null)
+
+    const handleEdit = (sectionKey: string) => {
+        setEditingSection(sectionKey)
+        setIsEditSheetOpen(true)
+    }
 
     return (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -255,6 +268,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                     <ProfileSection
                         title="Información Personal"
                         icon={<User className="h-4 w-4" />}
+                        onEdit={() => handleEdit("personal")}
                     >
                         <ProfileField label="Género" value={<DataEnum value={persona.genero} />} />
                         <ProfileField label="Fecha de Nacimiento" value={<DataDate date={persona.fecha_nacimiento} />} />
@@ -267,6 +281,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                     <ProfileSection
                         title="Vínculo Institucional"
                         icon={<Star className="h-4 w-4" />}
+                        onEdit={() => handleEdit("institutional")}
                     >
                         <ProfileField label="Código de Socio" value={<code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">{persona.codigo}</code>} />
                         <ProfileField label="Fecha de Ingreso" value={<DataDate date={persona.fecha_socio} />} />
@@ -298,6 +313,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                     <ProfileSection
                         title="Perfil Profesional"
                         icon={<GraduationCap className="h-4 w-4" />}
+                        onEdit={() => handleEdit("professional")}
                     >
                         <ProfileField label="Nivel Educativo" value={<DataEnum value={persona.nivel_educacion} />} />
                         <ProfileField label="Profesión" value={persona.profesion} />
@@ -308,6 +324,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                     <ProfileSection
                         title="Salud y Médica"
                         icon={<HeartPulse className="h-4 w-4" />}
+                        onEdit={() => handleEdit("health")}
                     >
                         <ProfileField label="Grupo Sanguíneo" value={<span className="text-red-600 font-bold">{persona.tipo_sangre || "—"}</span>} />
                         <ProfileField label="EPS / Prepagada" value={persona.eps} />
@@ -318,6 +335,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                     <ProfileSection
                         title="Contacto de Emergencia"
                         icon={<ShieldCheck className="h-4 w-4" />}
+                        onEdit={() => handleEdit("emergency")}
                     >
                         <ProfileField label="Nombre Contacto" value={persona.nombre_contacto_emergencia} bold />
                         <ProfileField label="Parentesco" value={persona.relacion_emergencia} />
@@ -328,6 +346,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                     <ProfileSection
                         title="Residencia"
                         icon={<Settings className="h-4 w-4" />}
+                        onEdit={() => handleEdit("residence")}
                     >
                         <ProfileField label="Dirección" value={(persona.perfil_preferencias as any)?.direccion_residencia?.direccion} />
                         <ProfileField label="Barrio" value={(persona.perfil_preferencias as any)?.direccion_residencia?.barrio} />
@@ -338,6 +357,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                     <ProfileSection
                         title="Ecosistema Digital"
                         icon={<MessageSquare className="h-4 w-4" />}
+                        onEdit={() => handleEdit("digital")}
                     >
                         <ProfileField label="Email Secundario" value={persona.email_secundario} />
                         <ProfileField label="WhatsApp" value={persona.whatsapp} />
@@ -354,6 +374,13 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                         />
                     </ProfileSection>
                 </div>
+
+                <EditSectionSheet
+                    persona={persona}
+                    sectionKey={editingSection}
+                    open={isEditSheetOpen}
+                    onOpenChange={setIsEditSheetOpen}
+                />
             </TabsContent>
 
             <TabsContent value="relations" className="mt-0">
@@ -428,14 +455,34 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
 /**
  * NEW: ProfileSection (The "Pro" Card Style)
  */
-function ProfileSection({ title, icon, children }: { title: string, icon: React.ReactNode, children: React.ReactNode }) {
+function ProfileSection({ title, icon, children, onEdit }: { title: string, icon: React.ReactNode, children: React.ReactNode, onEdit?: () => void }) {
     return (
         <Card className="border shadow-none bg-background">
-            <CardHeader className="border-b bg-muted/40 px-6 py-4">
+            <CardHeader className="border-b bg-muted/40 px-6 py-4 flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-base font-semibold tracking-tight flex items-center gap-2">
                     <span className="text-muted-foreground/80">{icon}</span>
                     {title}
                 </CardTitle>
+
+                {onEdit && (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                    onClick={onEdit}
+                                >
+                                    <Pencil className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Editar sección</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                )}
             </CardHeader>
             <CardContent className="p-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-6">
