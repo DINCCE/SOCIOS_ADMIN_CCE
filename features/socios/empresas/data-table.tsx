@@ -160,8 +160,8 @@ export function EmpresasDataTable<TData, TValue>({
                     <TableHead
                       key={header.id}
                       className={cn(
-                        header.column.id === "select" && "sticky left-0 z-20 bg-background/90 backdrop-blur-sm",
-                        header.column.id === "razon_social" && "min-w-[250px] sticky left-[48px] z-20 bg-background/90 backdrop-blur-sm shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]",
+                        header.column.id === "select" && "sticky left-0 z-20 bg-slate-50 border-r border-border/60",
+                        header.column.id === "razon_social" && "min-w-[250px] sticky left-[48px] z-20 bg-slate-50 border-r border-border/80 shadow-[2px_0_8px_-2px_rgba(0,0,0,0.05)]",
                         header.column.id !== "razon_social" && header.column.id !== "select" && "w-auto whitespace-nowrap"
                       )}
                     >
@@ -183,7 +183,7 @@ export function EmpresasDataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="cursor-pointer transition-colors hover:bg-muted/50"
+                  className="group cursor-pointer transition-colors hover:bg-muted/50"
                   onClick={(e) => {
                     // Don't navigate if clicking checkbox or action button
                     const target = e.target as HTMLElement
@@ -202,8 +202,8 @@ export function EmpresasDataTable<TData, TValue>({
                     <TableCell
                       key={cell.id}
                       className={cn(
-                        cell.column.id === "select" && "sticky left-0 z-10 bg-inherit",
-                        cell.column.id === "razon_social" && "sticky left-[48px] z-10 bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+                        cell.column.id === "select" && "sticky left-0 z-10 bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted border-r border-border/40",
+                        cell.column.id === "razon_social" && "sticky left-[48px] z-10 bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted border-r border-border/80 shadow-[2px_0_8px_-2px_rgba(0,0,0,0.05)]"
                       )}
                     >
                       {flexRender(

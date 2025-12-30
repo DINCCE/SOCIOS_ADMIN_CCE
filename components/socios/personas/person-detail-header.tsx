@@ -33,7 +33,7 @@ export function PersonDetailHeader({ persona }: PersonDetailHeaderProps) {
 
                     <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                            <h1 className="text-2xl font-bold tracking-tight">{persona.nombre_completo}</h1>
+                            <h1 className="text-xl font-bold tracking-tight">{persona.nombre_completo}</h1>
                             <Badge
                                 variant={persona.estado === "activo" ? "status-active" : persona.estado === "suspendido" ? "status-destructive" : "status-warning"}
                                 showDot
@@ -42,19 +42,11 @@ export function PersonDetailHeader({ persona }: PersonDetailHeaderProps) {
                             </Badge>
                             <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground/60 px-2 ml-2 border-l">
                                 <span className="font-semibold text-foreground/80 uppercase tracking-wider text-[10px]">Titular</span>
-                                <span className="text-border">|</span>
-                                <span className={cn(
-                                    "font-semibold",
-                                    (persona.deuda ?? 0) > 0 ? "text-red-500" : "text-emerald-600"
-                                )}>
-                                    Deuda: ${(persona.deuda ?? 0).toLocaleString()}
-                                </span>
                             </div>
                         </div>
                         <p className="text-sm text-muted-foreground flex items-center gap-2">
-                            <span>{persona.tipo_documento} {persona.numero_documento}</span>
-                            <span className="opacity-40">•</span>
-                            <span>{persona.codigo}</span>
+                            <span className="font-medium text-muted-foreground/60">ID Socio:</span>
+                            <span className="font-semibold">{persona.codigo}</span>
                         </p>
                     </div>
                 </div>

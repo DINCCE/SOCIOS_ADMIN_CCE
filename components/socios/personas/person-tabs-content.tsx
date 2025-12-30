@@ -92,123 +92,100 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
 
             {/* --- OVERVIEW TAB --- */}
             <TabsContent value="overview" className="mt-0 space-y-6">
-                {/* 1. Alerts Area (Previously in Sidebar) */}
-                <div className="grid grid-cols-1 gap-4">
-                    <Alert variant="warning">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Documentación Pendiente</AlertTitle>
-                        <AlertDescription>
-                            Falta copia de carnet de salud vigente para el archivo físico del club.
-                        </AlertDescription>
+                {/* 1. Alerts Area - Compact & Inline */}
+                <div className="flex flex-col gap-2">
+                    <Alert className="border-amber-500/20 border-l-amber-500 text-amber-900 bg-amber-50/30 py-2 px-3 shadow-sm [&>svg]:top-2.5 [&>svg]:left-3 [&>svg~*]:pl-6">
+                        <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
+                        <div className="flex items-center gap-1.5 text-xs">
+                            <span className="font-bold uppercase tracking-tight">Documentación:</span>
+                            <span className="text-amber-800/80">Falta copia de carnet de salud vigente para el archivo físico.</span>
+                        </div>
                     </Alert>
 
-                    <Alert variant="info">
-                        <Star className="h-4 w-4" />
-                        <AlertTitle>Membresía Próxima a Vencer</AlertTitle>
-                        <AlertDescription>
-                            La anualidad vence en 15 días. Generar factura de renovación.
-                        </AlertDescription>
+                    <Alert className="border-blue-500/20 border-l-blue-500 text-blue-900 bg-blue-50/30 py-2 px-3 shadow-sm [&>svg]:top-2.5 [&>svg]:left-3 [&>svg~*]:pl-6">
+                        <Star className="h-3.5 w-3.5 text-blue-600" />
+                        <div className="flex items-center gap-1.5 text-xs">
+                            <span className="font-bold uppercase tracking-tight">Membresía:</span>
+                            <span className="text-blue-800/80">La anualidad vence en 15 días. Generar factura de renovación.</span>
+                        </div>
                     </Alert>
                 </div>
 
                 {/* 2. Responsive Grid for Widgets */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 items-stretch">
                     {/* Widget: Fidelity Highlights */}
-                    <Card className="shadow-sm h-full">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                <Heart className="h-4 w-4 text-red-500" />
-                                Programa de Fidelidad
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex flex-col items-center py-2">
-                                <span className="text-3xl font-bold">Gold</span>
-                                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Nivel de Membresía</span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 pt-2 border-t text-sm">
-                                <div>
-                                    <p className="text-xs text-muted-foreground">Antigüedad</p>
-                                    <p className="font-semibold">2.4 años</p>
+                    <Card className="h-full border border-border bg-card">
+                        <CardContent className="p-4 flex flex-col h-full">
+                            <div className="space-y-1 mb-4">
+                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Nivel Membresía</p>
+                                <div className="flex items-center gap-2">
+                                    <Heart className="h-4 w-4 text-rose-500" />
+                                    <span className="text-2xl font-bold tracking-tight text-foreground">Gold</span>
                                 </div>
+                            </div>
+
+                            <div className="mt-auto pt-4 border-t border-border/40 flex justify-between gap-4">
                                 <div>
-                                    <p className="text-xs text-muted-foreground">Visitas/Mes</p>
-                                    <p className="font-semibold">8.4</p>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Antigüedad</p>
+                                    <p className="text-sm font-semibold text-foreground">2.4 años</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Visitas/Mes</p>
+                                    <p className="text-sm font-semibold text-foreground">8.4</p>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Widget: Family Snippet */}
-                    <Card className="shadow-sm h-full">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                <Users className="h-4 w-4 text-primary" />
-                                Grupo Familiar
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            <div className="flex items-center justify-between text-sm">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold">ML</div>
-                                    <span className="font-medium truncate max-w-[100px]">María López</span>
-                                </div>
-                                <Badge variant="metadata-outline">CÓNYUGE</Badge>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold">CP</div>
-                                    <span className="font-medium truncate max-w-[100px]">Camilo Pérez</span>
-                                </div>
-                                <Badge variant="metadata-outline">HIJO</Badge>
-                            </div>
-                            <Button variant="ghost" size="sm" className="w-full text-[10px] h-7 mt-2" asChild>
-                                <button onClick={() => { }}>Gestionar Relaciones</button>
-                            </Button>
-                        </CardContent>
-                    </Card>
-
-                    {/* Widget: Quick Stats / Latest Activity */}
-                    <Card className="shadow-sm h-full">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
+                    {/* Widget: Latest Activity with Timeline */}
+                    <Card className="h-full border border-border bg-card">
+                        <CardHeader className="p-4 pb-0">
+                            <CardTitle className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
+                                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                                 Resumen de Actividad
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-3">
-                                <ActivitySnippet
-                                    title="Ingreso a Gimnasio"
-                                    time="Hoy, 10:45 AM"
-                                />
-                                <ActivitySnippet
-                                    title="Reserva de Canva"
-                                    time="Ayer, 4:20 PM"
-                                />
+                        <CardContent className="p-4 pt-4">
+                            <div className="relative space-y-6 before:absolute before:inset-0 before:ml-1 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-border/60 before:via-border/60 before:to-transparent">
+                                <div className="relative flex items-center gap-3">
+                                    <div className="absolute left-0 w-2 h-2 rounded-full bg-primary border-2 border-white shadow-sm ring-2 ring-primary/20" />
+                                    <div className="pl-6">
+                                        <p className="text-sm font-medium text-foreground leading-none">Ingreso a Gimnasio</p>
+                                        <p className="text-[10px] text-muted-foreground mt-1">Hoy, 10:45 AM</p>
+                                    </div>
+                                </div>
+                                <div className="relative flex items-center gap-3">
+                                    <div className="absolute left-0 w-2 h-2 rounded-full bg-muted-foreground/30 border-2 border-white shadow-sm" />
+                                    <div className="pl-6">
+                                        <p className="text-sm font-medium text-foreground leading-none">Reserva de Canva</p>
+                                        <p className="text-[10px] text-muted-foreground mt-1">Ayer, 4:20 PM</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="pt-2 border-t text-center">
-                                <p className="text-[11px] font-medium text-muted-foreground">Más de 24 interacciones este mes</p>
-                            </div>
+                            <p className="text-[10px] font-medium text-muted-foreground mt-6 pt-3 border-t border-border/40">
+                                +24 interacciones este mes
+                            </p>
                         </CardContent>
                     </Card>
 
                     {/* Widget: Health & Emergency Highlight */}
-                    <Card className="shadow-sm border-red-100 bg-red-50/10 h-full">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-red-800">
-                                <HeartPulse className="h-4 w-4" />
-                                Salud Crítica
+                    <Card className="h-full border border-border bg-card">
+                        <CardHeader className="p-4 pb-0">
+                            <CardTitle className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
+                                <HeartPulse className="h-3.5 w-3.5 text-rose-500" />
+                                Información Médica
                             </CardTitle>
                         </CardHeader>
-                        <CardContent>
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs text-red-900/70">Tipo Sangre:</span>
-                                <span className="text-sm font-bold text-red-600">{persona.tipo_sangre || "N/A"}</span>
+                        <CardContent className="p-4">
+                            <div className="space-y-1 mb-4">
+                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Tipo Sangre</p>
+                                <p className="text-xl font-bold text-foreground">{persona.tipo_sangre || "N/A"}</p>
                             </div>
-                            <div className="text-xs border-t border-red-100 pt-2">
-                                <p className="font-semibold text-red-900">Contacto de Emergencia:</p>
-                                <p className="text-red-800/80">{persona.nombre_contacto_emergencia || "No asignado"}</p>
+                            <div className="pt-4 border-t border-border/40">
+                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Contacto de Emergencia</p>
+                                <p className="text-sm font-semibold text-foreground leading-tight">
+                                    {persona.nombre_contacto_emergencia || "No asignado"}
+                                </p>
                             </div>
                         </CardContent>
                     </Card>
@@ -448,7 +425,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                     </CardContent>
                 </Card>
             </TabsContent>
-        </Tabs>
+        </Tabs >
     )
 }
 

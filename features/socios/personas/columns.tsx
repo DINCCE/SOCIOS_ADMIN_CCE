@@ -142,7 +142,7 @@ export const columns: ColumnDef<Persona>[] = [
       <DataTableColumnHeader column={column} title="Teléfono" className="text-left" />
     ),
     cell: ({ row }) => (
-      <FormattedNumber value={row.getValue("phone_principal") || row.getValue("telefono_principal")} type="phone" />
+      <FormattedNumber value={row.getValue("telefono_principal")} type="phone" />
     ),
   },
   // --- Optional Columns (Hidden by default) ---

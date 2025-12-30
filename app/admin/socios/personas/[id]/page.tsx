@@ -25,21 +25,23 @@ export default async function PersonDetailPage({ params }: PersonPageProps) {
     }
 
     return (
-        <div className="flex flex-col gap-6">
-            {/* 1. Header Area */}
-            <PersonDetailHeader persona={persona as Persona} />
+        <div className="flex flex-col h-full bg-background">
+            {/* 1. Header Area - Fixed at top */}
+            <div className="bg-background px-6 py-4">
+                <PersonDetailHeader persona={persona as Persona} />
+            </div>
 
-            {/* 2. Main 2-Column Content */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
-                {/* LeftColumn: Identity Sidebar */}
-                <aside className="relative">
-                    <div className="sticky top-6">
+            {/* 2. Main Layout: Flex Container */}
+            <div className="flex flex-1 overflow-hidden">
+                {/* Left Sidebar: Identity (Fixed width) */}
+                <aside className="w-[300px] shrink-0 border-r border-border bg-white overflow-y-auto hidden md:block">
+                    <div className="p-4">
                         <PersonIdentityPanel persona={persona as Persona} />
                     </div>
                 </aside>
 
-                {/* Main: Main Content Area */}
-                <main className="min-w-0">
+                {/* Main Content Area: Tabs & Grid (Flexible) */}
+                <main className="flex-1 overflow-y-auto p-4 scroll-smooth">
                     <PersonTabsContent persona={persona as Persona} />
                 </main>
             </div>
