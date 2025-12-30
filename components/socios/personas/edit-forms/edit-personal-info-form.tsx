@@ -16,6 +16,7 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { DatePicker } from "@/components/ui/date-picker"
 import {
     Select,
     SelectContent,
@@ -98,7 +99,14 @@ export function EditPersonalInfoForm({ persona, onSuccess, onCancel }: EditPerso
                         <FormItem>
                             <FormLabel>Fecha de Nacimiento</FormLabel>
                             <FormControl>
-                                <Input type="date" {...field} value={field.value || ""} />
+                                <DatePicker
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    placeholder="Seleccionar fecha de nacimiento"
+                                    captionLayout="dropdown"
+                                    fromYear={1900}
+                                    toYear={new Date().getFullYear()}
+                                />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -151,7 +159,11 @@ export function EditPersonalInfoForm({ persona, onSuccess, onCancel }: EditPerso
                         <FormItem>
                             <FormLabel>Fecha de Aniversario</FormLabel>
                             <FormControl>
-                                <Input type="date" {...field} value={field.value || ""} />
+                                <DatePicker
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    placeholder="Seleccionar fecha de aniversario"
+                                />
                             </FormControl>
                             <FormMessage />
                         </FormItem>

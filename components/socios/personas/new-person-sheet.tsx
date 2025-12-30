@@ -4,9 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
-import { ChevronDown, Loader2, Plus } from "lucide-react"
+import { Loader2, Plus } from "lucide-react"
 import { toast } from "sonner"
 
 import { cn } from "@/lib/utils"
@@ -21,12 +19,7 @@ import {
     SheetTrigger,
     SheetFooter,
 } from "@/components/ui/sheet"
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
+import { DatePicker } from "@/components/ui/date-picker"
 import {
     Form,
     FormControl,
@@ -190,43 +183,19 @@ export function NewPersonSheet() {
                                         control={form.control}
                                         name="fecha_nacimiento"
                                         render={({ field }) => (
-                                            <FormItem className="flex flex-col">
+                                            <FormItem>
                                                 <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Fecha de Nacimiento</FormLabel>
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <FormControl>
-                                                            <Button
-                                                                variant={"outline"}
-                                                                className={cn(
-                                                                    "h-11 bg-muted/30 border-muted-foreground/20 focus:ring-primary/20 w-full pl-3 text-left font-normal",
-                                                                    !field.value && "text-muted-foreground"
-                                                                )}
-                                                            >
-                                                                {field.value ? (
-                                                                    format(new Date(field.value + "T12:00:00"), "PPP", { locale: es })
-                                                                ) : (
-                                                                    <span>Seleccionar fecha</span>
-                                                                )}
-                                                                <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
-                                                            </Button>
-                                                        </FormControl>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-auto p-0" align="start">
-                                                        <Calendar
-                                                            mode="single"
-                                                            captionLayout="dropdown-buttons"
-                                                            fromYear={1900}
-                                                            toYear={new Date().getFullYear()}
-                                                            selected={field.value ? new Date(field.value + "T12:00:00") : undefined}
-                                                            onSelect={(date) => {
-                                                                if (date) {
-                                                                    field.onChange(format(date, "yyyy-MM-dd"))
-                                                                }
-                                                            }}
-                                                            initialFocus
-                                                        />
-                                                    </PopoverContent>
-                                                </Popover>
+                                                <FormControl>
+                                                    <DatePicker
+                                                        value={field.value}
+                                                        onChange={field.onChange}
+                                                        placeholder="Seleccionar fecha"
+                                                        captionLayout="dropdown"
+                                                        fromYear={1900}
+                                                        toYear={new Date().getFullYear()}
+                                                        className="h-11 bg-muted/30 border-muted-foreground/20 focus:ring-primary/20"
+                                                    />
+                                                </FormControl>
                                                 <FormMessage className="text-[10px]" />
                                             </FormItem>
                                         )}

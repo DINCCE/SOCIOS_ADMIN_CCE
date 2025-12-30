@@ -4,19 +4,12 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
-import { ChevronDown, Loader2, Plus } from "lucide-react"
+import { Loader2, Plus } from "lucide-react"
 import { toast } from "sonner"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
+import { DatePicker } from "@/components/ui/date-picker"
 import {
     Sheet,
     SheetContent,
@@ -359,36 +352,15 @@ export function NewCompanySheet() {
                                             control={form.control}
                                             name="fecha_constitucion"
                                             render={({ field }) => (
-                                                <FormItem className="flex flex-col">
+                                                <FormItem>
                                                     <FormLabel>Fecha de Constitución</FormLabel>
-                                                    <Popover>
-                                                        <PopoverTrigger asChild>
-                                                            <FormControl>
-                                                                <Button
-                                                                    variant={"outline"}
-                                                                    className={cn(
-                                                                        "w-full pl-3 text-left font-normal",
-                                                                        !field.value && "text-muted-foreground"
-                                                                    )}
-                                                                >
-                                                                    {field.value ? (
-                                                                        format(new Date(field.value), "PPP", { locale: es })
-                                                                    ) : (
-                                                                        <span>Seleccione fecha</span>
-                                                                    )}
-                                                                    <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
-                                                                </Button>
-                                                            </FormControl>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-auto p-0" align="start">
-                                                            <Calendar
-                                                                mode="single"
-                                                                selected={field.value ? new Date(field.value) : undefined}
-                                                                onSelect={(date) => field.onChange(date?.toISOString().split('T')[0])}
-                                                                initialFocus
-                                                            />
-                                                        </PopoverContent>
-                                                    </Popover>
+                                                    <FormControl>
+                                                        <DatePicker
+                                                            value={field.value}
+                                                            onChange={field.onChange}
+                                                            placeholder="Seleccione fecha"
+                                                        />
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
