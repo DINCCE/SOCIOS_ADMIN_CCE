@@ -175,6 +175,9 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
                                                     onChange={field.onChange}
                                                     placeholder="Seleccionar fecha"
                                                     className="h-9"
+                                                    captionLayout="dropdown"
+                                                    fromYear={1950}
+                                                    toYear={new Date().getFullYear()}
                                                 />
                                             </FormControl>
                                             <FormMessage />

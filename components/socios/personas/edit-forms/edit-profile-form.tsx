@@ -169,6 +169,9 @@ export function EditProfileForm({ persona, onSuccess, onCancel }: EditProfileFor
                                                     onChange={field.onChange}
                                                     placeholder="Seleccionar fecha"
                                                     className="h-9"
+                                                    captionLayout="dropdown"
+                                                    fromYear={1980}
+                                                    toYear={new Date().getFullYear()}
                                                     disabled
                                                 />
                                             </FormControl>
@@ -188,6 +191,9 @@ export function EditProfileForm({ persona, onSuccess, onCancel }: EditProfileFor
                                                     onChange={field.onChange}
                                                     placeholder="Seleccionar fecha"
                                                     className="h-9"
+                                                    captionLayout="dropdown"
+                                                    fromYear={1950}
+                                                    toYear={new Date().getFullYear()}
                                                 />
                                             </FormControl>
                                             <FormMessage />

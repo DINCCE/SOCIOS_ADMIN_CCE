@@ -87,6 +87,9 @@ export function EditInstitutionalForm({ persona, onSuccess, onCancel }: EditInst
                                     value={field.value}
                                     onChange={field.onChange}
                                     placeholder="Seleccionar fecha de ingreso"
+                                    captionLayout="dropdown"
+                                    fromYear={1980}
+                                    toYear={new Date().getFullYear()}
                                 />
                             </FormControl>
                             <FormMessage />
