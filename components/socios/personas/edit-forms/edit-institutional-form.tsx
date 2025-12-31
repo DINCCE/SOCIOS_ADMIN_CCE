@@ -42,8 +42,8 @@ export function EditInstitutionalForm({ persona, onSuccess, onCancel }: EditInst
         resolver: zodResolver(institutionalSchema),
         defaultValues: {
             fecha_socio: persona.fecha_socio || null,
-            estado: (persona.estado as any) || "activo",
-            estado_vital: (persona.estado_vital as any) || "vivo",
+            estado: (persona.estado as "activo" | "inactivo" | "mora") || "activo",
+            estado_vital: (persona.estado_vital as "vivo" | "fallecido" | "desconocido") || "vivo",
             tags: persona.tags || [],
         },
     })

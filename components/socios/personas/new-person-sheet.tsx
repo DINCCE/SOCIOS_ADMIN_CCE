@@ -39,7 +39,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 
 import { crearPersonaFromPersonFormValues } from "@/app/actions/personas"
-import { personSchema } from "@/lib/schemas/person-schema"
+import { personSchema, type PersonFormValues } from "@/lib/schemas/person-schema"
 
 export function NewPersonSheet() {
     const [open, setOpen] = useState(false)
@@ -65,7 +65,7 @@ export function NewPersonSheet() {
         },
     })
 
-    async function onSubmit(data: any) {
+    async function onSubmit(data: PersonFormValues) {
         setIsPending(true)
         try {
             const result = await crearPersonaFromPersonFormValues(data)

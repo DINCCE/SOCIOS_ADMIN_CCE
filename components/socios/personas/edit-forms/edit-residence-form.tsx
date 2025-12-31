@@ -31,14 +31,17 @@ export function EditResidenceForm({ persona, onSuccess, onCancel }: EditResidenc
     const [isPending, setIsPending] = useState(false)
 
     // Extract from JSONB if exists, otherwise null
-    const prefs = persona.perfil_preferencias as any
+    type PerfilPreferencias = Record<string, unknown>
+    type DireccionResidencia = { direccion?: string; barrio?: string; ciudad?: string }
+    const prefs = (persona.perfil_preferencias || {}) as PerfilPreferencias
+    const direccionData = (prefs.direccion_residencia || {}) as DireccionResidencia
 
     const form = useForm<ResidenceValues>({
         resolver: zodResolver(residenceSchema),
         defaultValues: {
-            direccion: prefs?.direccion_residencia?.direccion || null,
-            barrio: prefs?.direccion_residencia?.barrio || null,
-            ciudad: prefs?.direccion_residencia?.ciudad || null,
+            direccion: direccionData.direccion || null,
+            barrio: direccionData.barrio || null,
+            ciudad: direccionData.ciudad || null,
         },
     })
 
@@ -49,7 +52,7 @@ export function EditResidenceForm({ persona, onSuccess, onCancel }: EditResidenc
             const updatedPrefs = {
                 ...prefs,
                 direccion_residencia: {
-                    ...(prefs?.direccion_residencia || {}),
+                    ...direccionData,
                     ...values
                 }
             }

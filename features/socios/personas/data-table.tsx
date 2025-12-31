@@ -70,7 +70,7 @@ export function PersonasDataTable<TData, TValue>({
 
   // Dynamic visibility for "tags" column
   React.useEffect(() => {
-    const hasTags = data.some((item: any) => (item.tags || []).length > 0)
+    const hasTags = data.some((item: { tags?: string[] }) => (item.tags || []).length > 0)
     setColumnVisibility(prev => ({
       ...prev,
       tags: hasTags
@@ -180,7 +180,7 @@ export function PersonasDataTable<TData, TValue>({
                     ) {
                       return
                     }
-                    router.push(`/admin/socios/personas/${(row.original as any).id}`)
+                    router.push(`/admin/socios/personas/${(row.original as { id: string }).id}`)
                   }}
                 >
                   {row.getVisibleCells().map((cell) => (

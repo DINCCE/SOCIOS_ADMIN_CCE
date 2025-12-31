@@ -15,7 +15,7 @@ export async function testWriteAction() {
 
         if (triggerData) {
             logs.push("🔍 TRIGGERS ENCONTRADOS en business_partners:")
-            triggerData.forEach((t: any) => {
+            triggerData.forEach((t: { trigger_name: string; action_timing: string; event_manipulation: string }) => {
                 logs.push(`   - ${t.trigger_name}: ${t.action_timing} ${t.event_manipulation}`)
                 if (t.action_timing === 'BEFORE' && t.event_manipulation === 'INSERT') {
                     logs.push("   ⚠️ CRÍTICO: Este trigger es el que está bloqueando. Debe ser AFTER + DEFERRABLE.")
@@ -94,8 +94,8 @@ export async function testWriteAction() {
 
         return { success: true, logs }
 
-    } catch (err: any) {
-        logs.push(`❌ EXCEPTION: ${err.message}`)
+    } catch (err: unknown) {
+        logs.push(`❌ EXCEPTION: ${err instanceof Error ? err.message : String(err)}`)
         return { success: false, logs }
     }
 }

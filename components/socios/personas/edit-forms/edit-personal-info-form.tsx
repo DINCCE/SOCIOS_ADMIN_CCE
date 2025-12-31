@@ -41,10 +41,10 @@ export function EditPersonalInfoForm({ persona, onSuccess, onCancel }: EditPerso
     const form = useForm<PersonalInfoValues>({
         resolver: zodResolver(personalInfoSchema),
         defaultValues: {
-            genero: (persona.genero as any) || null,
+            genero: (persona.genero as "masculino" | "femenino" | "otro" | null) || null,
             fecha_nacimiento: persona.fecha_nacimiento || null,
             lugar_nacimiento: persona.lugar_nacimiento || null,
-            estado_civil: (persona.estado_civil as any) || null,
+            estado_civil: (persona.estado_civil as "soltero" | "casado" | "union_libre" | "divorciado" | "viudo" | null) || null,
             fecha_aniversario: persona.fecha_aniversario || null,
         },
     })
