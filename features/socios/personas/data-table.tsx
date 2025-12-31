@@ -70,7 +70,10 @@ export function PersonasDataTable<TData, TValue>({
 
   // Dynamic visibility for "tags" column
   React.useEffect(() => {
-    const hasTags = data.some((item: { tags?: string[] }) => (item.tags || []).length > 0)
+    const hasTags = data.some((item) => {
+      const typedItem = item as { tags?: string[] }
+      return (typedItem.tags || []).length > 0
+    })
     setColumnVisibility(prev => ({
       ...prev,
       tags: hasTags

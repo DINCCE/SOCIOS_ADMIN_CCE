@@ -481,7 +481,7 @@ function ProfileSection({ title, icon, children, onEdit }: { title: string, icon
 /**
  * NEW: ProfileField (Flat Layout with Fixed Label Width)
  */
-function ProfileField({ label, value, bold }: { label: string, value: string | null | undefined, bold?: boolean }) {
+function ProfileField({ label, value, bold }: { label: string, value: React.ReactNode, bold?: boolean }) {
     return (
         <div className="grid grid-cols-[180px_1fr] items-baseline">
             <span className="text-sm font-medium text-muted-foreground">{label}</span>
