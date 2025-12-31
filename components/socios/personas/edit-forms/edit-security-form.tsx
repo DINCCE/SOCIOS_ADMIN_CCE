@@ -19,14 +19,25 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { Persona } from "@/features/socios/types/socios-schema"
 
 // Schema de validación
 const securitySchema = z.object({
     tipo_sangre: z.string().optional().nullable(),
     eps: z.string().optional().nullable(),
+    alergias_condiciones: z.string().optional().nullable(),
     contacto_emergencia_id: z.string().uuid().optional().nullable(),
+    nombre_contacto_emergencia: z.string().optional().nullable(),
     relacion_emergencia: z.string().optional().nullable(),
+    telefono_emergencia: z.string().optional().nullable(),
 })
 
 type SecurityFormValues = z.infer<typeof securitySchema>
@@ -46,8 +57,11 @@ export function EditSecurityForm({ persona, onSuccess, onCancel }: EditSecurityF
         defaultValues: {
             tipo_sangre: persona.tipo_sangre || "",
             eps: persona.eps || "",
+            alergias_condiciones: "",
             contacto_emergencia_id: persona.contacto_emergencia_id || undefined,
+            nombre_contacto_emergencia: persona.nombre_contacto_emergencia || "",
             relacion_emergencia: persona.relacion_emergencia || "",
+            telefono_emergencia: "",
         },
     })
 
@@ -96,9 +110,23 @@ export function EditSecurityForm({ persona, onSuccess, onCancel }: EditSecurityF
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Grupo Sanguíneo</FormLabel>
-                                            <FormControl>
-                                                <Input className="h-9" placeholder="O+, A+, etc." {...field} value={field.value || ""} />
-                                            </FormControl>
+                                            <Select onValueChange={field.onChange} value={field.value || undefined}>
+                                                <FormControl>
+                                                    <SelectTrigger className="h-9">
+                                                        <SelectValue placeholder="Seleccionar" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="O+">O+</SelectItem>
+                                                    <SelectItem value="O-">O-</SelectItem>
+                                                    <SelectItem value="A+">A+</SelectItem>
+                                                    <SelectItem value="A-">A-</SelectItem>
+                                                    <SelectItem value="B+">B+</SelectItem>
+                                                    <SelectItem value="B-">B-</SelectItem>
+                                                    <SelectItem value="AB+">AB+</SelectItem>
+                                                    <SelectItem value="AB-">AB-</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -117,22 +145,96 @@ export function EditSecurityForm({ persona, onSuccess, onCancel }: EditSecurityF
                                     )}
                                 />
                             </div>
+
+                            <FormField
+                                control={form.control}
+                                name="alergias_condiciones"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Alergias / Condiciones Médicas</FormLabel>
+                                        <FormControl>
+                                            <Textarea
+                                                className="resize-none"
+                                                placeholder="Describe alergias, condiciones médicas relevantes..."
+                                                rows={3}
+                                                {...field}
+                                                value={field.value || ""}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </div>
 
                         {/* Contacto de Emergencia */}
                         <div className="space-y-4">
                             <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Contacto de Emergencia</h4>
+
+                            <div className="space-y-2 p-3 bg-blue-50/50 border border-blue-200 rounded-md">
+                                <p className="text-xs font-semibold text-blue-900">Buscar Contacto en Sistema</p>
+                                <p className="text-[10px] text-blue-700 italic">
+                                    El selector de búsqueda de contactos (Combobox con búsqueda async) será implementado próximamente.
+                                    Por ahora, puedes ingresar los datos manualmente.
+                                </p>
+                            </div>
+
+                            <FormField
+                                control={form.control}
+                                name="nombre_contacto_emergencia"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Nombre Contacto (Fallback Manual)</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                className="h-9"
+                                                placeholder="Nombre completo del contacto"
+                                                {...field}
+                                                value={field.value || ""}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="contacto_emergencia_id"
+                                    name="relacion_emergencia"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">ID Contacto</FormLabel>
+                                            <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Parentesco</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value || undefined}>
+                                                <FormControl>
+                                                    <SelectTrigger className="h-9">
+                                                        <SelectValue placeholder="Seleccionar" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="conyuge">Cónyuge</SelectItem>
+                                                    <SelectItem value="padre">Padre</SelectItem>
+                                                    <SelectItem value="madre">Madre</SelectItem>
+                                                    <SelectItem value="hijo">Hijo/a</SelectItem>
+                                                    <SelectItem value="hermano">Hermano/a</SelectItem>
+                                                    <SelectItem value="amigo">Amigo/a</SelectItem>
+                                                    <SelectItem value="otro">Otro</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="telefono_emergencia"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Teléfono Emergencia</FormLabel>
                                             <FormControl>
                                                 <Input
-                                                    className="h-9 font-mono"
-                                                    placeholder="UUID del contacto"
+                                                    className="h-9"
+                                                    placeholder="+57 3..."
                                                     {...field}
                                                     value={field.value || ""}
                                                 />
@@ -141,23 +243,27 @@ export function EditSecurityForm({ persona, onSuccess, onCancel }: EditSecurityF
                                         </FormItem>
                                     )}
                                 />
-                                <FormField
-                                    control={form.control}
-                                    name="relacion_emergencia"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Parentesco</FormLabel>
-                                            <FormControl>
-                                                <Input className="h-9" placeholder="Esposo/a, Hijo/a, etc." {...field} value={field.value || ""} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
                             </div>
-                            <p className="text-xs text-muted-foreground italic">
-                                Nota: El selector de contacto de emergencia será implementado próximamente para buscar en la tabla de personas.
-                            </p>
+
+                            <FormField
+                                control={form.control}
+                                name="contacto_emergencia_id"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">ID Contacto en Sistema (UUID)</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                className="h-9 font-mono text-xs bg-muted/40"
+                                                placeholder="Se completará automáticamente al seleccionar del sistema"
+                                                {...field}
+                                                value={field.value || ""}
+                                                disabled
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </div>
                     </form>
                 </Form>
