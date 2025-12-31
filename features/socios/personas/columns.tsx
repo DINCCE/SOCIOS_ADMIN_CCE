@@ -91,13 +91,13 @@ export const columns: ColumnDef<Persona>[] = [
   {
     accessorKey: "numero_documento",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Documento" className="text-left" />
+      <DataTableColumnHeader column={column} title="Documento" className="text-center" />
     ),
     cell: ({ row }) => {
       const tipoDocumento = row.original.tipo_documento
       const numeroDocumento = row.getValue("numero_documento") as string
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           <Badge
             variant="metadata-outline"
           >
@@ -139,10 +139,12 @@ export const columns: ColumnDef<Persona>[] = [
   {
     accessorKey: "telefono_principal",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Teléfono" className="text-left" />
+      <DataTableColumnHeader column={column} title="Teléfono" className="text-center" />
     ),
     cell: ({ row }) => (
-      <FormattedNumber value={row.getValue("telefono_principal")} type="phone" />
+      <div className="text-center">
+        <FormattedNumber value={row.getValue("telefono_principal")} type="phone" />
+      </div>
     ),
   },
   // --- Optional Columns (Hidden by default) ---
@@ -282,19 +284,21 @@ export const columns: ColumnDef<Persona>[] = [
   {
     accessorKey: "estado",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Estado" className="text-left" />
+      <DataTableColumnHeader column={column} title="Estado" className="text-center" />
     ),
     cell: ({ row }) => {
       const estado = (row.getValue("estado") as string)?.toLowerCase()
       // "Activo" is neutral secondary in SaaS 2025
       const variant = (estadoVariants[estado] || "status-neutral") as "status-active" | "status-inactive" | "status-destructive" | "status-warning" | "status-neutral"
       return (
-        <Badge
-          variant={variant}
-          showDot
-        >
-          {estado.charAt(0).toUpperCase() + estado.slice(1)}
-        </Badge>
+        <div className="flex justify-center">
+          <Badge
+            variant={variant}
+            showDot
+          >
+            {estado.charAt(0).toUpperCase() + estado.slice(1)}
+          </Badge>
+        </div>
       )
     },
     filterFn: (row, id, value) => {
