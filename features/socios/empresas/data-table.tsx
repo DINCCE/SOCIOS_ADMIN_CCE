@@ -195,7 +195,7 @@ export function EmpresasDataTable<TData, TValue>({
                     ) {
                       return
                     }
-                    router.push(`/admin/socios/empresas/${(row.original as any).id}`)
+                    router.push(`/admin/socios/empresas/${(row.original as { id: string }).id}`)
                   }}
                 >
                   {row.getVisibleCells().map((cell) => (

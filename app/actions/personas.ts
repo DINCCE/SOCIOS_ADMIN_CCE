@@ -191,7 +191,7 @@ export async function crearPersonaFromForm(data: {
  * @param data - Partial persona data to update
  * @returns Object with { success, message, error? }
  */
-export async function actualizarPersona(id: string, data: any) {
+export async function actualizarPersona(id: string, data: Record<string, unknown>) {
   const supabase = await createClient()
 
   const { error } = await supabase

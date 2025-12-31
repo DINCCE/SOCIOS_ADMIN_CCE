@@ -30,19 +30,21 @@ interface EditEmergencyFormProps {
 export function EditEmergencyForm({ persona, onSuccess, onCancel }: EditEmergencyFormProps) {
     const [isPending, setIsPending] = useState(false)
 
+    type PerfilPreferencias = Record<string, unknown>
+    const prefs = (persona.perfil_preferencias || {}) as PerfilPreferencias
+
     const form = useForm<EmergencyValues>({
         resolver: zodResolver(emergencySchema),
         defaultValues: {
             nombre_contacto_emergencia: persona.nombre_contacto_emergencia || null,
             relacion_emergencia: persona.relacion_emergencia || null,
-            protocolo_emergencia: (persona.perfil_preferencias as any)?.protocolo_emergencia || "Estándar",
+            protocolo_emergencia: (prefs.protocolo_emergencia as string | undefined) || "Estándar",
         },
     })
 
     async function onSubmit(values: EmergencyValues) {
         setIsPending(true)
         try {
-            const prefs = persona.perfil_preferencias as any
             const updatedData = {
                 nombre_contacto_emergencia: values.nombre_contacto_emergencia,
                 relacion_emergencia: values.relacion_emergencia,

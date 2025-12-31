@@ -248,10 +248,10 @@ export const columns: ColumnDef<Empresa>[] = [
     cell: ({ row }) => {
       const estado = (row.getValue("estado") as string)?.toLowerCase()
       // "Activo" is neutral/subtle in SaaS 2025
-      const variant = estadoVariants[estado] || "status-neutral"
+      const variant = (estadoVariants[estado] || "status-neutral") as "status-active" | "status-inactive" | "status-destructive" | "status-warning" | "status-neutral"
       return (
         <Badge
-          variant={variant as any}
+          variant={variant}
           showDot
         >
           {estado.charAt(0).toUpperCase() + estado.slice(1)}

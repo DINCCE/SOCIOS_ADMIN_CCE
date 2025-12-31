@@ -45,8 +45,8 @@ export default async function TestDBPage() {
                     : `Found ${count} organizations. Sample ID: ${orgData?.id || 'N/A'}`
             }
         }
-    } catch (e: any) {
-        results.organizations = { status: "error", count: 0, message: e.message }
+    } catch (e: unknown) {
+        results.organizations = { status: "error", count: 0, message: e instanceof Error ? e.message : String(e) }
     }
 
     // 3. Check Business Partners (Permissions Check)
@@ -64,8 +64,8 @@ export default async function TestDBPage() {
                 message: `Found ${count} business partners. Read permission OK.`
             }
         }
-    } catch (e: any) {
-        results.business_partners = { status: "error", count: 0, message: e.message }
+    } catch (e: unknown) {
+        results.business_partners = { status: "error", count: 0, message: e instanceof Error ? e.message : String(e) }
     }
 
     return (

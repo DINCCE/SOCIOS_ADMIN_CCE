@@ -27,10 +27,18 @@ interface PersonTabsContentProps {
     persona: Persona
 }
 
+// Type helpers for JSONB fields
+type PerfilPreferencias = Record<string, unknown>
+type DireccionResidencia = { direccion?: string; barrio?: string; ciudad?: string }
+
 export function PersonTabsContent({ persona }: PersonTabsContentProps) {
     const [activeTab, setActiveTab] = useState("overview")
     const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
     const [editingSection, setEditingSection] = useState<string | null>(null)
+
+    // Extract JSONB data with proper typing
+    const prefs = (persona.perfil_preferencias || {}) as PerfilPreferencias
+    const direccion = (prefs.direccion_residencia || {}) as DireccionResidencia
 
     const handleEdit = (sectionKey: string) => {
         setEditingSection(sectionKey)
@@ -316,7 +324,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                     >
                         <ProfileField label="Nombre Contacto" value={persona.nombre_contacto_emergencia} bold />
                         <ProfileField label="Parentesco" value={persona.relacion_emergencia} />
-                        <ProfileField label="Protocolo" value={(persona.perfil_preferencias as any)?.protocolo_emergencia || "Estándar"} />
+                        <ProfileField label="Protocolo" value={(prefs.protocolo_emergencia as string | undefined) || "Estándar"} />
                     </ProfileSection>
 
                     {/* SECCIÓN 7: UBICACIÓN */}
@@ -325,9 +333,9 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                         icon={<Settings className="h-4 w-4" />}
                         onEdit={() => handleEdit("residence")}
                     >
-                        <ProfileField label="Dirección" value={(persona.perfil_preferencias as any)?.direccion_residencia?.direccion} />
-                        <ProfileField label="Barrio" value={(persona.perfil_preferencias as any)?.direccion_residencia?.barrio} />
-                        <ProfileField label="Ciudad" value={(persona.perfil_preferencias as any)?.direccion_residencia?.ciudad} />
+                        <ProfileField label="Dirección" value={direccion.direccion} />
+                        <ProfileField label="Barrio" value={direccion.barrio} />
+                        <ProfileField label="Ciudad" value={direccion.ciudad} />
                     </ProfileSection>
 
                     {/* SECCIÓN 8: PRESENCIA DIGITAL */}
@@ -473,7 +481,7 @@ function ProfileSection({ title, icon, children, onEdit }: { title: string, icon
 /**
  * NEW: ProfileField (Flat Layout with Fixed Label Width)
  */
-function ProfileField({ label, value, bold }: { label: string, value: any, bold?: boolean }) {
+function ProfileField({ label, value, bold }: { label: string, value: React.ReactNode, bold?: boolean }) {
     return (
         <div className="grid grid-cols-[180px_1fr] items-baseline">
             <span className="text-sm font-medium text-muted-foreground">{label}</span>

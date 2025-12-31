@@ -16,6 +16,7 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { DatePicker } from "@/components/ui/date-picker"
 import {
     Select,
     SelectContent,
@@ -41,8 +42,8 @@ export function EditInstitutionalForm({ persona, onSuccess, onCancel }: EditInst
         resolver: zodResolver(institutionalSchema),
         defaultValues: {
             fecha_socio: persona.fecha_socio || null,
-            estado: (persona.estado as any) || "activo",
-            estado_vital: (persona.estado_vital as any) || "vivo",
+            estado: (persona.estado as "activo" | "inactivo" | "mora") || "activo",
+            estado_vital: (persona.estado_vital as "vivo" | "fallecido" | "desconocido") || "vivo",
             tags: persona.tags || [],
         },
     })
@@ -82,7 +83,11 @@ export function EditInstitutionalForm({ persona, onSuccess, onCancel }: EditInst
                         <FormItem>
                             <FormLabel>Fecha de Ingreso</FormLabel>
                             <FormControl>
-                                <Input type="date" {...field} value={field.value || ""} />
+                                <DatePicker
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    placeholder="Seleccionar fecha de ingreso"
+                                />
                             </FormControl>
                             <FormMessage />
                         </FormItem>

@@ -95,7 +95,7 @@ export async function createPerson(data: PersonFormValues) {
     }
 
     // cast result if needed, usually rpc returns data
-    const result = rpcResult as any
+    const result = rpcResult as { success?: boolean; error?: string; id?: string }
     if (!result?.success) {
         console.error("RPC Business Error:", result)
         return { error: result?.error || "Error desconocido al crear persona" }

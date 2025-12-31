@@ -16,6 +16,7 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { DatePicker } from "@/components/ui/date-picker"
 import {
     Select,
     SelectContent,
@@ -40,10 +41,10 @@ export function EditPersonalInfoForm({ persona, onSuccess, onCancel }: EditPerso
     const form = useForm<PersonalInfoValues>({
         resolver: zodResolver(personalInfoSchema),
         defaultValues: {
-            genero: (persona.genero as any) || null,
+            genero: (persona.genero as "masculino" | "femenino" | "otro" | null) || null,
             fecha_nacimiento: persona.fecha_nacimiento || null,
             lugar_nacimiento: persona.lugar_nacimiento || null,
-            estado_civil: (persona.estado_civil as any) || null,
+            estado_civil: (persona.estado_civil as "soltero" | "casado" | "union_libre" | "divorciado" | "viudo" | null) || null,
             fecha_aniversario: persona.fecha_aniversario || null,
         },
     })
@@ -98,7 +99,14 @@ export function EditPersonalInfoForm({ persona, onSuccess, onCancel }: EditPerso
                         <FormItem>
                             <FormLabel>Fecha de Nacimiento</FormLabel>
                             <FormControl>
-                                <Input type="date" {...field} value={field.value || ""} />
+                                <DatePicker
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    placeholder="Seleccionar fecha de nacimiento"
+                                    captionLayout="dropdown"
+                                    fromYear={1900}
+                                    toYear={new Date().getFullYear()}
+                                />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -151,7 +159,11 @@ export function EditPersonalInfoForm({ persona, onSuccess, onCancel }: EditPerso
                         <FormItem>
                             <FormLabel>Fecha de Aniversario</FormLabel>
                             <FormControl>
-                                <Input type="date" {...field} value={field.value || ""} />
+                                <DatePicker
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    placeholder="Seleccionar fecha de aniversario"
+                                />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
