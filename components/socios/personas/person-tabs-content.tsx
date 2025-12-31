@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Clock, User, Users, Receipt, GraduationCap, HeartPulse, ShieldCheck, Settings, LayoutDashboard, Heart, ChevronDown, MessageSquare, Pencil } from "lucide-react"
+import { Clock, User, Users, Receipt, GraduationCap, HeartPulse, ShieldCheck, Settings, LayoutDashboard, ChevronDown, MessageSquare, Pencil } from "lucide-react"
 import { Persona } from "@/features/socios/types/socios-schema"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,8 +20,11 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip"
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Alert } from "@/components/ui/alert"
 import { AlertCircle, Star } from "lucide-react"
+import { FinancialEcosystemCard } from "./dashboard-cards/financial-ecosystem-card"
+import { EngagementLoyaltyCard } from "./dashboard-cards/engagement-loyalty-card"
+import { PreferencesServicesCard } from "./dashboard-cards/preferences-services-card"
 
 interface PersonTabsContentProps {
     persona: Persona
@@ -119,84 +122,11 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                     </Alert>
                 </div>
 
-                {/* 2. Responsive Grid for Widgets */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 items-stretch">
-                    {/* Widget: Fidelity Highlights */}
-                    <Card className="h-full border border-border bg-card">
-                        <CardContent className="p-4 flex flex-col h-full">
-                            <div className="space-y-1 mb-4">
-                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Nivel Membresía</p>
-                                <div className="flex items-center gap-2">
-                                    <Heart className="h-4 w-4 text-rose-500" />
-                                    <span className="text-2xl font-bold tracking-tight text-foreground">Gold</span>
-                                </div>
-                            </div>
-
-                            <div className="mt-auto pt-4 border-t border-border/40 flex justify-between gap-4">
-                                <div>
-                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Antigüedad</p>
-                                    <p className="text-sm font-semibold text-foreground">2.4 años</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Visitas/Mes</p>
-                                    <p className="text-sm font-semibold text-foreground">8.4</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Widget: Latest Activity with Timeline */}
-                    <Card className="h-full border border-border bg-card">
-                        <CardHeader className="p-4 pb-0">
-                            <CardTitle className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
-                                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                                Resumen de Actividad
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 pt-4">
-                            <div className="relative space-y-6 before:absolute before:inset-0 before:ml-1 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-border/60 before:via-border/60 before:to-transparent">
-                                <div className="relative flex items-center gap-3">
-                                    <div className="absolute left-0 w-2 h-2 rounded-full bg-primary border-2 border-white shadow-sm ring-2 ring-primary/20" />
-                                    <div className="pl-6">
-                                        <p className="text-sm font-medium text-foreground leading-none">Ingreso a Gimnasio</p>
-                                        <p className="text-[10px] text-muted-foreground mt-1">Hoy, 10:45 AM</p>
-                                    </div>
-                                </div>
-                                <div className="relative flex items-center gap-3">
-                                    <div className="absolute left-0 w-2 h-2 rounded-full bg-muted-foreground/30 border-2 border-white shadow-sm" />
-                                    <div className="pl-6">
-                                        <p className="text-sm font-medium text-foreground leading-none">Reserva de Canva</p>
-                                        <p className="text-[10px] text-muted-foreground mt-1">Ayer, 4:20 PM</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <p className="text-[10px] font-medium text-muted-foreground mt-6 pt-3 border-t border-border/40">
-                                +24 interacciones este mes
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    {/* Widget: Health & Emergency Highlight */}
-                    <Card className="h-full border border-border bg-card">
-                        <CardHeader className="p-4 pb-0">
-                            <CardTitle className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
-                                <HeartPulse className="h-3.5 w-3.5 text-rose-500" />
-                                Información Médica
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4">
-                            <div className="space-y-1 mb-4">
-                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Tipo Sangre</p>
-                                <p className="text-xl font-bold text-foreground">{persona.tipo_sangre || "N/A"}</p>
-                            </div>
-                            <div className="pt-4 border-t border-border/40">
-                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Contacto de Emergencia</p>
-                                <p className="text-sm font-semibold text-foreground leading-tight">
-                                    {persona.nombre_contacto_emergencia || "No asignado"}
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
+                {/* 2. Dashboard de Inteligencia de Socio - Grid de 3 columnas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
+                    <FinancialEcosystemCard />
+                    <EngagementLoyaltyCard />
+                    <PreferencesServicesCard />
                 </div>
             </TabsContent>
 
