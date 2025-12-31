@@ -3,6 +3,8 @@
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker, type DayPickerProps, type Formatters } from "react-day-picker"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
@@ -23,10 +25,18 @@ function Calendar({
     showOutsideDays = true,
     ...props
 }: CalendarProps) {
+    // Formatters personalizados para versiones cortas de meses
+    const formatters: Partial<Formatters> = {
+        formatMonthDropdown: (month: Date) => {
+            return format(month, "MMM", { locale: es })
+        },
+    }
+
     return (
         <DayPicker
             showOutsideDays={showOutsideDays}
             className={cn("p-3", className)}
+            formatters={formatters}
             classNames={{
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
                 month: "space-y-4",
@@ -72,7 +82,7 @@ function Calendar({
                 },
                 MonthCaption: ({ calendarMonth, children, ...props }) => {
                     return (
-                        <div className="flex justify-center gap-1">
+                        <div className="flex justify-center items-center gap-2">
                             {children}
                         </div>
                     )
@@ -90,7 +100,7 @@ function Calendar({
                             value={value?.toString()}
                             onValueChange={handleChange}
                         >
-                            <SelectTrigger className="pr-1.5 focus:ring-0">
+                            <SelectTrigger className="pr-1.5 focus:ring-0 w-fit">
                                 <SelectValue>{selected?.label}</SelectValue>
                             </SelectTrigger>
                             <SelectContent position="popper">
