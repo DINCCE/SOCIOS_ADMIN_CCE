@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Clock, User, Users, Receipt, GraduationCap, HeartPulse, ShieldCheck, Settings, LayoutDashboard, ChevronDown, MessageSquare, Pencil } from "lucide-react"
+import { Clock, User, Users, Receipt, HeartPulse, ShieldCheck, Settings, LayoutDashboard, ChevronDown, MessageSquare, Pencil } from "lucide-react"
 import { Persona } from "@/features/socios/types/socios-schema"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,18 +30,10 @@ interface PersonTabsContentProps {
     persona: Persona
 }
 
-// Type helpers for JSONB fields
-type PerfilPreferencias = Record<string, unknown>
-type DireccionResidencia = { direccion?: string; barrio?: string; ciudad?: string }
-
 export function PersonTabsContent({ persona }: PersonTabsContentProps) {
     const [activeTab, setActiveTab] = useState("overview")
     const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
     const [editingSection, setEditingSection] = useState<string | null>(null)
-
-    // Extract JSONB data with proper typing
-    const prefs = (persona.perfil_preferencias || {}) as PerfilPreferencias
-    const direccion = (prefs.direccion_residencia || {}) as DireccionResidencia
 
     const handleEdit = (sectionKey: string) => {
         setEditingSection(sectionKey)
@@ -159,16 +151,62 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
 
             <TabsContent value="profile" className="mt-0 outline-none">
                 <div className="w-full py-2 space-y-6">
-                    {/* SECCIÓN 1: IDENTIDAD LEGAL */}
+                    {/* TARJETA 1: IDENTIDAD & DATOS CIVILES */}
                     <ProfileSection
-                        title="Identificación Legal"
+                        title="Identificación Personal"
                         icon={<ShieldCheck className="h-4 w-4" />}
+                        onEdit={() => handleEdit("identity")}
                     >
-                        <ProfileField label="Tipo de Documento" value={persona.tipo_documento} />
-                        <ProfileField label="Número de Documento" value={persona.numero_documento} bold />
-                        <ProfileField label="Fecha de Expedición" value={<DataDate date={persona.fecha_expedicion} />} />
-                        <ProfileField label="Lugar de Expedición" value={persona.lugar_expedicion} />
-                        <ProfileField label="Nacionalidad" value={persona.nacionalidad || "Colombia"} />
+                        <ProfileField
+                            label="Nombre Completo"
+                            value={persona.nombre_completo}
+                            bold
+                        />
+                        <ProfileField
+                            label="Tipo de Documento"
+                            value={persona.tipo_documento}
+                        />
+                        <ProfileField
+                            label="Número de Documento"
+                            value={persona.numero_documento}
+                            bold
+                        />
+                        <ProfileField
+                            label="Fecha de Expedición"
+                            value={<DataDate date={persona.fecha_expedicion} />}
+                        />
+                        <ProfileField
+                            label="Lugar de Expedición"
+                            value={persona.lugar_expedicion}
+                        />
+                        <ProfileField
+                            label="Nacionalidad"
+                            value={persona.nacionalidad || "Colombia"}
+                        />
+                        <ProfileField
+                            label="Género"
+                            value={<DataEnum value={persona.genero} />}
+                        />
+                        <ProfileField
+                            label="Fecha de Nacimiento"
+                            value={<DataDate date={persona.fecha_nacimiento} />}
+                        />
+                        <ProfileField
+                            label="Lugar de Nacimiento"
+                            value={persona.lugar_nacimiento}
+                        />
+                        <ProfileField
+                            label="Estado Civil"
+                            value={<DataEnum value={persona.estado_civil} />}
+                        />
+                        <ProfileField
+                            label="Tipo de Sangre"
+                            value={
+                                persona.tipo_sangre ? (
+                                    <span className="text-red-600 font-bold">{persona.tipo_sangre}</span>
+                                ) : null
+                            }
+                        />
                         <ProfileField
                             label="Estado Vital"
                             value={
@@ -179,114 +217,184 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                         />
                     </ProfileSection>
 
-                    {/* SECCIÓN 2: BIOGRAFÍA PERSONAL */}
+                    {/* TARJETA 2: PERFIL SOCIO-PROFESIONAL & CONTACTO */}
                     <ProfileSection
-                        title="Información Personal"
+                        title="Vinculación & Contacto"
                         icon={<User className="h-4 w-4" />}
-                        onEdit={() => handleEdit("personal")}
+                        onEdit={() => handleEdit("profile")}
                     >
-                        <ProfileField label="Género" value={<DataEnum value={persona.genero} />} />
-                        <ProfileField label="Fecha de Nacimiento" value={<DataDate date={persona.fecha_nacimiento} />} />
-                        <ProfileField label="Lugar de Nacimiento" value={persona.lugar_nacimiento} />
-                        <ProfileField label="Estado Civil" value={<DataEnum value={persona.estado_civil} />} />
-                        <ProfileField label="Fecha de Aniversario" value={<DataDate date={persona.fecha_aniversario} />} />
-                    </ProfileSection>
-
-                    {/* SECCIÓN 3: RELACIÓN CON EL CLUB */}
-                    <ProfileSection
-                        title="Vínculo Institucional"
-                        icon={<Star className="h-4 w-4" />}
-                        onEdit={() => handleEdit("institutional")}
-                    >
-                        <ProfileField label="Código de Socio" value={<code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">{persona.codigo}</code>} />
-                        <ProfileField label="Fecha de Ingreso" value={<DataDate date={persona.fecha_socio} />} />
-                        <ProfileField
-                            label="Estado del Socio"
-                            value={
-                                <Badge variant={persona.estado === 'activo' ? 'status-active' : 'status-inactive'} showDot>
-                                    <DataEnum value={persona.estado} />
-                                </Badge>
-                            }
-                        />
-                        <ProfileField
-                            label="Etiquetas"
-                            value={
-                                <div className="flex flex-wrap gap-1.5">
-                                    {(persona.tags || []).length > 0 ? (
-                                        persona.tags.map(tag => (
-                                            <Badge key={tag} variant="metadata-outline">{tag}</Badge>
-                                        ))
-                                    ) : (
-                                        <NullCell />
-                                    )}
+                        {/* Datos del Club */}
+                        <div className="col-span-2">
+                            <div className="border-b border-border/40 pb-3 mb-3">
+                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                                    Datos del Club
+                                </h4>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-4">
+                                    <ProfileField
+                                        label="Código de Socio"
+                                        value={
+                                            <code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
+                                                {persona.codigo}
+                                            </code>
+                                        }
+                                    />
+                                    <ProfileField
+                                        label="Estado del Socio"
+                                        value={
+                                            <Badge variant={persona.estado === 'activo' ? 'status-active' : 'status-inactive'} showDot>
+                                                <DataEnum value={persona.estado} />
+                                            </Badge>
+                                        }
+                                    />
+                                    <ProfileField
+                                        label="Fecha de Ingreso"
+                                        value={<DataDate date={persona.fecha_socio} />}
+                                    />
+                                    <ProfileField
+                                        label="Fecha de Aniversario"
+                                        value={<DataDate date={persona.fecha_aniversario} />}
+                                    />
+                                    <ProfileField
+                                        label="Etiquetas"
+                                        value={
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {(persona.tags || []).length > 0 ? (
+                                                    persona.tags.map(tag => (
+                                                        <Badge key={tag} variant="metadata-outline">{tag}</Badge>
+                                                    ))
+                                                ) : (
+                                                    <NullCell />
+                                                )}
+                                            </div>
+                                        }
+                                    />
                                 </div>
-                            }
-                        />
+                            </div>
+                        </div>
+
+                        {/* Perfil Profesional */}
+                        <div className="col-span-2">
+                            <div className="border-b border-border/40 pb-3 mb-3">
+                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                                    Perfil Profesional
+                                </h4>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-4">
+                                    <ProfileField
+                                        label="Nivel Educativo"
+                                        value={<DataEnum value={persona.nivel_educacion} />}
+                                    />
+                                    <ProfileField
+                                        label="Profesión"
+                                        value={persona.profesion}
+                                    />
+                                    <ProfileField
+                                        label="Ocupación Actual"
+                                        value={persona.ocupacion}
+                                    />
+                                    <ProfileField
+                                        label="Redes Sociales"
+                                        value={
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {persona.linkedin_url && <Badge variant="metadata-outline">LinkedIn</Badge>}
+                                                {persona.facebook_url && <Badge variant="metadata-outline">Facebook</Badge>}
+                                                {persona.instagram_handle && <Badge variant="metadata-outline">@{persona.instagram_handle}</Badge>}
+                                                {persona.twitter_handle && <Badge variant="metadata-outline">@{persona.twitter_handle}</Badge>}
+                                                {!persona.linkedin_url && !persona.facebook_url && !persona.instagram_handle && !persona.twitter_handle && <NullCell />}
+                                            </div>
+                                        }
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Medios de Contacto */}
+                        <div className="col-span-2">
+                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                                Medios de Contacto
+                            </h4>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-4">
+                                <ProfileField
+                                    label="Email Principal"
+                                    value={persona.email_principal}
+                                    bold
+                                />
+                                <ProfileField
+                                    label="Teléfono Principal"
+                                    value={persona.telefono_principal}
+                                    bold
+                                />
+                                <ProfileField
+                                    label="Email Secundario"
+                                    value={persona.email_secundario}
+                                />
+                                <ProfileField
+                                    label="Teléfono Secundario"
+                                    value={persona.telefono_secundario}
+                                />
+                                <ProfileField
+                                    label="WhatsApp"
+                                    value={persona.whatsapp}
+                                />
+                            </div>
+                        </div>
                     </ProfileSection>
 
-                    {/* SECCIÓN 4: EDUCACIÓN Y EMPLEO */}
+                    {/* TARJETA 3: SEGURIDAD Y BIENESTAR */}
                     <ProfileSection
-                        title="Perfil Profesional"
-                        icon={<GraduationCap className="h-4 w-4" />}
-                        onEdit={() => handleEdit("professional")}
-                    >
-                        <ProfileField label="Nivel Educativo" value={<DataEnum value={persona.nivel_educacion} />} />
-                        <ProfileField label="Profesión" value={persona.profesion} />
-                        <ProfileField label="Ocupación Actual" value={persona.ocupacion} />
-                    </ProfileSection>
-
-                    {/* SECCIÓN 5: SALUD */}
-                    <ProfileSection
-                        title="Salud y Médica"
+                        title="Salud & Emergencia"
                         icon={<HeartPulse className="h-4 w-4" />}
-                        onEdit={() => handleEdit("health")}
+                        onEdit={() => handleEdit("security")}
                     >
-                        <ProfileField label="Grupo Sanguíneo" value={<span className="text-red-600 font-bold">{persona.tipo_sangre || "—"}</span>} />
-                        <ProfileField label="EPS / Prepagada" value={persona.eps} />
-                        <ProfileField label="Intereses Médicos" value={Object.keys(persona.perfil_intereses || {}).length > 0 ? Object.keys(persona.perfil_intereses).join(", ") : null} />
-                    </ProfileSection>
-
-                    {/* SECCIÓN 6: EMERGENCIA */}
-                    <ProfileSection
-                        title="Contacto de Emergencia"
-                        icon={<ShieldCheck className="h-4 w-4" />}
-                        onEdit={() => handleEdit("emergency")}
-                    >
-                        <ProfileField label="Nombre Contacto" value={persona.nombre_contacto_emergencia} bold />
-                        <ProfileField label="Parentesco" value={persona.relacion_emergencia} />
-                        <ProfileField label="Protocolo" value={(prefs.protocolo_emergencia as string | undefined) || "Estándar"} />
-                    </ProfileSection>
-
-                    {/* SECCIÓN 7: UBICACIÓN */}
-                    <ProfileSection
-                        title="Residencia"
-                        icon={<Settings className="h-4 w-4" />}
-                        onEdit={() => handleEdit("residence")}
-                    >
-                        <ProfileField label="Dirección" value={direccion.direccion} />
-                        <ProfileField label="Barrio" value={direccion.barrio} />
-                        <ProfileField label="Ciudad" value={direccion.ciudad} />
-                    </ProfileSection>
-
-                    {/* SECCIÓN 8: PRESENCIA DIGITAL */}
-                    <ProfileSection
-                        title="Ecosistema Digital"
-                        icon={<MessageSquare className="h-4 w-4" />}
-                        onEdit={() => handleEdit("digital")}
-                    >
-                        <ProfileField label="Email Secundario" value={persona.email_secundario} />
-                        <ProfileField label="WhatsApp" value={persona.whatsapp} />
-                        <ProfileField
-                            label="Redes Sociales"
-                            value={
-                                <div className="flex gap-2">
-                                    {persona.linkedin_url && <Badge variant="metadata-outline">LinkedIn</Badge>}
-                                    {persona.facebook_url && <Badge variant="metadata-outline">Facebook</Badge>}
-                                    {persona.instagram_handle && <Badge variant="metadata-outline">@{persona.instagram_handle}</Badge>}
-                                    {!persona.linkedin_url && !persona.facebook_url && !persona.instagram_handle && <NullCell />}
+                        {/* Información Médica */}
+                        <div className="col-span-2">
+                            <div className="border-b border-border/40 pb-3 mb-3">
+                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                                    Información Médica
+                                </h4>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-4">
+                                    <ProfileField
+                                        label="Grupo Sanguíneo"
+                                        value={
+                                            persona.tipo_sangre ? (
+                                                <span className="text-red-600 font-bold">{persona.tipo_sangre}</span>
+                                            ) : null
+                                        }
+                                    />
+                                    <ProfileField
+                                        label="EPS / Prepagada"
+                                        value={persona.eps}
+                                    />
                                 </div>
-                            }
-                        />
+                            </div>
+                        </div>
+
+                        {/* Contacto de Emergencia */}
+                        <div className="col-span-2">
+                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                                Contacto de Emergencia
+                            </h4>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-4">
+                                <ProfileField
+                                    label="Nombre Contacto"
+                                    value={persona.nombre_contacto_emergencia}
+                                    bold
+                                />
+                                <ProfileField
+                                    label="Parentesco"
+                                    value={persona.relacion_emergencia}
+                                />
+                                <ProfileField
+                                    label="ID Contacto"
+                                    value={
+                                        persona.contacto_emergencia_id ? (
+                                            <code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
+                                                {persona.contacto_emergencia_id.substring(0, 8)}...
+                                            </code>
+                                        ) : null
+                                    }
+                                />
+                            </div>
+                        </div>
                     </ProfileSection>
                 </div>
 
@@ -420,18 +528,6 @@ function ProfileField({ label, value, bold }: { label: string, value: React.Reac
                 bold ? "text-foreground font-bold" : "text-foreground"
             )}>
                 {value !== null && value !== undefined && value !== "" ? value : <NullCell />}
-            </div>
-        </div>
-    )
-}
-
-function ActivitySnippet({ title, time }: { title: string, time: string }) {
-    return (
-        <div className="flex items-center gap-3">
-            <div className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-            <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold truncate">{title}</p>
-                <p className="text-[10px] text-muted-foreground italic">{time}</p>
             </div>
         </div>
     )
