@@ -3,14 +3,10 @@
 import {
     Sheet,
     SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
 } from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
 import { Persona } from "@/features/socios/types/socios-schema"
 
-// Forms
+// Legacy Forms (to be deprecated)
 import { EditPersonalInfoForm } from "./edit-forms/edit-personal-info-form"
 import { EditInstitutionalForm } from "./edit-forms/edit-institutional-form"
 import { EditProfessionalForm } from "./edit-forms/edit-professional-form"
@@ -18,6 +14,11 @@ import { EditHealthForm } from "./edit-forms/edit-health-form"
 import { EditEmergencyForm } from "./edit-forms/edit-emergency-form"
 import { EditResidenceForm } from "./edit-forms/edit-residence-form"
 import { EditDigitalForm } from "./edit-forms/edit-digital-form"
+
+// New Consolidated Forms
+import { EditIdentityForm } from "./edit-forms/edit-identity-form"
+import { EditProfileForm } from "./edit-forms/edit-profile-form"
+import { EditSecurityForm } from "./edit-forms/edit-security-form"
 
 interface EditSectionSheetProps {
     sectionKey: string | null
@@ -34,19 +35,6 @@ export function EditSectionSheet({
 }: EditSectionSheetProps) {
     if (!sectionKey) return null
 
-    const getSectionTitle = (key: string) => {
-        switch (key) {
-            case "personal": return "Información Personal"
-            case "institutional": return "Vínculo Institucional"
-            case "professional": return "Perfil Profesional"
-            case "health": return "Salud y Médica"
-            case "emergency": return "Contacto de Emergencia"
-            case "residence": return "Información de Residencia"
-            case "digital": return "Ecosistema Digital"
-            default: return "Sección"
-        }
-    }
-
     const renderForm = () => {
         const commonProps = {
             persona,
@@ -54,7 +42,13 @@ export function EditSectionSheet({
             onCancel: () => onOpenChange(false),
         }
 
+        // New consolidated forms
         switch (sectionKey) {
+            case "identity": return <EditIdentityForm {...commonProps} />
+            case "profile": return <EditProfileForm {...commonProps} />
+            case "security": return <EditSecurityForm {...commonProps} />
+
+            // Legacy forms (deprecated - will be removed)
             case "personal": return <EditPersonalInfoForm {...commonProps} />
             case "institutional": return <EditInstitutionalForm {...commonProps} />
             case "professional": return <EditProfessionalForm {...commonProps} />
@@ -68,19 +62,8 @@ export function EditSectionSheet({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="right" className="sm:max-w-md w-full overflow-y-auto">
-                <SheetHeader className="text-left pb-4">
-                    <SheetTitle>Editar {getSectionTitle(sectionKey)}</SheetTitle>
-                    <SheetDescription>
-                        Actualiza los datos de esta sección. Los cambios se reflejarán inmediatamente tras guardar.
-                    </SheetDescription>
-                </SheetHeader>
-
-                <Separator className="mb-6" />
-
-                <div className="pb-8">
-                    {renderForm()}
-                </div>
+            <SheetContent side="right" className="sm:max-w-2xl w-full p-0">
+                {renderForm()}
             </SheetContent>
         </Sheet>
     )
