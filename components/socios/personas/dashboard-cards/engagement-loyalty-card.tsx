@@ -17,7 +17,7 @@ export function EngagementLoyaltyCard() {
   return (
     <Card className="h-full bg-card border border-border rounded-lg p-5 flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border/40 min-h-[32px]">
         <Heart className="h-4 w-4 text-muted-foreground" />
         <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
           Comportamiento & RFM
@@ -51,7 +51,7 @@ export function EngagementLoyaltyCard() {
               className={cn(
                 "aspect-square rounded-sm",
                 attended === 1
-                  ? "bg-emerald-500 hover:bg-emerald-600"
+                  ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-slate-100 hover:bg-slate-200"
               )}
               title={attended === 1 ? "Asistió" : "No asistió"}

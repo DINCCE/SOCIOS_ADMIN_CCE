@@ -2,13 +2,12 @@
 
 import { Wallet, TrendingUp } from "lucide-react"
 import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 
 export function FinancialEcosystemCard() {
   return (
     <Card className="h-full bg-card border border-border rounded-lg p-5 flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border/40 min-h-[32px]">
         <Wallet className="h-4 w-4 text-muted-foreground" />
         <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
           Rendimiento & Consumo
@@ -19,10 +18,10 @@ export function FinancialEcosystemCard() {
       <div className="space-y-2 mb-4">
         <p className="text-xs text-muted-foreground">Consumo Mes Actual</p>
         <p className="text-2xl font-medium tabular-nums text-foreground">$ 450.000</p>
-        <Badge variant="status-active" className="text-[10px] gap-1">
+        <div className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">
           <TrendingUp className="h-3 w-3" />
-          15% vs Promedio
-        </Badge>
+          <span>15% vs Promedio</span>
+        </div>
       </div>
 
       {/* Sección Media: Split Familiar - Barra Visual */}

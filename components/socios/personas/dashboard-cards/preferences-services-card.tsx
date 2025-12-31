@@ -4,20 +4,19 @@ import { Zap, Calendar } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { cn } from "@/lib/utils"
 
 // Mock data para top servicios
 const topServices = [
-  { name: "Tenis", percentage: 45, color: "bg-blue-500" },
-  { name: "Restaurante", percentage: 30, color: "bg-emerald-500" },
-  { name: "Spa / Wellness", percentage: 25, color: "bg-purple-500" },
+  { name: "Tenis", percentage: 45 },
+  { name: "Restaurante", percentage: 30 },
+  { name: "Spa / Wellness", percentage: 25 },
 ]
 
 export function PreferencesServicesCard() {
   return (
     <Card className="h-full bg-card border border-border rounded-lg p-5 flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border/40 min-h-[32px]">
         <Zap className="h-4 w-4 text-muted-foreground" />
         <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
           Top Servicios & Reservas
@@ -47,7 +46,7 @@ export function PreferencesServicesCard() {
             {/* Barra de porcentaje */}
             <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden ml-6">
               <div
-                className={cn("h-full transition-all", service.color)}
+                className="h-full transition-all bg-slate-800"
                 style={{ width: `${service.percentage}%` }}
               />
             </div>
