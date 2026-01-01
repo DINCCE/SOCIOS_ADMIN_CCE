@@ -28,6 +28,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Persona } from "@/features/socios/types/socios-schema"
+import { updatePersonaSecurity } from "@/app/actions/personas"
 
 // Schema de validación
 const securitySchema = z.object({
@@ -68,12 +69,14 @@ export function EditSecurityForm({ persona, onSuccess, onCancel }: EditSecurityF
     async function onSubmit(data: SecurityFormValues) {
         setIsPending(true)
         try {
-            // TODO: Implement API call to update security data
-            console.log("Update security:", data)
+            const result = await updatePersonaSecurity(persona.id, data)
 
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            if (!result.success) {
+                toast.error(result.message)
+                return
+            }
 
-            toast.success("Datos de salud y emergencia actualizados")
+            toast.success(result.message)
             router.refresh()
             onSuccess()
         } catch (error) {

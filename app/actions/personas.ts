@@ -217,3 +217,225 @@ export async function actualizarPersona(id: string, data: Record<string, unknown
     message: 'Persona actualizada correctamente'
   }
 }
+
+/**
+ * Update persona identity data (EditIdentityForm)
+ * Updates: business_partners (document, names) + personas (biographical data)
+ *
+ * @param id - The UUID of the persona
+ * @param data - Identity form data
+ * @returns Object with { success, message }
+ */
+export async function updatePersonaIdentity(
+  id: string,
+  data: {
+    tipo_documento: string
+    numero_documento: string
+    fecha_expedicion?: string | null
+    lugar_expedicion?: string | null
+    primer_nombre: string
+    segundo_nombre?: string | null
+    primer_apellido: string
+    segundo_apellido?: string | null
+    genero: string
+    fecha_nacimiento: string
+    lugar_nacimiento?: string | null
+    nacionalidad?: string | null
+    estado_civil?: string | null
+    tipo_sangre?: string | null
+  }
+) {
+  const supabase = await createClient()
+
+  // 1. Update business_partners (document and names)
+  const { error: bpError } = await supabase
+    .from('business_partners')
+    .update({
+      tipo_documento: data.tipo_documento,
+      numero_documento: data.numero_documento,
+      fecha_expedicion: data.fecha_expedicion,
+      lugar_expedicion: data.lugar_expedicion,
+      primer_nombre: data.primer_nombre,
+      segundo_nombre: data.segundo_nombre,
+      primer_apellido: data.primer_apellido,
+      segundo_apellido: data.segundo_apellido,
+    })
+    .eq('id', id)
+
+  if (bpError) {
+    console.error('Error updating business_partners:', bpError)
+    return {
+      success: false,
+      message: `Error al actualizar documento: ${bpError.message}`,
+    }
+  }
+
+  // 2. Update personas (biographical data)
+  const { error: personaError } = await supabase
+    .from('personas')
+    .update({
+      genero: data.genero,
+      fecha_nacimiento: data.fecha_nacimiento,
+      lugar_nacimiento: data.lugar_nacimiento,
+      nacionalidad: data.nacionalidad,
+      estado_civil: data.estado_civil,
+      tipo_sangre: data.tipo_sangre,
+    })
+    .eq('id', id)
+
+  if (personaError) {
+    console.error('Error updating personas:', personaError)
+    return {
+      success: false,
+      message: `Error al actualizar datos biográficos: ${personaError.message}`,
+    }
+  }
+
+  // Revalidate pages
+  revalidatePath('/admin/socios/personas')
+  revalidatePath(`/admin/socios/personas/${id}`)
+
+  return {
+    success: true,
+    message: 'Datos de identidad actualizados correctamente',
+  }
+}
+
+/**
+ * Update persona profile data (EditProfileForm)
+ * Updates: business_partners (status, contact) + personas (professional, dates)
+ *
+ * @param id - The UUID of the persona
+ * @param data - Profile form data
+ * @returns Object with { success, message }
+ */
+export async function updatePersonaProfile(
+  id: string,
+  data: {
+    estado: string
+    fecha_socio?: string | null
+    fecha_aniversario?: string | null
+    nivel_educacion?: string | null
+    profesion?: string | null
+    sector_industria?: string | null
+    empresa_actual?: string | null
+    cargo_actual?: string | null
+    linkedin_url?: string | null
+    email_principal?: string | null
+    telefono_principal?: string | null
+    email_secundario?: string | null
+    telefono_secundario?: string | null
+    instagram?: string | null
+    twitter?: string | null
+    facebook?: string | null
+  }
+) {
+  const supabase = await createClient()
+
+  // 1. Update business_partners (status and contact methods)
+  const { error: bpError } = await supabase
+    .from('business_partners')
+    .update({
+      estado: data.estado,
+      email_principal: data.email_principal,
+      telefono_principal: data.telefono_principal,
+      email_secundario: data.email_secundario,
+      telefono_secundario: data.telefono_secundario,
+      linkedin_url: data.linkedin_url,
+      instagram_handle: data.instagram,
+      twitter_handle: data.twitter,
+      facebook_url: data.facebook,
+    })
+    .eq('id', id)
+
+  if (bpError) {
+    console.error('Error updating business_partners:', bpError)
+    return {
+      success: false,
+      message: `Error al actualizar contacto: ${bpError.message}`,
+    }
+  }
+
+  // 2. Update personas (professional profile and dates)
+  const { error: personaError } = await supabase
+    .from('personas')
+    .update({
+      fecha_socio: data.fecha_socio,
+      fecha_aniversario: data.fecha_aniversario,
+      nivel_educacion: data.nivel_educacion,
+      profesion: data.profesion,
+      sector_industria: data.sector_industria,
+      empresa_actual: data.empresa_actual,
+      cargo_actual: data.cargo_actual,
+    })
+    .eq('id', id)
+
+  if (personaError) {
+    console.error('Error updating personas:', personaError)
+    return {
+      success: false,
+      message: `Error al actualizar perfil: ${personaError.message}`,
+    }
+  }
+
+  // Revalidate pages
+  revalidatePath('/admin/socios/personas')
+  revalidatePath(`/admin/socios/personas/${id}`)
+
+  return {
+    success: true,
+    message: 'Perfil actualizado correctamente',
+  }
+}
+
+/**
+ * Update persona security data (EditSecurityForm)
+ * Updates: personas (medical info and emergency contact)
+ *
+ * @param id - The UUID of the persona
+ * @param data - Security form data
+ * @returns Object with { success, message }
+ */
+export async function updatePersonaSecurity(
+  id: string,
+  data: {
+    tipo_sangre?: string | null
+    eps?: string | null
+    alergias_condiciones?: string | null
+    contacto_emergencia_id?: string | null
+    nombre_contacto_emergencia?: string | null
+    relacion_emergencia?: string | null
+    telefono_emergencia?: string | null
+  }
+) {
+  const supabase = await createClient()
+
+  // Update personas (all fields are in personas table)
+  const { error } = await supabase
+    .from('personas')
+    .update({
+      tipo_sangre: data.tipo_sangre,
+      eps: data.eps,
+      alergias_condiciones: data.alergias_condiciones,
+      contacto_emergencia_id: data.contacto_emergencia_id,
+      relacion_emergencia: data.relacion_emergencia,
+    })
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error updating personas security:', error)
+    return {
+      success: false,
+      message: `Error al actualizar datos de seguridad: ${error.message}`,
+    }
+  }
+
+  // Revalidate pages
+  revalidatePath('/admin/socios/personas')
+  revalidatePath(`/admin/socios/personas/${id}`)
+
+  return {
+    success: true,
+    message: 'Datos de salud y emergencia actualizados correctamente',
+  }
+}

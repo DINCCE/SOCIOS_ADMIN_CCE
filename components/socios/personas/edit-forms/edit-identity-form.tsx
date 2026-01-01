@@ -28,6 +28,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Persona } from "@/features/socios/types/socios-schema"
+import { updatePersonaIdentity } from "@/app/actions/personas"
 
 // Schema de validación
 const identitySchema = z.object({
@@ -82,12 +83,14 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
     async function onSubmit(data: IdentityFormValues) {
         setIsPending(true)
         try {
-            // TODO: Implement API call to update persona identity
-            console.log("Update identity:", data)
+            const result = await updatePersonaIdentity(persona.id, data)
 
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            if (!result.success) {
+                toast.error(result.message)
+                return
+            }
 
-            toast.success("Datos de identidad actualizados")
+            toast.success(result.message)
             router.refresh()
             onSuccess()
         } catch (error) {

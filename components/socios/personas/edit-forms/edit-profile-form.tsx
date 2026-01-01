@@ -28,6 +28,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Persona } from "@/features/socios/types/socios-schema"
+import { updatePersonaProfile } from "@/app/actions/personas"
 
 // Schema de validación
 const profileSchema = z.object({
@@ -88,12 +89,14 @@ export function EditProfileForm({ persona, onSuccess, onCancel }: EditProfileFor
     async function onSubmit(data: ProfileFormValues) {
         setIsPending(true)
         try {
-            // TODO: Implement API call to update persona profile
-            console.log("Update profile:", data)
+            const result = await updatePersonaProfile(persona.id, data)
 
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            if (!result.success) {
+                toast.error(result.message)
+                return
+            }
 
-            toast.success("Datos de perfil y contacto actualizados")
+            toast.success(result.message)
             router.refresh()
             onSuccess()
         } catch (error) {
