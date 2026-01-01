@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Clock, User, Users, Receipt, HeartPulse, ShieldCheck, Settings, LayoutDashboard, ChevronDown, MessageSquare, Pencil } from "lucide-react"
 import { Persona } from "@/features/socios/types/socios-schema"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -31,9 +32,19 @@ interface PersonTabsContentProps {
 }
 
 export function PersonTabsContent({ persona }: PersonTabsContentProps) {
-    const [activeTab, setActiveTab] = useState("overview")
+    const searchParams = useSearchParams()
+    const initialTab = searchParams.get("tab") || "overview"
+    const [activeTab, setActiveTab] = useState(initialTab)
     const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
     const [editingSection, setEditingSection] = useState<string | null>(null)
+
+    // Update active tab when URL changes
+    useEffect(() => {
+        const tabParam = searchParams.get("tab")
+        if (tabParam && ["overview", "profile", "relationships", "history"].includes(tabParam)) {
+            setActiveTab(tabParam)
+        }
+    }, [searchParams])
 
     const handleEdit = (sectionKey: string) => {
         setEditingSection(sectionKey)

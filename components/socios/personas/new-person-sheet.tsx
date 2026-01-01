@@ -82,9 +82,9 @@ export function NewPersonSheet() {
             form.reset()
             setOpen(false)
 
-            // Navigate to the newly created person detail page
+            // Navigate to the newly created person detail page (profile tab)
             if (result.bp_id) {
-                router.push(`/admin/socios/personas/${result.bp_id}`)
+                router.push(`/admin/socios/personas/${result.bp_id}?tab=profile`)
             } else {
                 router.refresh()
             }
