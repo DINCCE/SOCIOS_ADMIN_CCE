@@ -83,7 +83,20 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
     async function onSubmit(data: IdentityFormValues) {
         setIsPending(true)
         try {
-            const result = await updatePersonaIdentity(persona.id, data)
+            // Convert empty strings to null for optional fields
+            const cleanedData = {
+                ...data,
+                fecha_expedicion: data.fecha_expedicion || null,
+                lugar_expedicion: data.lugar_expedicion || null,
+                segundo_nombre: data.segundo_nombre || null,
+                segundo_apellido: data.segundo_apellido || null,
+                lugar_nacimiento: data.lugar_nacimiento || null,
+                nacionalidad: data.nacionalidad || null,
+                estado_civil: data.estado_civil || null,
+                tipo_sangre: data.tipo_sangre || null,
+            }
+
+            const result = await updatePersonaIdentity(persona.id, cleanedData)
 
             if (!result.success) {
                 toast.error(result.message)

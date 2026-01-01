@@ -89,7 +89,22 @@ export function EditProfileForm({ persona, onSuccess, onCancel }: EditProfileFor
     async function onSubmit(data: ProfileFormValues) {
         setIsPending(true)
         try {
-            const result = await updatePersonaProfile(persona.id, data)
+            // Convert empty strings to null for date fields
+            const cleanedData = {
+                ...data,
+                fecha_socio: data.fecha_socio || null,
+                fecha_aniversario: data.fecha_aniversario || null,
+                email_principal: data.email_principal || null,
+                telefono_principal: data.telefono_principal || null,
+                email_secundario: data.email_secundario || null,
+                telefono_secundario: data.telefono_secundario || null,
+                linkedin_url: data.linkedin_url || null,
+                instagram: data.instagram_handle || null,
+                twitter: data.twitter_handle || null,
+                facebook: data.facebook_url || null,
+            }
+
+            const result = await updatePersonaProfile(persona.id, cleanedData)
 
             if (!result.success) {
                 toast.error(result.message)
