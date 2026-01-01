@@ -124,14 +124,16 @@ export function EditProfileForm({ persona, onSuccess, onCancel }: EditProfileFor
                         <div className="space-y-4">
                             <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Datos Institucionales</h4>
                             <div className="grid grid-cols-2 gap-4">
-                                <FormItem>
-                                    <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Código Socio (Read-only)</FormLabel>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                                        Código Socio (Read-only)
+                                    </label>
                                     <Input
                                         className="h-9 font-mono bg-muted/40"
                                         value={persona.codigo}
                                         disabled
                                     />
-                                </FormItem>
+                                </div>
                                 <FormField
                                     control={form.control}
                                     name="estado"
