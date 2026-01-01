@@ -34,11 +34,8 @@ import { updatePersonaSecurity } from "@/app/actions/personas"
 const securitySchema = z.object({
     tipo_sangre: z.string().optional().nullable(),
     eps: z.string().optional().nullable(),
-    alergias_condiciones: z.string().optional().nullable(),
     contacto_emergencia_id: z.string().uuid().optional().nullable(),
-    nombre_contacto_emergencia: z.string().optional().nullable(),
     relacion_emergencia: z.string().optional().nullable(),
-    telefono_emergencia: z.string().optional().nullable(),
 })
 
 type SecurityFormValues = z.infer<typeof securitySchema>
@@ -58,11 +55,8 @@ export function EditSecurityForm({ persona, onSuccess, onCancel }: EditSecurityF
         defaultValues: {
             tipo_sangre: persona.tipo_sangre || "",
             eps: persona.eps || "",
-            alergias_condiciones: "",
             contacto_emergencia_id: persona.contacto_emergencia_id || undefined,
-            nombre_contacto_emergencia: persona.nombre_contacto_emergencia || "",
             relacion_emergencia: persona.relacion_emergencia || "",
-            telefono_emergencia: "",
         },
     })
 
@@ -148,26 +142,6 @@ export function EditSecurityForm({ persona, onSuccess, onCancel }: EditSecurityF
                                     )}
                                 />
                             </div>
-
-                            <FormField
-                                control={form.control}
-                                name="alergias_condiciones"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Alergias / Condiciones Médicas</FormLabel>
-                                        <FormControl>
-                                            <Textarea
-                                                className="resize-none"
-                                                placeholder="Describe alergias, condiciones médicas relevantes..."
-                                                rows={3}
-                                                {...field}
-                                                value={field.value || ""}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
                         </div>
 
                         {/* Contacto de Emergencia */}
@@ -175,78 +149,38 @@ export function EditSecurityForm({ persona, onSuccess, onCancel }: EditSecurityF
                             <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Contacto de Emergencia</h4>
 
                             <div className="space-y-2 p-3 bg-blue-50/50 border border-blue-200 rounded-md">
-                                <p className="text-xs font-semibold text-blue-900">Buscar Contacto en Sistema</p>
+                                <p className="text-xs font-semibold text-blue-900">Información Simplificada</p>
                                 <p className="text-[10px] text-blue-700 italic">
-                                    El selector de búsqueda de contactos (Combobox con búsqueda async) será implementado próximamente.
-                                    Por ahora, puedes ingresar los datos manualmente.
+                                    Selecciona el parentesco con el contacto de emergencia. El sistema de búsqueda de contactos será implementado en una futura versión.
                                 </p>
                             </div>
 
                             <FormField
                                 control={form.control}
-                                name="nombre_contacto_emergencia"
+                                name="relacion_emergencia"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Nombre Contacto (Fallback Manual)</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                className="h-9"
-                                                placeholder="Nombre completo del contacto"
-                                                {...field}
-                                                value={field.value || ""}
-                                            />
-                                        </FormControl>
+                                        <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Parentesco</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value || undefined}>
+                                            <FormControl>
+                                                <SelectTrigger className="h-9">
+                                                    <SelectValue placeholder="Seleccionar" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="conyuge">Cónyuge</SelectItem>
+                                                <SelectItem value="padre">Padre</SelectItem>
+                                                <SelectItem value="madre">Madre</SelectItem>
+                                                <SelectItem value="hijo">Hijo/a</SelectItem>
+                                                <SelectItem value="hermano">Hermano/a</SelectItem>
+                                                <SelectItem value="amigo">Amigo/a</SelectItem>
+                                                <SelectItem value="otro">Otro</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="relacion_emergencia"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Parentesco</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value || undefined}>
-                                                <FormControl>
-                                                    <SelectTrigger className="h-9">
-                                                        <SelectValue placeholder="Seleccionar" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="conyuge">Cónyuge</SelectItem>
-                                                    <SelectItem value="padre">Padre</SelectItem>
-                                                    <SelectItem value="madre">Madre</SelectItem>
-                                                    <SelectItem value="hijo">Hijo/a</SelectItem>
-                                                    <SelectItem value="hermano">Hermano/a</SelectItem>
-                                                    <SelectItem value="amigo">Amigo/a</SelectItem>
-                                                    <SelectItem value="otro">Otro</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="telefono_emergencia"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Teléfono Emergencia</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    className="h-9"
-                                                    placeholder="+57 3..."
-                                                    {...field}
-                                                    value={field.value || ""}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
 
                             <FormField
                                 control={form.control}

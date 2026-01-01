@@ -247,9 +247,9 @@ export async function updatePersonaIdentity(
 ) {
   const supabase = await createClient()
 
-  // 1. Update business_partners (document and names)
-  const { error: bpError } = await supabase
-    .from('business_partners')
+  // All identity fields are in personas table (CTI pattern)
+  const { error } = await supabase
+    .from('personas')
     .update({
       tipo_documento: data.tipo_documento,
       numero_documento: data.numero_documento,
@@ -259,21 +259,6 @@ export async function updatePersonaIdentity(
       segundo_nombre: data.segundo_nombre,
       primer_apellido: data.primer_apellido,
       segundo_apellido: data.segundo_apellido,
-    })
-    .eq('id', id)
-
-  if (bpError) {
-    console.error('Error updating business_partners:', bpError)
-    return {
-      success: false,
-      message: `Error al actualizar documento: ${bpError.message}`,
-    }
-  }
-
-  // 2. Update personas (biographical data)
-  const { error: personaError } = await supabase
-    .from('personas')
-    .update({
       genero: data.genero,
       fecha_nacimiento: data.fecha_nacimiento,
       lugar_nacimiento: data.lugar_nacimiento,
@@ -283,11 +268,11 @@ export async function updatePersonaIdentity(
     })
     .eq('id', id)
 
-  if (personaError) {
-    console.error('Error updating personas:', personaError)
+  if (error) {
+    console.error('Error updating personas identity:', error)
     return {
       success: false,
-      message: `Error al actualizar datos biográficos: ${personaError.message}`,
+      message: `Error al actualizar datos de identidad: ${error.message}`,
     }
   }
 
@@ -332,19 +317,13 @@ export async function updatePersonaProfile(
 ) {
   const supabase = await createClient()
 
-  // 1. Update business_partners (status and contact methods)
+  // 1. Update business_partners (status and primary contact only)
   const { error: bpError } = await supabase
     .from('business_partners')
     .update({
       estado: data.estado,
       email_principal: data.email_principal,
       telefono_principal: data.telefono_principal,
-      email_secundario: data.email_secundario,
-      telefono_secundario: data.telefono_secundario,
-      linkedin_url: data.linkedin_url,
-      instagram_handle: data.instagram,
-      twitter_handle: data.twitter,
-      facebook_url: data.facebook,
     })
     .eq('id', id)
 
@@ -352,11 +331,11 @@ export async function updatePersonaProfile(
     console.error('Error updating business_partners:', bpError)
     return {
       success: false,
-      message: `Error al actualizar contacto: ${bpError.message}`,
+      message: `Error al actualizar estado: ${bpError.message}`,
     }
   }
 
-  // 2. Update personas (professional profile and dates)
+  // 2. Update personas (professional profile, dates, secondary contact, social networks)
   const { error: personaError } = await supabase
     .from('personas')
     .update({
@@ -367,6 +346,12 @@ export async function updatePersonaProfile(
       sector_industria: data.sector_industria,
       empresa_actual: data.empresa_actual,
       cargo_actual: data.cargo_actual,
+      email_secundario: data.email_secundario,
+      telefono_secundario: data.telefono_secundario,
+      linkedin_url: data.linkedin_url,
+      instagram_handle: data.instagram,
+      twitter_handle: data.twitter,
+      facebook_url: data.facebook,
     })
     .eq('id', id)
 
@@ -401,22 +386,18 @@ export async function updatePersonaSecurity(
   data: {
     tipo_sangre?: string | null
     eps?: string | null
-    alergias_condiciones?: string | null
     contacto_emergencia_id?: string | null
-    nombre_contacto_emergencia?: string | null
     relacion_emergencia?: string | null
-    telefono_emergencia?: string | null
   }
 ) {
   const supabase = await createClient()
 
-  // Update personas (all fields are in personas table)
+  // Update personas (medical and emergency contact fields)
   const { error } = await supabase
     .from('personas')
     .update({
       tipo_sangre: data.tipo_sangre,
       eps: data.eps,
-      alergias_condiciones: data.alergias_condiciones,
       contacto_emergencia_id: data.contacto_emergencia_id,
       relacion_emergencia: data.relacion_emergencia,
     })
