@@ -176,7 +176,7 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
                                                     placeholder="Seleccionar fecha"
                                                     className="h-9"
                                                     captionLayout="dropdown"
-                                                    fromYear={1950}
+                                                    fromYear={1930}
                                                     toYear={new Date().getFullYear()}
                                                 />
                                             </FormControl>

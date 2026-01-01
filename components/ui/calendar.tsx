@@ -42,12 +42,12 @@ function Calendar({
             classNames={{
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
                 month: "space-y-4",
-                month_caption: "flex justify-center items-center pt-1",
+                month_caption: "flex justify-center items-center pt-1 w-full",
                 caption_label: "text-sm font-medium",
                 button_next: "hidden",
                 button_previous: "hidden",
                 dropdowns: "flex gap-2",
-                nav: "flex items-center justify-center",
+                nav: "flex items-center justify-center w-full",
                 month_grid: "w-full border-collapse space-y-1",
                 weekdays: "flex",
                 weekday:

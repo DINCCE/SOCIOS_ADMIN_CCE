@@ -194,7 +194,7 @@ export function EditProfileForm({ persona, onSuccess, onCancel }: EditProfileFor
                                                     placeholder="Seleccionar fecha"
                                                     className="h-9"
                                                     captionLayout="dropdown"
-                                                    fromYear={1950}
+                                                    fromYear={1930}
                                                     toYear={new Date().getFullYear()}
                                                 />
                                             </FormControl>
