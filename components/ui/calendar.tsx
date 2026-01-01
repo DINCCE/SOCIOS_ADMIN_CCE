@@ -42,18 +42,18 @@ function Calendar({
             classNames={{
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
                 month: "space-y-4",
-                month_caption: "flex justify-center pt-1 relative items-center",
+                month_caption: "flex justify-between items-center pt-1",
                 caption_label: "text-sm font-medium",
                 button_next: cn(
                     buttonVariants({ variant: "outline" }),
-                    "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+                    "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 order-3"
                 ),
                 button_previous: cn(
                     buttonVariants({ variant: "outline" }),
-                    "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+                    "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 order-1"
                 ),
-                dropdowns: "flex gap-2",
-                nav: "space-x-1 flex items-center",
+                dropdowns: "flex gap-2 order-2",
+                nav: "flex items-center w-full justify-between",
                 month_grid: "w-full border-collapse space-y-1",
                 weekdays: "flex",
                 weekday:
@@ -83,12 +83,8 @@ function Calendar({
                     }
                     return <ChevronRight className="h-4 w-4" />
                 },
-                MonthCaption: ({ calendarMonth, children, ...props }) => {
-                    return (
-                        <div className="flex justify-center items-center gap-2">
-                            {children}
-                        </div>
-                    )
+                MonthCaption: ({ calendarMonth, children }) => {
+                    return <>{children}</>
                 },
                 Dropdown: ({ value, onChange, options, ...props }) => {
                     const selected = options?.find((option) => option.value === value)
