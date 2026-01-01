@@ -42,18 +42,12 @@ function Calendar({
             classNames={{
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
                 month: "space-y-4",
-                month_caption: "flex justify-between items-center pt-1",
+                month_caption: "flex justify-center items-center pt-1",
                 caption_label: "text-sm font-medium",
-                button_next: cn(
-                    buttonVariants({ variant: "outline" }),
-                    "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 order-3"
-                ),
-                button_previous: cn(
-                    buttonVariants({ variant: "outline" }),
-                    "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 order-1"
-                ),
-                dropdowns: "flex gap-2 order-2",
-                nav: "flex items-center w-full justify-between",
+                button_next: "hidden",
+                button_previous: "hidden",
+                dropdowns: "flex gap-2",
+                nav: "flex items-center justify-center",
                 month_grid: "w-full border-collapse space-y-1",
                 weekdays: "flex",
                 weekday:
