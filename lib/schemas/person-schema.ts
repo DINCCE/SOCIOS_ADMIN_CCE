@@ -18,7 +18,12 @@ export const personSchema = z.object({
         "DNI",
         "NUIP",
     ]),
-    numero_documento: z.string().min(3, "El número de documento es obligatorio"),
+    numero_documento: z
+        .string()
+        .min(1, "El número de documento es obligatorio")
+        .trim()
+        .min(5, "Mínimo 5 caracteres")
+        .max(20, "Máximo 20 caracteres"),
     fecha_expedicion: z.string().optional().or(z.literal("")),
     lugar_expedicion: z.string().optional(),
 

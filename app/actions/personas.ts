@@ -217,3 +217,27 @@ export async function actualizarPersona(id: string, data: Record<string, unknown
     message: 'Persona actualizada correctamente'
   }
 }
+
+/**
+ * Search personas by name or document
+ * Uses v_personas_org view as requested
+ */
+export async function buscarPersonas(term: string) {
+  const supabase = await createClient()
+
+  // Prevent empty search
+  if (!term || term.length < 2) return []
+
+  const { data, error } = await supabase
+    .from('v_personas_completa')
+    .select('id, nombre_completo, numero_documento, tipo_documento, foto_url')
+    .or(`nombre_completo.ilike.%${term}%,numero_documento.ilike.%${term}%`)
+    .limit(5)
+
+  if (error) {
+    console.error('Error searching personas:', error)
+    return []
+  }
+
+  return data
+}

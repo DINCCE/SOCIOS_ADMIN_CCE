@@ -23,6 +23,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, Star } from "lucide-react"
 import { PartnerDashboard } from "./partner-dashboard"
+import { FamilyGroupTab } from "@/components/socios/personas/family/family-group-tab"
 
 interface PersonTabsContentProps {
     persona: Persona
@@ -372,22 +373,8 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                 />
             </TabsContent>
 
-            <TabsContent value="relations" className="mt-0">
-                <Card className="shadow-none border">
-                    <CardHeader className="bg-muted/40 border-b py-4">
-                        <CardTitle className="text-base font-semibold tracking-tight flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            Red de Relaciones
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-12">
-                        <div className="flex flex-col items-center justify-center text-center">
-                            <Users className="h-10 w-10 text-muted-foreground/30 mb-4" />
-                            <p className="text-sm font-medium text-muted-foreground">No hay relaciones vinculadas aún</p>
-                            <p className="text-xs text-muted-foreground/60">Aquí se mostrarán hijos, cónyuges y relaciones laborales</p>
-                        </div>
-                    </CardContent>
-                </Card>
+            <TabsContent value="relations" className="m-0 h-full p-0 outline-none">
+                <FamilyGroupTab />
             </TabsContent>
 
             <TabsContent value="consumptions" className="mt-0">

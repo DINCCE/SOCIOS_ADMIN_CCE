@@ -41,10 +41,20 @@ import { Separator } from "@/components/ui/separator"
 import { crearPersonaFromPersonFormValues } from "@/app/actions/personas"
 import { personSchema, type PersonFormValues } from "@/lib/schemas/person-schema"
 
-export function NewPersonSheet() {
-    const [open, setOpen] = useState(false)
+interface NewPersonSheetProps {
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
+    onSuccess?: (newPersonId: string, newPersonName: string) => void
+}
+
+export function NewPersonSheet({ open: controlledOpen, onOpenChange: controlledOnOpenChange, onSuccess }: NewPersonSheetProps = {}) {
+    const [internalOpen, setInternalOpen] = useState(false)
     const [isPending, setIsPending] = useState(false)
     const router = useRouter()
+
+    const isControlled = controlledOpen !== undefined
+    const open = isControlled ? controlledOpen : internalOpen
+    const setOpen = isControlled ? controlledOnOpenChange! : setInternalOpen
 
     const form = useForm({
         resolver: zodResolver(personSchema),
@@ -77,17 +87,24 @@ export function NewPersonSheet() {
                 return
             }
 
-            toast.success("Persona creada correctamente. Completa su perfil ahora.")
+            toast.success("Persona creada correctamente.")
 
             form.reset()
             setOpen(false)
 
-            // Navigate to the newly created person detail page
-            if (result.bp_id) {
-                router.push(`/admin/socios/personas/${result.bp_id}`)
+            if (onSuccess && result.bp_id) {
+                // Construct full name for UX feedback
+                const fullName = `${data.primer_nombre} ${data.primer_apellido}`.trim()
+                onSuccess(result.bp_id, fullName)
             } else {
-                router.refresh()
+                // Default behavior: Navigate or refresh
+                if (result.bp_id) {
+                    router.push(`/admin/socios/personas/${result.bp_id}`)
+                } else {
+                    router.refresh()
+                }
             }
+
         } catch (err) {
             console.error("Unexpected error submitting form:", err)
             toast.error("Error inesperado al procesar la solicitud")
@@ -98,12 +115,14 @@ export function NewPersonSheet() {
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nueva Persona
-                </Button>
-            </SheetTrigger>
+            {!isControlled && (
+                <SheetTrigger asChild>
+                    <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Nueva Persona
+                    </Button>
+                </SheetTrigger>
+            )}
             <SheetContent className="sm:max-w-xl w-[90vw] flex flex-col p-0 gap-0 border-l shadow-2xl">
                 {/* Header Section */}
                 <div className="bg-background shrink-0 px-6 py-6 border-b">
