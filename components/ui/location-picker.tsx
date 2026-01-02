@@ -90,7 +90,8 @@ export function LocationPicker({
             setIsLoading(true)
             try {
                 const { data, error } = await supabase.rpc("search_locations", {
-                    search_term: searchTerm,
+                    q: searchTerm,
+                    max_results: 20,
                 })
 
                 if (!error && data) {
