@@ -12,6 +12,9 @@ Hook personalizado para gestionar notificaciones mejoradas en la aplicación.
 - **Título y Descripción**: Soporte completo para mensajes en dos niveles (breve + técnico)
 - **Duración Inteligente**: 4 segundos para éxitos/info/warning, infinito para errores
 - **Reporte Completo**: Al copiar, incluye título, descripción, fecha/hora, URL y navegador
+- **Diseño Elegante**: Bordes laterales coloreados en lugar de fondos agresivos
+- **Iconos Semánticos**: Iconos lucide-react con colores sutiles para cada tipo
+- **Animaciones Suaves**: Entrada slide-up elegante con cubic-bezier
 
 ### Uso Básico
 
@@ -176,6 +179,32 @@ notifyError({
 })
 ```
 
+### Diseño Visual Elegante
+
+El sistema de notificaciones está diseñado para mantener la elegancia del dashboard incluso cuando ocurren errores:
+
+**Semántica de Color Sutil:**
+- ✅ **Éxito**: Borde izquierdo verde (emerald-600) + icono CheckCircle
+- ❌ **Error**: Borde izquierdo rojo (rose-600) + icono AlertCircle
+- ⚠️ **Advertencia**: Borde izquierdo ámbar (amber-600) + icono AlertTriangle
+- ℹ️ **Info**: Borde izquierdo azul (blue-600) + icono Info
+
+**Tipografía:**
+- Título en `font-semibold` para jerarquía visual
+- Descripción en `font-mono text-xs` para errores técnicos
+- Colores: título en `foreground`, descripción en `muted-foreground`
+
+**Animaciones:**
+- Entrada suave con slide-up (0.3s cubic-bezier)
+- Salida elegante con fade-out (0.2s)
+- Sin animaciones bruscas o distractoras
+
+**Refinamiento:**
+- Bordes redondeados (0.5rem)
+- Sombras sutiles adaptadas a modo claro/oscuro
+- Backdrop blur para modernidad
+- Sin fondos sólidos agresivos
+
 ### Notas Técnicas
 
 1. **Duración Infinita para Errores**: Los errores usan `duration: Infinity` para asegurar que el usuario tenga tiempo de leerlos y copiarlos.
@@ -186,18 +215,27 @@ notifyError({
    - Icono de Copy (lucide-react) junto al texto "Copiar"
    - Feedback visual inmediato con toast de confirmación
 
-3. **Texto Seleccionable**: Se aplican las clases CSS `select-text` y `cursor-text` para permitir selección de texto en todos los navegadores.
+3. **Iconos Personalizados**:
+   - Error: `AlertCircle` en rose-600
+   - Éxito: `CheckCircle` en emerald-600
+   - Advertencia: `AlertTriangle` en amber-600
+   - Info: `Info` en blue-600
+   - Todos con soporte para dark mode (variantes `-500`)
 
-4. **Descripción en Monospace**: Los mensajes de descripción usan fuente monospace (`font-mono`) para facilitar la lectura de errores técnicos.
+4. **Texto Seleccionable**: Se aplican las clases CSS `select-text` y `cursor-text` para permitir selección de texto en todos los navegadores.
 
-5. **Formato del Reporte**: El error copiado incluye:
+5. **Descripción en Monospace**: Los mensajes de descripción usan fuente monospace (`font-mono`) para facilitar la lectura de errores técnicos.
+
+6. **Formato del Reporte**: El error copiado incluye:
    - Título del error
    - Descripción técnica (si existe)
    - Fecha/hora con formato localizado (es-CO)
    - URL completa de la página
    - User Agent del navegador
 
-6. **Botón de Cierre Visible**: Gracias a `closeButton={true}` en la configuración global del Toaster, todos los errores muestran un botón X para cerrarlos.
+7. **Botón de Cierre Visible**: Gracias a `closeButton={true}` en la configuración global del Toaster, todos los errores muestran un botón X para cerrarlos.
+
+8. **Animaciones Suaves**: Configuradas con cubic-bezier para movimientos naturales que no distraen del contenido.
 
 ### Personalización Avanzada
 

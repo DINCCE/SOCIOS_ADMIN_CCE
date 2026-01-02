@@ -1,7 +1,7 @@
 "use client"
 
 import { toast } from "sonner"
-import { Copy, Check } from "lucide-react"
+import { Copy, Check, AlertCircle, CheckCircle, Info, AlertTriangle } from "lucide-react"
 
 interface NotifyOptions {
   title: string
@@ -58,12 +58,13 @@ function fallbackCopyTextToClipboard(text: string) {
       toast.success("Error copiado", {
         description: "El error se copió al portapapeles",
         duration: 2000,
-        icon: <Check className="h-4 w-4" />,
+        icon: <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />,
       })
     } else {
       toast.error("Error al copiar", {
         description: "No se pudo copiar al portapapeles",
         duration: 3000,
+        icon: <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-500" />,
       })
     }
   } catch (err) {
@@ -71,6 +72,7 @@ function fallbackCopyTextToClipboard(text: string) {
     toast.error("Error al copiar", {
       description: "No se pudo copiar al portapapeles",
       duration: 3000,
+      icon: <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-500" />,
     })
   } finally {
     document.body.removeChild(textArea)
@@ -108,6 +110,8 @@ export function useNotify() {
     toast.error(title, {
       description,
       duration: Infinity,
+      // Icono elegante: AlertCircle en rose-600
+      icon: <AlertCircle className="h-5 w-5 text-rose-600 dark:text-rose-500" />,
       // Clase personalizada para hacer el texto seleccionable
       className: "select-text cursor-text",
       classNames: {
@@ -132,7 +136,7 @@ export function useNotify() {
             toast.success("Error copiado", {
               description: "El error se copió al portapapeles",
               duration: 2000,
-              icon: <Check className="h-4 w-4" />,
+              icon: <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />,
             })
           } catch (err) {
             console.error("Error al copiar al portapapeles:", err)
@@ -160,6 +164,8 @@ export function useNotify() {
   const notifySuccess = ({ title, description }: NotifyOptions) => {
     toast.success(title, {
       description,
+      // Icono elegante: CheckCircle en emerald-600
+      icon: <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-500" />,
       // Usa la duración configurada globalmente (4000ms) si no se especifica
     })
   }
@@ -178,6 +184,8 @@ export function useNotify() {
   const notifyInfo = ({ title, description }: NotifyOptions) => {
     toast.info(title, {
       description,
+      // Icono elegante: Info en blue-600
+      icon: <Info className="h-5 w-5 text-blue-600 dark:text-blue-500" />,
     })
   }
 
@@ -198,6 +206,8 @@ export function useNotify() {
   const notifyWarning = ({ title, description }: NotifyOptions) => {
     toast.warning(title, {
       description,
+      // Icono elegante: AlertTriangle en amber-600
+      icon: <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500" />,
     })
   }
 

@@ -201,4 +201,46 @@
     user-select: text;
     cursor: text;
   }
+
+  /* Animaciones suaves para toasts */
+  [data-sonner-toast] {
+    animation: toast-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  [data-sonner-toast][data-removed="true"] {
+    animation: toast-slide-out 0.2s cubic-bezier(0.4, 0, 1, 1);
+  }
+
+  @keyframes toast-slide-up {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes toast-slide-out {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+  }
+
+  /* Refinamiento visual: bordes y sombras elegantes */
+  [data-sonner-toast] {
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Modo oscuro: sombras más sutiles */
+  .dark [data-sonner-toast] {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
 }
