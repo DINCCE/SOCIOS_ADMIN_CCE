@@ -11,7 +11,8 @@ export const personaSchema = z.object({
   tipo_documento: z.enum(["CC", "CE", "TI", "PA", "RC", "NIT", "PEP", "PPT", "DNI", "NUIP"]),
   numero_documento: z.string(),
   fecha_expedicion: z.string().nullable(),
-  lugar_expedicion: z.string().nullable(),
+  lugar_expedicion: z.string().nullable(), // Legacy text field (kept for backward compatibility)
+  lugar_expedicion_id: z.string().uuid().nullable(), // New FK to geographic_locations
   primer_nombre: z.string(),
   segundo_nombre: z.string().nullable(),
   primer_apellido: z.string(),

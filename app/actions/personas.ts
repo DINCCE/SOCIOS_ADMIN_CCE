@@ -232,7 +232,8 @@ export async function updatePersonaIdentity(
     tipo_documento: string
     numero_documento: string
     fecha_expedicion?: string | null
-    lugar_expedicion?: string | null
+    lugar_expedicion?: string | null // Legacy text field (backward compatibility)
+    lugar_expedicion_id?: string | null // New FK to geographic_locations
     primer_nombre: string
     segundo_nombre?: string | null
     primer_apellido: string
@@ -254,7 +255,8 @@ export async function updatePersonaIdentity(
       tipo_documento: data.tipo_documento,
       numero_documento: data.numero_documento,
       fecha_expedicion: data.fecha_expedicion,
-      lugar_expedicion: data.lugar_expedicion,
+      lugar_expedicion: data.lugar_expedicion, // Legacy field (backward compatibility)
+      lugar_expedicion_id: data.lugar_expedicion_id, // New FK to geographic_locations
       primer_nombre: data.primer_nombre,
       segundo_nombre: data.segundo_nombre,
       primer_apellido: data.primer_apellido,

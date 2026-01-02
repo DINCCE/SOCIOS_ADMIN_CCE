@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select"
 import { Persona } from "@/features/socios/types/socios-schema"
 import { updatePersonaSecurity } from "@/app/actions/personas"
+import { EPS_OPTIONS } from "@/lib/constants"
 
 // Schema de validación
 const securitySchema = z.object({
@@ -134,9 +135,26 @@ export function EditSecurityForm({ persona, onSuccess, onCancel }: EditSecurityF
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">EPS / Prepagada</FormLabel>
-                                            <FormControl>
-                                                <Input className="h-9" placeholder="Nombre de la EPS" {...field} value={field.value || ""} />
-                                            </FormControl>
+                                            <Select onValueChange={field.onChange} value={field.value || undefined}>
+                                                <FormControl>
+                                                    <SelectTrigger className="h-9">
+                                                        <SelectValue placeholder="Seleccionar EPS" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent className="max-h-[300px]">
+                                                    {EPS_OPTIONS.map((eps) =>
+                                                        eps.value === "---" ? (
+                                                            <SelectItem key={eps.value} value={eps.value} disabled>
+                                                                {eps.label}
+                                                            </SelectItem>
+                                                        ) : (
+                                                            <SelectItem key={eps.value} value={eps.value}>
+                                                                {eps.label}
+                                                            </SelectItem>
+                                                        )
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}

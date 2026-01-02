@@ -30,13 +30,15 @@ import {
 } from "@/components/ui/select"
 import { Persona } from "@/features/socios/types/socios-schema"
 import { updatePersonaIdentity } from "@/app/actions/personas"
+import { NACIONALIDADES } from "@/lib/constants"
 
 // Schema de validación
 const identitySchema = z.object({
     tipo_documento: z.enum(["CC", "CE", "TI", "PA", "RC", "NIT", "PEP", "PPT", "DNI", "NUIP"]),
     numero_documento: z.string().min(1, "Número de documento requerido"),
     fecha_expedicion: z.string().optional().nullable(),
-    lugar_expedicion: z.string().optional().nullable(),
+    lugar_expedicion: z.string().optional().nullable(), // Legacy field (backward compatibility)
+    lugar_expedicion_id: z.string().uuid().optional().nullable(), // New FK to geographic_locations
     primer_nombre: z.string().min(1, "Primer nombre requerido"),
     segundo_nombre: z.string().optional().nullable(),
     primer_apellido: z.string().min(1, "Primer apellido requerido"),
@@ -68,6 +70,7 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
             numero_documento: persona.numero_documento,
             fecha_expedicion: persona.fecha_expedicion || "",
             lugar_expedicion: persona.lugar_expedicion || "",
+            lugar_expedicion_id: persona.lugar_expedicion_id || undefined,
             primer_nombre: persona.primer_nombre,
             segundo_nombre: persona.segundo_nombre || "",
             primer_apellido: persona.primer_apellido,
@@ -89,6 +92,7 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
                 ...data,
                 fecha_expedicion: data.fecha_expedicion || null,
                 lugar_expedicion: data.lugar_expedicion || null,
+                lugar_expedicion_id: data.lugar_expedicion_id || null,
                 segundo_nombre: data.segundo_nombre || null,
                 segundo_apellido: data.segundo_apellido || null,
                 lugar_nacimiento: data.lugar_nacimiento || null,
@@ -203,12 +207,16 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
                                 />
                                 <FormField
                                     control={form.control}
-                                    name="lugar_expedicion"
+                                    name="lugar_expedicion_id"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Lugar Expedición</FormLabel>
                                             <FormControl>
-                                                <Input className="h-9" placeholder="Ciudad" {...field} value={field.value || ""} />
+                                                <LocationPicker
+                                                    value={field.value || undefined}
+                                                    onChange={field.onChange}
+                                                    placeholder="Buscar ciudad..."
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -353,9 +361,26 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Nacionalidad</FormLabel>
-                                            <FormControl>
-                                                <Input className="h-9" placeholder="Colombia" {...field} value={field.value || ""} />
-                                            </FormControl>
+                                            <Select onValueChange={field.onChange} value={field.value || undefined}>
+                                                <FormControl>
+                                                    <SelectTrigger className="h-9">
+                                                        <SelectValue placeholder="Seleccionar nacionalidad" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent className="max-h-[300px]">
+                                                    {NACIONALIDADES.map((nac) =>
+                                                        nac.code === "---" ? (
+                                                            <SelectItem key={nac.code} value={nac.code} disabled>
+                                                                {nac.name}
+                                                            </SelectItem>
+                                                        ) : (
+                                                            <SelectItem key={nac.code} value={nac.code}>
+                                                                {nac.name}
+                                                            </SelectItem>
+                                                        )
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}
