@@ -239,7 +239,8 @@ export async function updatePersonaIdentity(
     segundo_apellido?: string | null
     genero: string
     fecha_nacimiento: string
-    lugar_nacimiento?: string | null
+    lugar_nacimiento?: string | null // Legacy text field (backward compatibility)
+    lugar_nacimiento_id?: string | null // New FK to geographic_locations
     nacionalidad?: string | null
     estado_civil?: string | null
   }
@@ -260,7 +261,8 @@ export async function updatePersonaIdentity(
       segundo_apellido: data.segundo_apellido,
       genero: data.genero,
       fecha_nacimiento: data.fecha_nacimiento,
-      lugar_nacimiento: data.lugar_nacimiento,
+      lugar_nacimiento: data.lugar_nacimiento, // Legacy field (backward compatibility)
+      lugar_nacimiento_id: data.lugar_nacimiento_id, // New FK to geographic_locations
       nacionalidad: data.nacionalidad,
       estado_civil: data.estado_civil,
     })

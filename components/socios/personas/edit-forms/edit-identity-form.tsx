@@ -11,6 +11,7 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { DatePicker } from "@/components/ui/date-picker"
+import { LocationPicker } from "@/components/ui/location-picker"
 import {
     Form,
     FormControl,
@@ -42,7 +43,8 @@ const identitySchema = z.object({
     segundo_apellido: z.string().optional().nullable(),
     genero: z.enum(["masculino", "femenino", "otro", "no_especifica"]),
     fecha_nacimiento: z.string(),
-    lugar_nacimiento: z.string().optional().nullable(),
+    lugar_nacimiento: z.string().optional().nullable(), // Legacy field (backward compatibility)
+    lugar_nacimiento_id: z.string().uuid().optional().nullable(), // New FK to geographic_locations
     nacionalidad: z.string().optional().nullable(),
     estado_civil: z.enum(["soltero", "casado", "union_libre", "divorciado", "viudo", "separado"]).optional().nullable(),
 })
@@ -73,6 +75,7 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
             genero: persona.genero,
             fecha_nacimiento: persona.fecha_nacimiento,
             lugar_nacimiento: persona.lugar_nacimiento || "",
+            lugar_nacimiento_id: persona.lugar_nacimiento_id || undefined,
             nacionalidad: persona.nacionalidad || "Colombia",
             estado_civil: persona.estado_civil || undefined,
         },
@@ -89,6 +92,7 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
                 segundo_nombre: data.segundo_nombre || null,
                 segundo_apellido: data.segundo_apellido || null,
                 lugar_nacimiento: data.lugar_nacimiento || null,
+                lugar_nacimiento_id: data.lugar_nacimiento_id || null,
                 nacionalidad: data.nacionalidad || null,
                 estado_civil: data.estado_civil || null,
             }
@@ -328,12 +332,16 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="lugar_nacimiento"
+                                    name="lugar_nacimiento_id"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Lugar de Nacimiento</FormLabel>
                                             <FormControl>
-                                                <Input className="h-9" placeholder="Ciudad, País" {...field} value={field.value || ""} />
+                                                <LocationPicker
+                                                    value={field.value || undefined}
+                                                    onChange={field.onChange}
+                                                    placeholder="Buscar ciudad..."
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>

@@ -18,7 +18,8 @@ export const personaSchema = z.object({
   segundo_apellido: z.string().nullable(),
   genero: z.enum(["masculino", "femenino", "otro", "no_especifica"]),
   fecha_nacimiento: z.string(),
-  lugar_nacimiento: z.string().nullable(),
+  lugar_nacimiento: z.string().nullable(), // Legacy text field (kept for backward compatibility)
+  lugar_nacimiento_id: z.string().uuid().nullable(), // New FK to geographic_locations
   nacionalidad: z.string().nullable(),
   estado_civil: z.enum(["soltero", "casado", "union_libre", "divorciado", "viudo", "separado"]).nullable(),
   ocupacion: z.string().nullable(),
