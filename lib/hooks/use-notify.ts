@@ -9,6 +9,35 @@ interface NotifyOptions {
   description?: string
 }
 
+// Iconos pre-renderizados para evitar problemas de parsing JSX en Turbopack
+const ErrorIcon = React.createElement(AlertCircle, {
+  className: "h-5 w-5 text-rose-600 dark:text-rose-500"
+})
+
+const SuccessIcon = React.createElement(CheckCircle, {
+  className: "h-5 w-5 text-emerald-600 dark:text-emerald-500"
+})
+
+const SuccessIconSmall = React.createElement(CheckCircle, {
+  className: "h-4 w-4 text-emerald-600 dark:text-emerald-500"
+})
+
+const ErrorIconSmall = React.createElement(AlertCircle, {
+  className: "h-4 w-4 text-rose-600 dark:text-rose-500"
+})
+
+const InfoIcon = React.createElement(Info, {
+  className: "h-5 w-5 text-blue-600 dark:text-blue-500"
+})
+
+const WarningIcon = React.createElement(AlertTriangle, {
+  className: "h-5 w-5 text-amber-600 dark:text-amber-500"
+})
+
+const CopyIcon = React.createElement(Copy, {
+  className: "h-3.5 w-3.5"
+})
+
 /**
  * Formatea la información del error para copiado al portapapeles
  */
@@ -59,13 +88,13 @@ function fallbackCopyTextToClipboard(text: string) {
       toast.success("Error copiado", {
         description: "El error se copió al portapapeles",
         duration: 2000,
-        icon: <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />,
+        icon: SuccessIconSmall,
       })
     } else {
       toast.error("Error al copiar", {
         description: "No se pudo copiar al portapapeles",
         duration: 3000,
-        icon: <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-500" />,
+        icon: ErrorIconSmall,
       })
     }
   } catch (err) {
@@ -73,7 +102,7 @@ function fallbackCopyTextToClipboard(text: string) {
     toast.error("Error al copiar", {
       description: "No se pudo copiar al portapapeles",
       duration: 3000,
-      icon: <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-500" />,
+      icon: ErrorIconSmall,
     })
   } finally {
     document.body.removeChild(textArea)
@@ -112,7 +141,7 @@ export function useNotify() {
       description,
       duration: Infinity,
       // Icono elegante: AlertCircle en rose-600
-      icon: <AlertCircle className="h-5 w-5 text-rose-600 dark:text-rose-500" />,
+      icon: ErrorIcon,
       // Clase personalizada para hacer el texto seleccionable
       className: "select-text cursor-text",
       classNames: {
@@ -122,11 +151,11 @@ export function useNotify() {
       },
       // Botón de acción para copiar el error
       action: {
-        label: (
-          <div className="flex items-center gap-1.5">
-            <Copy className="h-3.5 w-3.5" />
-            <span className="text-xs font-medium">Copiar</span>
-          </div>
+        label: React.createElement(
+          "div",
+          { className: "flex items-center gap-1.5" },
+          CopyIcon,
+          React.createElement("span", { className: "text-xs font-medium" }, "Copiar")
         ),
         onClick: async () => {
           try {
@@ -137,7 +166,7 @@ export function useNotify() {
             toast.success("Error copiado", {
               description: "El error se copió al portapapeles",
               duration: 2000,
-              icon: <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />,
+              icon: SuccessIconSmall,
             })
           } catch (err) {
             console.error("Error al copiar al portapapeles:", err)
@@ -166,7 +195,7 @@ export function useNotify() {
     toast.success(title, {
       description,
       // Icono elegante: CheckCircle en emerald-600
-      icon: <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-500" />,
+      icon: SuccessIcon,
       // Usa la duración configurada globalmente (4000ms) si no se especifica
     })
   }
@@ -186,7 +215,7 @@ export function useNotify() {
     toast.info(title, {
       description,
       // Icono elegante: Info en blue-600
-      icon: <Info className="h-5 w-5 text-blue-600 dark:text-blue-500" />,
+      icon: InfoIcon,
     })
   }
 
@@ -208,7 +237,7 @@ export function useNotify() {
     toast.warning(title, {
       description,
       // Icono elegante: AlertTriangle en amber-600
-      icon: <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500" />,
+      icon: WarningIcon,
     })
   }
 
