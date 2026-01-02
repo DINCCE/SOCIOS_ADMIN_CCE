@@ -1,7 +1,8 @@
 "use client"
 
+import React from "react"
 import { toast } from "sonner"
-import { Copy, Check, AlertCircle, CheckCircle, Info, AlertTriangle } from "lucide-react"
+import { Copy, AlertCircle, CheckCircle, Info, AlertTriangle } from "lucide-react"
 
 interface NotifyOptions {
   title: string
