@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import { useNotify } from '@/lib/hooks/use-notify'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,6 +28,7 @@ export function LoginForm({
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isGitHubLoading, setIsGitHubLoading] = useState(false)
+  const { notifyError, notifySuccess } = useNotify()
 
   const {
     register,
@@ -48,15 +49,21 @@ export function LoginForm({
       })
 
       if (error) {
-        toast.error(error.message)
+        notifyError({
+          title: 'Error al iniciar sesión',
+          description: error.message,
+        })
         return
       }
 
-      toast.success('Logged in successfully!')
+      notifySuccess({ title: 'Sesión iniciada correctamente' })
       router.push('/admin')
       router.refresh()
     } catch (error) {
-      toast.error('An unexpected error occurred')
+      notifyError({
+        title: 'Error inesperado',
+        description: error instanceof Error ? error.message : 'Error desconocido',
+      })
       console.error('Login error:', error)
     } finally {
       setIsLoading(false)
@@ -76,12 +83,18 @@ export function LoginForm({
       })
 
       if (error) {
-        toast.error(error.message)
+        notifyError({
+          title: 'Error al iniciar sesión con GitHub',
+          description: error.message,
+        })
         setIsGitHubLoading(false)
       }
       // Don't reset loading state here - user will be redirected
     } catch (error) {
-      toast.error('An unexpected error occurred')
+      notifyError({
+        title: 'Error inesperado',
+        description: error instanceof Error ? error.message : 'Error desconocido',
+      })
       console.error('GitHub login error:', error)
       setIsGitHubLoading(false)
     }
