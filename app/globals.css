@@ -177,3 +177,28 @@
     /* Reduce from 700 to 600 */
   }
 }
+
+@layer utilities {
+  /* Toasts: Texto seleccionable para errores técnicos */
+  .select-text {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+  }
+
+  .cursor-text {
+    cursor: text !important;
+  }
+
+  /* Asegurar que los toasts de error permitan interacción con el texto */
+  [data-sonner-toast][data-type="error"] {
+    user-select: text;
+    cursor: default;
+  }
+
+  [data-sonner-toast][data-type="error"] * {
+    user-select: text;
+    cursor: text;
+  }
+}
