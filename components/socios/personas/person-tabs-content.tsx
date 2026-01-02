@@ -22,6 +22,7 @@ import {
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, Star } from "lucide-react"
+import { PartnerDashboard } from "./partner-dashboard"
 
 interface PersonTabsContentProps {
     persona: Persona
@@ -119,7 +120,10 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                     </Alert>
                 </div>
 
-                {/* 2. Responsive Grid for Widgets */}
+                {/* 2. Partner Dashboard - Advanced KPIs */}
+                <PartnerDashboard />
+
+                {/* 3. Responsive Grid for Widgets */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 items-stretch">
                     {/* Widget: Fidelity Highlights */}
                     <Card className="h-full border border-border bg-card">
