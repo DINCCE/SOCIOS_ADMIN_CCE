@@ -7,9 +7,11 @@ Hook personalizado para gestionar notificaciones mejoradas en la aplicación.
 ### Características
 
 - **Errores Persistentes**: Los errores permanecen en pantalla hasta que el usuario los cierre manualmente
-- **Texto Seleccionable**: Los mensajes de error pueden seleccionarse y copiarse para debugging
+- **Copiado Rápido**: Botón "Copiar Error" que copia toda la información del error con un clic
+- **Texto Seleccionable**: Los mensajes de error pueden seleccionarse y copiarse manualmente para debugging
 - **Título y Descripción**: Soporte completo para mensajes en dos niveles (breve + técnico)
 - **Duración Inteligente**: 4 segundos para éxitos/info/warning, infinito para errores
+- **Reporte Completo**: Al copiar, incluye título, descripción, fecha/hora, URL y navegador
 
 ### Uso Básico
 
@@ -58,6 +60,42 @@ function MyComponent() {
   }
 }
 ```
+
+### Copiado Rápido de Errores
+
+Cada error incluye un botón **"Copiar Error"** que copia automáticamente toda la información relevante:
+
+```
+═══════════════════════════════════
+🐛 REPORTE DE ERROR
+═══════════════════════════════════
+
+ERROR: Error al crear usuario
+
+DETALLES TÉCNICOS:
+Unique constraint violation on email field
+
+FECHA/HORA: 02/01/2026, 10:30:45 a. m.
+
+CONTEXTO:
+URL: https://app.ejemplo.com/admin/usuarios
+Navegador: Mozilla/5.0 (Windows NT 10.0; Win64; x64)...
+
+═══════════════════════════════════
+```
+
+**Características:**
+- ✅ Un solo clic para copiar todo el contexto del error
+- ✅ Feedback visual inmediato ("Error copiado")
+- ✅ Incluye fecha/hora, URL actual y navegador
+- ✅ Fallback automático para navegadores antiguos
+- ✅ Formato limpio listo para pegar en tickets o Slack
+
+**Flujo de Usuario:**
+1. Aparece un error persistente en pantalla
+2. Usuario hace clic en el botón "Copiar"
+3. Aparece confirmación "Error copiado al portapapeles"
+4. Usuario pega el error en su herramienta de soporte preferida
 
 ### Ejemplo Real: Formulario con manejo de errores
 
@@ -142,11 +180,24 @@ notifyError({
 
 1. **Duración Infinita para Errores**: Los errores usan `duration: Infinity` para asegurar que el usuario tenga tiempo de leerlos y copiarlos.
 
-2. **Texto Seleccionable**: Se aplican las clases CSS `select-text` y `cursor-text` para permitir selección de texto en todos los navegadores.
+2. **Botón de Acción "Copiar Error"**:
+   - Usa la API moderna del Clipboard (`navigator.clipboard.writeText()`)
+   - Fallback automático con `document.execCommand('copy')` para navegadores antiguos
+   - Icono de Copy (lucide-react) junto al texto "Copiar"
+   - Feedback visual inmediato con toast de confirmación
 
-3. **Descripción en Monospace**: Los mensajes de descripción usan fuente monospace (`font-mono`) para facilitar la lectura de errores técnicos.
+3. **Texto Seleccionable**: Se aplican las clases CSS `select-text` y `cursor-text` para permitir selección de texto en todos los navegadores.
 
-4. **Botón de Cierre Visible**: Gracias a `closeButton={true}` en la configuración global del Toaster, todos los errores muestran un botón X para cerrarlos.
+4. **Descripción en Monospace**: Los mensajes de descripción usan fuente monospace (`font-mono`) para facilitar la lectura de errores técnicos.
+
+5. **Formato del Reporte**: El error copiado incluye:
+   - Título del error
+   - Descripción técnica (si existe)
+   - Fecha/hora con formato localizado (es-CO)
+   - URL completa de la página
+   - User Agent del navegador
+
+6. **Botón de Cierre Visible**: Gracias a `closeButton={true}` en la configuración global del Toaster, todos los errores muestran un botón X para cerrarlos.
 
 ### Personalización Avanzada
 
