@@ -29,7 +29,7 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
     }
 
     const formatBirthDate = (dateStr: string | null) => {
-        if (!dateStr) return "No registrada";
+        if (!dateStr) return null;
         try {
             const date = new Date(dateStr);
             const formatted = format(date, "d MMM yyyy", { locale: es });
