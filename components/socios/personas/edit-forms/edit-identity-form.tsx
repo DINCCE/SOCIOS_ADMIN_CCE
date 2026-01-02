@@ -45,7 +45,6 @@ const identitySchema = z.object({
     lugar_nacimiento: z.string().optional().nullable(),
     nacionalidad: z.string().optional().nullable(),
     estado_civil: z.enum(["soltero", "casado", "union_libre", "divorciado", "viudo", "separado"]).optional().nullable(),
-    tipo_sangre: z.string().optional().nullable(),
 })
 
 type IdentityFormValues = z.infer<typeof identitySchema>
@@ -76,7 +75,6 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
             lugar_nacimiento: persona.lugar_nacimiento || "",
             nacionalidad: persona.nacionalidad || "Colombia",
             estado_civil: persona.estado_civil || undefined,
-            tipo_sangre: persona.tipo_sangre || "",
         },
     })
 
@@ -93,7 +91,6 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
                 lugar_nacimiento: data.lugar_nacimiento || null,
                 nacionalidad: data.nacionalidad || null,
                 estado_civil: data.estado_civil || null,
-                tipo_sangre: data.tipo_sangre || null,
             }
 
             const result = await updatePersonaIdentity(persona.id, cleanedData)
@@ -357,7 +354,7 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="estado_civil"
@@ -379,19 +376,6 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
                                                     <SelectItem value="separado">Separado/a</SelectItem>
                                                 </SelectContent>
                                             </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="tipo_sangre"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Tipo de Sangre</FormLabel>
-                                            <FormControl>
-                                                <Input className="h-9" placeholder="O+, A+, etc." {...field} value={field.value || ""} />
-                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}

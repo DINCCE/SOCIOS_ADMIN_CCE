@@ -242,7 +242,6 @@ export async function updatePersonaIdentity(
     lugar_nacimiento?: string | null
     nacionalidad?: string | null
     estado_civil?: string | null
-    tipo_sangre?: string | null
   }
 ) {
   const supabase = await createClient()
@@ -264,7 +263,6 @@ export async function updatePersonaIdentity(
       lugar_nacimiento: data.lugar_nacimiento,
       nacionalidad: data.nacionalidad,
       estado_civil: data.estado_civil,
-      tipo_sangre: data.tipo_sangre,
     })
     .eq('id', id)
 

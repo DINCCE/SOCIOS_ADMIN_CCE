@@ -1,9 +1,11 @@
-import { Mail, Phone, MapPin, Calendar, Globe, Linkedin, Instagram, Facebook, Twitter } from "lucide-react"
+import { Mail, Phone, MapPin, Calendar, Globe, Linkedin, Instagram, Facebook, Twitter, Cake } from "lucide-react"
 import { Persona } from "@/features/socios/types/socios-schema"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { format, differenceInDays } from "date-fns"
+import { es } from "date-fns/locale"
 
 interface PersonIdentityPanelProps {
     persona: Persona
@@ -30,20 +32,47 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
         if (!dateStr) return "No registrada";
         try {
             const date = new Date(dateStr);
-            const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-            const day = date.getUTCDate();
-            const month = months[date.getUTCMonth()];
-            const year = date.getUTCFullYear();
+            const formatted = format(date, "d MMM yyyy", { locale: es });
 
-            const age = new Date().getFullYear() - year;
+            const age = new Date().getFullYear() - date.getFullYear();
             const hasHadBirthdayThisYear = new Date().getMonth() > date.getMonth() ||
                 (new Date().getMonth() === date.getMonth() && new Date().getDate() >= date.getDate());
             const finalAge = hasHadBirthdayThisYear ? age : age - 1;
 
-            return `${day} ${month} ${year} (${finalAge} años)`;
+            return { formatted, age: finalAge, date };
         } catch (e) {
-            return dateStr;
+            return null;
         }
+    }
+
+    const formatStandardDate = (dateStr: string | null) => {
+        if (!dateStr) return null;
+        try {
+            const date = new Date(dateStr);
+            return format(date, "d MMM yyyy", { locale: es });
+        } catch (e) {
+            return null;
+        }
+    }
+
+    const getBirthdayCountdown = (birthDate: Date) => {
+        const today = new Date();
+        const thisYear = today.getFullYear();
+
+        // Get birthday this year
+        let nextBirthday = new Date(thisYear, birthDate.getMonth(), birthDate.getDate());
+
+        // If birthday already passed, use next year
+        if (nextBirthday < today) {
+            nextBirthday = new Date(thisYear + 1, birthDate.getMonth(), birthDate.getDate());
+        }
+
+        const daysUntil = differenceInDays(nextBirthday, today);
+
+        if (daysUntil === 0) return { show: true, text: "Hoy 🎉", days: 0 };
+        if (daysUntil < 30) return { show: true, text: `en ${daysUntil} días`, days: daysUntil };
+
+        return { show: false, text: "", days: daysUntil };
     }
 
     return (
@@ -60,15 +89,16 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
                     <div className="space-y-1">
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Emails</p>
                         <div className="space-y-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2" title="Principal">
                                 <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                                 <p className="text-sm font-medium text-foreground break-all leading-tight">
                                     {persona.email_principal || "Principal no reg."}
                                 </p>
                             </div>
                             {persona.email_secundario && (
-                                <div className="flex items-center gap-2 pl-5.5"> {/* 3.5 icon + 2 gap = 5.5 */}
-                                    <p className="text-xs text-muted-foreground break-all leading-tight">
+                                <div className="flex items-center gap-2">
+                                    <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                    <p className="text-sm font-medium text-foreground break-all leading-tight">
                                         {persona.email_secundario}
                                     </p>
                                 </div>
@@ -134,17 +164,17 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
                 {/* Identity Details Group */}
                 <div className="space-y-4">
                     <div className="space-y-1">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Nacionalidad y Documento</p>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Identidad</p>
                         <div className="space-y-1">
                             <div className="flex items-center gap-2">
                                 <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                                 <p className="text-sm font-medium text-foreground leading-tight">
-                                    {persona.nacionalidad === 'CO' ? 'Colombiana 🇨🇴' : (persona.nacionalidad || "No registrada")}
+                                    {persona.tipo_documento} {formatDocument(persona.numero_documento)}
                                 </p>
                             </div>
                             <div className="flex items-center gap-2 pl-5.5">
-                                <p className="text-sm text-muted-foreground font-medium leading-tight">
-                                    {persona.tipo_documento} {formatDocument(persona.numero_documento)}
+                                <p className="text-xs text-muted-foreground leading-tight flex items-center gap-1">
+                                    {persona.nacionalidad === 'CO' ? '🇨🇴 Colombiana' : (persona.nacionalidad || "No registrada")}
                                 </p>
                             </div>
                             {persona.lugar_expedicion && (
@@ -158,23 +188,44 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
                     </div>
 
                     <div className="space-y-1">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Fechas Clave</p>
-                        <div className="grid grid-cols-1 gap-1.5 pl-5.5">
-                            <div className="flex items-center gap-2">
-                                <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0 -ml-5.5" />
-                                <p className="text-sm font-medium leading-tight">
-                                    <span className="text-muted-foreground font-normal">Nacimiento:</span> {formatBirthDate(persona.fecha_nacimiento)}
-                                </p>
-                            </div>
-                            {persona.fecha_expedicion && (
-                                <p className="text-xs text-muted-foreground leading-tight">
-                                    <span className="font-medium text-muted-foreground/80">Expedición:</span> {persona.fecha_expedicion}
-                                </p>
-                            )}
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Fechas Importantes</p>
+                        <div className="grid grid-cols-1 gap-1.5">
+                            {(() => {
+                                const birthData = formatBirthDate(persona.fecha_nacimiento);
+                                if (!birthData) return null;
+                                const countdown = getBirthdayCountdown(birthData.date);
+                                return (
+                                    <div className="flex items-center gap-2">
+                                        <Cake className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                        <div className="flex items-center gap-2 flex-wrap leading-tight">
+                                            <p className="text-sm font-medium">
+                                                <span className="text-muted-foreground font-normal">Nacimiento:</span> {birthData.formatted}
+                                            </p>
+                                            <span className="text-sm text-muted-foreground">({birthData.age} años)</span>
+                                            {countdown.show && (
+                                                <Badge className="text-[10px] px-1.5 rounded-full bg-amber-100 text-amber-700 border-none">
+                                                    {countdown.text}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                             {persona.fecha_aniversario && (
-                                <p className="text-xs text-muted-foreground leading-tight">
-                                    <span className="font-medium text-muted-foreground/80">Aniversario:</span> {persona.fecha_aniversario}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                    <p className="text-sm font-medium leading-tight">
+                                        <span className="text-muted-foreground font-normal">Aniversario:</span> {formatStandardDate(persona.fecha_aniversario)}
+                                    </p>
+                                </div>
+                            )}
+                            {persona.fecha_expedicion && (
+                                <div className="flex items-center gap-2">
+                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                    <p className="text-sm font-medium leading-tight">
+                                        <span className="text-muted-foreground font-normal">Expedición:</span> {formatStandardDate(persona.fecha_expedicion)}
+                                    </p>
+                                </div>
                             )}
                         </div>
                     </div>
