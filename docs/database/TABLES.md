@@ -15,6 +15,7 @@
 - [bp_relaciones](#bp_relaciones)
 - [acciones](#acciones)
 - [asignaciones_acciones](#asignaciones_acciones)
+- [geographic_locations](#geographic_locations)
 - [organization_members](#organization_members)
 - [roles](#roles)
 - [role_permissions](#role_permissions)
@@ -189,7 +190,8 @@
 | `segundo_apellido` | text | NULL | - | Second surname |
 | `genero` | text | NOT NULL | - | Gender: masculino, femenino, otro, no_especifica |
 | `fecha_nacimiento` | date | NOT NULL | - | Birth date (validated for 18+ years) |
-| `lugar_nacimiento` | text | NULL | - | Place of birth |
+| `lugar_nacimiento` | text | NULL | - | Place of birth (legacy text field - deprecated) |
+| `lugar_nacimiento_id` | uuid | NULL | - | FK to geographic_locations - Structured birth place reference |
 | `nacionalidad` | text | NULL | `'CO'::text` | ISO nationality code (default: Colombia) |
 | `estado_civil` | text | NULL | - | Marital status: soltero, casado, union_libre, divorciado, viudo, separado |
 | `ocupacion` | text | NULL | - | Current occupation |
@@ -883,6 +885,85 @@ VALUES ('analyst', 'business_partners', 'select');
 
 ---
 
+## geographic_locations
+
+**Purpose:** Reference table for cities and geographic locations used in location pickers (birth place, residence, etc.).
+
+**Row Count:** Variable (seeded with major cities) | **RLS:** ✅ Enabled (public read access)
+
+### Fields
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| `id` | uuid | NOT NULL | `gen_random_uuid()` | Primary key - Unique location identifier |
+| `country_code` | text | NOT NULL | - | ISO 3166-1 alpha-2 country code (CO, US, MX, etc.) |
+| `country_name` | text | NOT NULL | - | Full country name (Colombia, United States, México) |
+| `state_code` | text | NULL | - | State/department code (ANT, CAL, etc.) |
+| `state_name` | text | NULL | - | State/department name (Antioquia, Caldas, etc.) |
+| `city_name` | text | NOT NULL | - | City name (Medellín, Bogotá, etc.) |
+| `timezone` | text | NULL | - | IANA timezone identifier (America/Bogota, America/New_York) |
+| `latitude` | numeric(10,7) | NULL | - | Geographic latitude for map features |
+| `longitude` | numeric(10,7) | NULL | - | Geographic longitude for map features |
+| `creado_en` | timestamptz | NOT NULL | `now()` | Timestamp of record creation |
+| `actualizado_en` | timestamptz | NOT NULL | `now()` | Timestamp of last modification |
+
+### Constraints
+
+- **PRIMARY KEY:** `id`
+- **NOT NULL:** `country_code`, `country_name`, `city_name`
+
+### Indexes
+
+- `geographic_locations_pkey` PRIMARY KEY on `id`
+- `idx_geographic_locations_country` on `country_code`
+- `idx_geographic_locations_city` on `city_name`
+
+### Triggers
+
+- `actualizar_timestamp` - Auto-update `actualizado_en` on UPDATE
+
+### RLS Policies
+
+**Policy:** `"Public read access to locations"`
+- **Operation:** SELECT
+- **Using:** `true` (public read access - locations are reference data)
+
+### Business Rules
+
+1. Reference data table - contains cities and geographic locations
+2. Used by LocationPicker component for structured location selection
+3. Public read access (no sensitive data)
+4. Data seeded with major Colombian cities (expandable to international cities)
+5. Optimized for search with trigram indexes (if enabled)
+
+### Related Functions
+
+**`search_locations(search_term TEXT)`**
+- Fuzzy search function for location picker
+- Returns max 20 results ordered by relevance
+- Prioritizes exact matches and Colombian cities
+- Requires minimum 2 characters
+
+### Usage Example
+
+```sql
+-- Search for cities matching "mede"
+SELECT * FROM search_locations('mede');
+
+-- Direct query
+SELECT id, city_name, state_name, country_name
+FROM geographic_locations
+WHERE country_code = 'CO'
+ORDER BY city_name;
+```
+
+### Referenced By
+
+- **personas:** `lugar_nacimiento_id` (birth place)
+- **Future:** Can be used for residence, expedition place, etc.
+
+---
+
 ## Summary Statistics
 
 | Table | Rows | Columns | RLS | Triggers | Indexes |
@@ -894,13 +975,14 @@ VALUES ('analyst', 'business_partners', 'select');
 | bp_relaciones | 1 | 17 | ✅ | 4 | 3 |
 | acciones | 25 | 10 | ✅ | 3 | 2 |
 | asignaciones_acciones | 2 | 20 | ✅ | 5 | 3 |
+| geographic_locations | ~100+ | 11 | ✅ | 1 | 3 |
 | organization_members | 1 | 5 | ✅ | 1 | 1 |
 | roles | 4 | 1 | ✅ | 0 | 1 |
 | role_permissions | 82 | 4 | ✅ | 0 | 1 |
-| **TOTAL** | **142** | **170** | **10/10** | **27** | **20** |
+| **TOTAL** | **242+** | **181** | **11/11** | **28** | **23** |
 
 ---
 
-**Last Generated:** 2025-12-28
+**Last Generated:** 2026-01-02 (Updated with geographic_locations table)
 **Source:** Live Supabase database via MCP
 **Validation:** ✅ All constraints verified against live schema

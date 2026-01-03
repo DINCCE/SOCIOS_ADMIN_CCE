@@ -92,10 +92,9 @@ export function NewPersonSheet({ open: controlledOpen, onOpenChange: controlledO
             form.reset()
             setOpen(false)
 
-            if (onSuccess && result.bp_id) {
-                // Construct full name for UX feedback
-                const fullName = `${data.primer_nombre} ${data.primer_apellido}`.trim()
-                onSuccess(result.bp_id, fullName)
+            // Navigate to the newly created person detail page (profile tab)
+            if (result.bp_id) {
+                router.push(`/admin/socios/personas/${result.bp_id}?tab=profile`)
             } else {
                 // Default behavior: Navigate or refresh
                 if (result.bp_id) {

@@ -359,6 +359,9 @@ export function NewCompanySheet() {
                                                             value={field.value}
                                                             onChange={field.onChange}
                                                             placeholder="Seleccione fecha"
+                                                            captionLayout="dropdown"
+                                                            fromYear={1900}
+                                                            toYear={new Date().getFullYear()}
                                                         />
                                                     </FormControl>
                                                     <FormMessage />

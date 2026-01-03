@@ -3,6 +3,8 @@
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker, type DayPickerProps, type Formatters } from "react-day-picker"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
@@ -23,24 +25,29 @@ function Calendar({
     showOutsideDays = true,
     ...props
 }: CalendarProps) {
+    // Formatters personalizados para versiones cortas de meses
+    const formatters: Partial<Formatters> = {
+        formatMonthDropdown: (month: Date) => {
+            const monthStr = format(month, "MMM", { locale: es })
+            // Capitalizar primera letra
+            return monthStr.charAt(0).toUpperCase() + monthStr.slice(1)
+        },
+    }
+
     return (
         <DayPicker
             showOutsideDays={showOutsideDays}
             className={cn("p-3", className)}
+            formatters={formatters}
             classNames={{
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
                 month: "space-y-4",
-                month_caption: "flex justify-center pt-1 relative items-center gap-1",
+                month_caption: "flex justify-center items-center pt-1 w-full",
                 caption_label: "text-sm font-medium",
-                button_next: cn(
-                    buttonVariants({ variant: "outline" }),
-                    "absolute right-1 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
-                ),
-                button_previous: cn(
-                    buttonVariants({ variant: "outline" }),
-                    "absolute left-1 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
-                ),
-                nav: "space-x-1 flex items-center",
+                button_next: "hidden",
+                button_previous: "hidden",
+                dropdowns: "flex gap-2",
+                nav: "flex items-center justify-center w-full",
                 month_grid: "w-full border-collapse space-y-1",
                 weekdays: "flex",
                 weekday:
@@ -70,12 +77,8 @@ function Calendar({
                     }
                     return <ChevronRight className="h-4 w-4" />
                 },
-                MonthCaption: ({ calendarMonth, children, ...props }) => {
-                    return (
-                        <div className="flex justify-center gap-1">
-                            {children}
-                        </div>
-                    )
+                MonthCaption: ({ calendarMonth, children }) => {
+                    return <>{children}</>
                 },
                 Dropdown: ({ value, onChange, options, ...props }) => {
                     const selected = options?.find((option) => option.value === value)
@@ -90,7 +93,7 @@ function Calendar({
                             value={value?.toString()}
                             onValueChange={handleChange}
                         >
-                            <SelectTrigger className="pr-1.5 focus:ring-0">
+                            <SelectTrigger className="pr-1.5 focus:ring-0 w-fit">
                                 <SelectValue>{selected?.label}</SelectValue>
                             </SelectTrigger>
                             <SelectContent position="popper">

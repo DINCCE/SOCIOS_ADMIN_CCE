@@ -163,6 +163,9 @@ export function EditPersonalInfoForm({ persona, onSuccess, onCancel }: EditPerso
                                     value={field.value}
                                     onChange={field.onChange}
                                     placeholder="Seleccionar fecha de aniversario"
+                                    captionLayout="dropdown"
+                                    fromYear={1930}
+                                    toYear={new Date().getFullYear()}
                                 />
                             </FormControl>
                             <FormMessage />
