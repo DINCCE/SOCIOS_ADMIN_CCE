@@ -2,7 +2,7 @@
 
 > **Common query patterns and frontend integration examples**
 >
-> Last updated: 2025-12-28 | Auto-generated from live database schema
+> Last updated: 2026-01-03 | Auto-generated from live database schema
 
 ---
 
@@ -25,6 +25,12 @@
   - [Assignment Operations](#assignment-operations)
   - [Ownership Tracking](#ownership-tracking)
   - [Historical Queries](#historical-queries)
+- [Opportunities Queries](#opportunities-queries)
+  - [Creating Opportunities](#creating-opportunities)
+  - [Managing Opportunities](#managing-opportunities)
+- [Tasks Queries](#tasks-queries)
+  - [Creating Tasks](#creating-tasks)
+  - [Managing Tasks](#managing-tasks)
 - [Soft Delete Patterns](#soft-delete-patterns)
 - [JSONB Queries](#jsonb-queries)
 - [Aggregation Queries](#aggregation-queries)
@@ -36,7 +42,7 @@
 
 ## Introduction
 
-This cookbook provides practical SQL examples and TypeScript integration patterns for common operations in the business partner management system.
+This cookbook provides practical SQL examples and TypeScript integration patterns for common operations in business partner management system.
 
 ### Key Concepts
 
@@ -45,6 +51,7 @@ This cookbook provides practical SQL examples and TypeScript integration pattern
 - **Soft Delete** - Always filter by `eliminado_en IS NULL` for active records
 - **JSONB Flexibility** - Use JSONB operators for custom metadata queries
 - **Temporal Tracking** - Query historical data with `fecha_inicio` / `fecha_fin`
+- **Operations Management** - Opportunities and tasks for business workflows
 
 ### Query Categories
 
@@ -53,9 +60,12 @@ This cookbook provides practical SQL examples and TypeScript integration pattern
 | Business Partners | Create, read, update personas/empresas | Medium (CTI) |
 | Relationships | Bidirectional queries, history | Medium |
 | Acciones | Assignment tracking, ownership transfer | High (temporal) |
+| Opportunities | Business requests, status management | Medium |
+| Tasks | Activities, assignment, priority management | Medium |
 | Soft Delete | Active/archived filtering | Low |
 | JSONB | Metadata search and filtering | Medium |
 | Aggregations | Counts, summaries, analytics | Medium-High |
+| Transactions | Multi-table operations | High |
 
 ---
 
@@ -81,7 +91,11 @@ export async function createPersona(params: PersonaParams) {
     nombres: params.nombres,
     apellidos: params.apellidos,
     email_principal: params.email,
-    // ... other fields
+    celular_principal: params.celular,
+    tipo_documento: params.tipoDocumento,
+    numero_documento: params.numeroDocumento,
+    perfil_persona: params.perfilPersona,
+    atributos: params.atributos
   })
 
   if (error) {
@@ -108,6 +122,7 @@ function PersonaForm() {
       nombres: formData.get('nombres') as string,
       apellidos: formData.get('apellidos') as string,
       email: formData.get('email') as string,
+      celular: formData.get('celular') as string,
     })
 
     if (result.success) {
@@ -177,10 +192,8 @@ export function useCreatePersona() {
     },
   })
 }
-```
 
-**Usage in component:**
-```typescript
+// Usage in component
 'use client'
 
 import { usePersonas, useCreatePersona } from '@/hooks/use-personas'
@@ -303,13 +316,18 @@ SELECT
   bp.organizacion_id,
   bp.email_principal,
   bp.celular_principal,
+  bp.atributos,
+  bp.creado_en,
   p.nombres,
   p.apellidos,
   p.tipo_documento,
   p.numero_documento,
   p.perfil_persona,
-  bp.atributos,
-  bp.creado_en
+  p.direccion_residencia,
+  p.barrio_residencia,
+  p.ciudad_residencia,
+  p.lugar_nacimiento_id,
+  bp.actualizado_en
 FROM business_partners bp
 JOIN personas p ON bp.id = p.id
 WHERE bp.tipo_actor = 'persona'
@@ -335,13 +353,17 @@ const { data, error } = await supabase
       apellidos,
       tipo_documento,
       numero_documento,
-      perfil_persona
+      perfil_persona,
+      direccion_residencia,
+      barrio_residencia,
+      ciudad_residencia,
+      lugar_nacimiento_id
     )
   `)
   .eq('tipo_actor', 'persona')
   .is('eliminado_en', null)
   .eq('organizacion_id', orgId)
-  .order('apellidos', { foreignTable: 'personas' })
+  .order('personas.apellidos', { ascending: true })
 ```
 
 #### Get All Empresas (with Base Table Data)
@@ -351,15 +373,18 @@ const { data, error } = await supabase
 SELECT
   bp.id,
   bp.codigo_bp,
+  bp.organizacion_id,
   bp.email_principal,
   bp.telefono_principal,
+  bp.atributos,
+  bp.creado_en,
   e.razon_social,
   e.nombre_comercial,
   e.nit,
   e.digito_verificacion,
   e.representante_legal_id,
   e.perfil_empresa,
-  bp.atributos
+  bp.actualizado_en
 FROM business_partners bp
 JOIN empresas e ON bp.id = e.id
 WHERE bp.tipo_actor = 'empresa'
@@ -375,8 +400,11 @@ const { data, error } = await supabase
   .select(`
     id,
     codigo_bp,
+    organizacion_id,
     email_principal,
+    telefono_principal,
     atributos,
+    creado_en,
     empresas (
       razon_social,
       nombre_comercial,
@@ -389,6 +417,7 @@ const { data, error } = await supabase
   .eq('tipo_actor', 'empresa')
   .is('eliminado_en', null)
   .eq('organizacion_id', orgId)
+  .order('empresas.razon_social')
 ```
 
 ---
@@ -422,7 +451,7 @@ SELECT
   bp.tipo_actor,
   p.nombres || ' ' || p.apellidos AS nombre_completo,
   bp.email_principal,
-  bp.celular_principal AS telefono,
+  COALESCE(bp.celular_principal, bp.telefono_principal) AS telefono,
   p.numero_documento AS identificacion
 FROM business_partners bp
 JOIN personas p ON bp.id = p.id
@@ -437,7 +466,7 @@ SELECT
   bp.tipo_actor,
   e.razon_social AS nombre_completo,
   bp.email_principal,
-  bp.telefono_principal AS telefono,
+  COALESCE(bp.celular_principal, bp.telefono_principal) AS telefono,
   e.nit || '-' || e.digito_verificacion AS identificacion
 FROM business_partners bp
 JOIN empresas e ON bp.id = e.id
@@ -570,7 +599,23 @@ SELECT
 FROM bp_relaciones r
 WHERE (r.bp_origen_id = '..bp-uuid..' OR r.bp_destino_id = '..bp-uuid..')
   AND r.eliminado_en IS NULL
-  AND r.es_vigente = TRUE;
+  AND r.es_actual = TRUE
+ORDER BY r.fecha_inicio DESC;
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('bp_relaciones')
+  .select(`
+    *,
+    bp_origen:business_partners!bp_origen_id(codigo_bp),
+    bp_destino:business_partners!bp_destino_id(codigo_bp)
+  `)
+  .or(`bp_origen_id.eq.${bpId},bp_destino_id.eq.${bpId}`)
+  .is('eliminado_en', null)
+  .eq('es_actual', true)
+  .order('fecha_inicio', { ascending: false })
 ```
 
 ---
@@ -605,8 +650,8 @@ const { data, error } = await supabase
     bp_origen:business_partners!bp_origen_id(codigo_bp),
     bp_destino:business_partners!bp_destino_id(codigo_bp)
   `)
-  .is('eliminado_en', null)
   .or(`bp_origen_id.eq.${bpId},bp_destino_id.eq.${bpId}`)
+  .is('eliminado_en', null)
   .order('fecha_inicio', { ascending: false })
 ```
 
@@ -638,7 +683,9 @@ const { data, error } = await supabase.rpc('crear_asignacion_accion', {
   tipo_asignacion: 'dueño',
   // subcodigo auto-generated
   fecha_inicio: new Date().toISOString().split('T')[0],
-  atributos: { modo_adquisicion: 'compra' }
+  atributos: {
+    modo_adquisicion: 'compra'
+  }
 })
 ```
 
@@ -697,10 +744,13 @@ const { data, error } = await supabase
 ```sql
 SELECT
   aa.*,
-  bp.codigo_bp,
-  COALESCE(p.nombres || ' ' || p.apellidos, e.razon_social) AS nombre_persona
+  bp.codigo_bp AS persona_codigo,
+  COALESCE(
+    p.nombres || ' ' || p.apellidos,
+    e.razon_social
+  ) AS nombre_persona
 FROM asignaciones_acciones aa
-JOIN business_partners bp ON aa.persona_id = bp.id
+JOIN business_partners bp ON aa.business_partner_id = bp.id
 LEFT JOIN personas p ON bp.id = p.id
 LEFT JOIN empresas e ON bp.id = e.id
 WHERE aa.accion_id = '..accion-uuid..'
@@ -720,6 +770,7 @@ WHERE aa.accion_id = '..accion-uuid..'
 SELECT *
 FROM v_asignaciones_historial
 WHERE accion_id = '..accion-uuid..'
+  AND tipo_asignacion = 'dueño'
 ORDER BY fecha_inicio DESC;
 ```
 
@@ -729,6 +780,7 @@ const { data, error } = await supabase
   .from('v_asignaciones_historial')
   .select('*')
   .eq('accion_id', accionId)
+  .eq('tipo_asignacion', 'dueño')
   .order('fecha_inicio', { ascending: false })
 ```
 
@@ -741,6 +793,157 @@ WHERE accion_id = '..accion-uuid..'
   AND fecha_inicio >= '2024-01-01'
   AND (fecha_fin IS NULL OR fecha_fin <= '2024-12-31')
   AND eliminado_en IS NULL;
+```
+
+---
+
+## Opportunities Queries
+
+### Creating Opportunities
+
+#### Create Opportunity (Withdrawal Request)
+
+**SQL:**
+```sql
+INSERT INTO oportunidades (
+  codigo,
+  tipo,
+  fecha_solicitud,
+  solicitante_id,
+  organizacion_id,
+  monto_estimado,
+  atributos
+) VALUES (
+  generate_uuid(), -- or use application code
+  'Solicitud Retiro'::tipo_oportunidad_enum,
+  CURRENT_DATE,
+  '..bp-uuid..',
+  '..org-uuid..',
+  5000000,
+  '{"motivo": "Retiro de fondos"}'::jsonb
+);
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('oportunidades')
+  .insert({
+    codigo: generateCode(),
+    tipo: 'Solicitud Retiro',
+    fecha_solicitud: new Date().toISOString().split('T')[0],
+    solicitante_id: bpId,
+    organizacion_id: orgId,
+    monto_estimado: 5000000,
+    atributos: { motivo: 'Retiro de fondos' }
+  })
+```
+
+### Managing Opportunities
+
+#### Get Open Opportunities
+
+```sql
+SELECT
+  o.*,
+  bp_solicitante.codigo_bp AS solicitante_codigo,
+  COALESCE(
+    p_solicitante.nombres || ' ' || p_solicitante.apellidos,
+    e_solicitante.razon_social
+  ) AS solicitante_nombre
+FROM oportunidades o
+JOIN business_partners bp_solicitante ON o.solicitante_id = bp_solicitante.id
+LEFT JOIN personas p_solicitante ON bp_solicitante.id = p_solicitante.id
+LEFT JOIN empresas e_solicitante ON bp_solicitante.id = e_solicitante.id
+WHERE o.estado = 'abierta'
+  AND o.eliminado_en IS NULL
+  AND o.organizacion_id = '..org-uuid..'
+ORDER BY o.fecha_solicitud DESC;
+```
+
+#### Update Opportunity Status
+
+```sql
+UPDATE oportunidades
+SET estado = 'en_proceso',
+    responsable_id = '..user-uuid..'
+WHERE id = '..oportunidad-uuid..';
+```
+
+---
+
+## Tasks Queries
+
+### Creating Tasks
+
+#### Create Task
+
+```sql
+INSERT INTO tareas (
+  titulo,
+  descripcion,
+  prioridad,
+  estado,
+  fecha_vencimiento,
+  asignado_a,
+  organizacion_id,
+  relacionado_con_bp
+) VALUES (
+  'Revisar documentación',
+  'Revisar documentación de socios nuevos',
+  'alta'::prioridad_tarea_enum,
+  'pendiente'::estado_tarea_enum,
+  '2024-01-15',
+  '..user-uuid..',
+  '..org-uuid..',
+  '..bp-uuid..'
+);
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('tareas')
+  .insert({
+    titulo: 'Revisar documentación',
+    descripcion: 'Revisar documentación de socios nuevos',
+    prioridad: 'alta',
+    estado: 'pendiente',
+    fecha_vencimiento: '2024-01-15',
+    asignado_a: userId,
+    organizacion_id: orgId,
+    relacionado_con_bp: bpId
+  })
+```
+
+### Managing Tasks
+
+#### Get Tasks for a Business Partner
+
+```sql
+SELECT
+  t.*,
+  bp_relacionado.codigo_bp AS bp_codigo,
+  COALESCE(
+    p_relacionado.nombres || ' ' || p_relacionado.apellidos,
+    e_relacionado.razon_social
+  ) AS bp_nombre
+FROM tareas t
+LEFT JOIN business_partners bp_relacionado ON t.relacionado_con_bp = bp_relacionado.id
+LEFT JOIN personas p_relacionado ON bp_relacionado.id = p_relacionado.id
+LEFT JOIN empresas e_relacionado ON bp_relacionado.id = e_relacionado.id
+WHERE t.eliminado_en IS NULL
+  AND t.organizacion_id = '..org-uuid..'
+ORDER BY t.prioridad DESC, t.fecha_vencimiento ASC;
+```
+
+#### Update Task Status
+
+```sql
+UPDATE tareas
+SET estado = 'en_progreso',
+  actualizado_en = NOW()
+WHERE id = '..tarea-uuid..';
 ```
 
 ---
@@ -787,11 +990,8 @@ ORDER BY eliminado_en DESC;
 
 **TypeScript:**
 ```typescript
-const { data, error } = await supabase
-  .from('business_partners')
-  .select('*')
-  .not('eliminado_en', 'is', null)
-  .order('eliminado_en', { ascending: false })
+.not('eliminado_en', 'is', null)
+.order('eliminado_en', { ascending: false })
 ```
 
 ### Restore Soft-Deleted Record
@@ -907,7 +1107,7 @@ SELECT
   COUNT(*) AS total
 FROM bp_relaciones
 WHERE eliminado_en IS NULL
-  AND es_vigente = TRUE
+  AND es_actual = TRUE
 GROUP BY tipo_relacion
 ORDER BY total DESC;
 ```
@@ -922,10 +1122,9 @@ SELECT
   COUNT(*) FILTER (WHERE aa.tipo_asignacion = 'beneficiario') AS beneficiarios
 FROM acciones a
 LEFT JOIN asignaciones_acciones aa ON a.id = aa.accion_id
-  AND aa.es_vigente = TRUE
-  AND aa.eliminado_en IS NULL
 WHERE a.eliminado_en IS NULL
-GROUP BY a.id, a.codigo;
+GROUP BY a.id, a.codigo
+ORDER BY a.codigo;
 ```
 
 ---
@@ -955,7 +1154,7 @@ INSERT INTO personas (
 COMMIT;
 ```
 
-**Note:** Use `crear_persona` RPC instead - it handles the transaction automatically.
+**Note:** Use `crear_persona` RPC instead - it handles transaction automatically.
 
 ### Conditional Update
 
@@ -979,6 +1178,7 @@ WHERE id = '..bp-uuid..'
 const { data } = await supabase
   .from('business_partners')
   .select('*, personas(*), empresas(*)')
+  .is('eliminado_en', null)
 ```
 
 **Use:**
@@ -987,6 +1187,7 @@ const { data } = await supabase
 const { data } = await supabase
   .from('v_actores_unificados')
   .select('*')
+  .is('eliminado_en', null)
 ```
 
 ### 2. Limit Results
@@ -1007,10 +1208,10 @@ const { data } = await supabase
 ### 4. Use Indexes for Filters
 
 The database has indexes on:
-- `codigo_bp` (unique)
-- `organizacion_id` (foreign key)
-- `nit` (unique for empresas)
-- `bp_origen_id`, `bp_destino_id` (relationships)
+- `business_partners.organizacion_id` (organization filter)
+- `business_partners.codigo_bp` (unique lookup)
+- `acciones.codigo_accion` (action lookup)
+- `asignaciones_acciones.accion_id` (assignment queries)
 
 Always filter by indexed columns when possible.
 
@@ -1029,7 +1230,7 @@ for (const bp of businessPartners) {
 // Single query with JOIN
 const { data } = await supabase
   .from('bp_relaciones')
-  .select('*, bp_origen:business_partners!bp_origen_id(*), bp_destino:business_partners!bp_destino_id(*)')
+  .select('*, bp_origen:business_partners!bp_origen_id(codigo_bp), bp_destino:business_partners!bp_destino_id(codigo_bp)')
   .in('bp_origen_id', businessPartnerIds)
 ```
 
@@ -1047,14 +1248,13 @@ const { data } = await supabase
 
 ### API Documentation
 - **[../api/README.md](../api/README.md)** - API overview and RPC index
-- **[../api/CREAR_PERSONA.md](../api/CREAR_PERSONA.md)** - Create natural person API
-- **[../api/CREAR_EMPRESA.md](../api/CREAR_EMPRESA.md)** - Create company API
-- **[../api/BP_RELACIONES.md](../api/BP_RELACIONES.md)** - Relationship management API
-- **[../api/ACCIONES.md](../api/ACCIONES.md)** - Club shares management API
+- **[../api/CREAR_PERSONA.md](../api/CREAR_PERSONA.md)** - Create natural person
+- **[../api/CREAR_EMPRESA.md](../api/CREAR_EMPRESA.md)** - Create company
+- **[../api/BP_RELACIONES.md](../api/BP_RELACIONES.md)** - Relationship management
+- **[../api/ACCIONES.md](../api/ACCIONES.md)** - Club shares management
 
 ---
 
-**Last Generated:** 2025-12-28
-**Total Query Examples:** 40+
+**Last Generated:** 2026-01-03
+**Total Query Examples:** 50+
 **Frontend Patterns:** Server Actions + TanStack Query
-

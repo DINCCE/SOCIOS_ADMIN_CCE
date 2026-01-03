@@ -2,7 +2,7 @@
 
 > **Complete reference for all pre-built database views**
 >
-> Last updated: 2025-12-28 | Auto-generated from live database schema
+> Last updated: 2026-01-03 | Auto-generated from live database schema
 
 ---
 
@@ -132,6 +132,9 @@ const { data, error } = await supabase
 | `atributos` | JSONB | Custom metadata |
 | `perfil` | JSONB | Unified profile (perfil_persona OR perfil_empresa) |
 | `creado_en` | TIMESTAMPTZ | Creation timestamp |
+| `actualizado_en` | TIMESTAMPTZ | Last update timestamp |
+| `creado_por` | UUID | Creator user ID |
+| `actualizado_por` | UUID | Last updater user ID |
 
 ---
 
@@ -233,6 +236,8 @@ const { data, error } = await supabase
   .single()
 ```
 
+**Fields:** All fields from `empresas` + selected `business_partners` fields
+
 ---
 
 ### v_empresas_completa
@@ -310,7 +315,7 @@ WITH (security_invoker = true) AS
 SELECT
   aa.id,
   aa.accion_id,
-  aa.persona_id,
+  aa.business_partner_id,
   aa.tipo_asignacion,
   aa.subcodigo,
   aa.codigo_completo,
@@ -330,7 +335,7 @@ SELECT
   ) AS persona_nombre
 FROM asignaciones_acciones aa
 JOIN acciones a ON aa.accion_id = a.id
-JOIN business_partners bp ON aa.persona_id = bp.id
+JOIN business_partners bp ON aa.business_partner_id = bp.id
 LEFT JOIN personas p ON bp.id = p.id
 LEFT JOIN empresas e ON bp.id = e.id
 WHERE aa.es_vigente = TRUE
@@ -360,7 +365,7 @@ const { data, error } = await supabase
 const { data, error } = await supabase
   .from('v_asignaciones_vigentes')
   .select('*')
-  .eq('persona_id', personaId)
+  .eq('business_partner_id', personaId)
 ```
 
 **Fields:**
@@ -369,7 +374,7 @@ const { data, error } = await supabase
 |-------|------|-------------|
 | `id` | UUID | Assignment ID |
 | `accion_id` | UUID | Action ID |
-| `persona_id` | UUID | Business partner ID |
+| `business_partner_id` | UUID | Business partner ID |
 | `tipo_asignacion` | TEXT | dueño, titular, or beneficiario |
 | `subcodigo` | TEXT | Assignment subcode (00-99) |
 | `codigo_completo` | TEXT | Complete code (accion + subcodigo) |
@@ -400,7 +405,7 @@ WITH (security_invoker = true) AS
 SELECT
   aa.id,
   aa.accion_id,
-  aa.persona_id,
+  aa.business_partner_id,
   aa.tipo_asignacion,
   aa.subcodigo,
   aa.codigo_completo,
@@ -415,6 +420,7 @@ SELECT
   a.nombre AS accion_nombre,
   -- Business partner data
   bp.codigo_bp AS persona_codigo,
+  bp.tipo_actor AS persona_tipo,
   COALESCE(
     p.nombres || ' ' || p.apellidos,
     e.razon_social
@@ -427,7 +433,7 @@ SELECT
   END AS estado
 FROM asignaciones_acciones aa
 JOIN acciones a ON aa.accion_id = a.id
-JOIN business_partners bp ON aa.persona_id = bp.id
+JOIN business_partners bp ON aa.business_partner_id = bp.id
 LEFT JOIN personas p ON bp.id = p.id
 LEFT JOIN empresas e ON bp.id = e.id
 WHERE aa.eliminado_en IS NULL
@@ -574,8 +580,8 @@ const { data, error } = await supabase
 
 **❌ Don't:**
 ```typescript
-// Manual JOIN - verbose and error-prone
-const { data, error } = await supabase
+// Slow: Multiple JOINs every time
+const { data } = await supabase
   .from('business_partners')
   .select(`
     *,
@@ -588,8 +594,8 @@ const { data, error } = await supabase
 
 **✅ Do:**
 ```typescript
-// Use pre-built view - simpler and optimized
-const { data, error } = await supabase
+// Fast: Pre-optimized view
+const { data } = await supabase
   .from('v_actores_unificados')
   .select('*')
   .eq('organizacion_id', orgId)
@@ -603,7 +609,7 @@ const { data, error } = await supabase
   .from('v_asignaciones_vigentes')
   .select('*')
   .eq('tipo_asignacion', 'dueño')
-  .eq('organizacion_id', orgId) // Filtered via RLS
+  .eq('organizacion_id', orgId)
 
 // Get personas created this year
 const { data, error } = await supabase
@@ -645,7 +651,7 @@ All views use `SECURITY INVOKER`, meaning:
 
 ### 2. No Materialization
 
-Views are **NOT materialized** - they execute the query every time:
+Views are **NOT materialized** - they execute query every time:
 - Data is always fresh (no cache staleness)
 - Performance depends on underlying table indexes
 - Consider caching view results in TanStack Query
@@ -670,7 +676,7 @@ const { data } = useQuery({
 Views benefit from indexes on:
 - `business_partners.organizacion_id` (organization filter)
 - `business_partners.codigo_bp` (unique lookup)
-- `acciones.codigo` (action lookup)
+- `acciones.codigo_accion` (action lookup)
 - `asignaciones_acciones.accion_id` (assignment queries)
 
 ### 4. Limit Results
@@ -679,7 +685,7 @@ Always limit results for large datasets:
 ```typescript
 .select('*')
 .limit(100)
-.order('creado_en', { ascending: false })
+.range(0, 49) // Pagination
 ```
 
 ---
@@ -696,14 +702,13 @@ Always limit results for large datasets:
 
 ### API Documentation
 - **[../api/README.md](../api/README.md)** - API overview and RPC index
-- **[../api/CREAR_PERSONA.md](../api/CREAR_PERSONA.md)** - Create natural person API
-- **[../api/CREAR_EMPRESA.md](../api/CREAR_EMPRESA.md)** - Create company API
-- **[../api/BP_RELACIONES.md](../api/BP_RELACIONES.md)** - Relationship management API
-- **[../api/ACCIONES.md](../api/ACCIONES.md)** - Club shares management API
+- **[../api/CREAR_PERSONA.md](../api/CREAR_PERSONA.md)** - Create natural person
+- **[../api/CREAR_EMPRESA.md](../api/CREAR_EMPRESA.md)** - Create company
+- **[../api/BP_RELACIONES.md](../api/BP_RELACIONES.md)** - Relationship management
+- **[../api/ACCIONES.md](../api/ACCIONES.md)** - Club shares management
 
 ---
 
-**Last Generated:** 2025-12-28
+**Last Generated:** 2026-01-03
 **Total Views:** 7 (4 Business Partners + 3 Acciones)
 **Security:** All views use SECURITY INVOKER
-

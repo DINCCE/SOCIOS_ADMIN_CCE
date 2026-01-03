@@ -2,7 +2,7 @@
 
 > **Complete reference for all database functions**
 >
-> Last updated: 2025-12-28 | Auto-generated from live Supabase backend
+> Last updated: 2026-01-03 | Auto-generated from live Supabase backend
 
 ---
 
@@ -31,7 +31,7 @@
 
 ## Overview
 
-The database implements **36 PostgreSQL functions** organized into 4 main categories:
+The database implements **36+ PostgreSQL functions** organized into 4 main categories:
 
 1. **User-Facing RPC (11 functions)** - Frontend-callable business logic
 2. **Helper Functions (9 functions)** - Internal utilities and validation
@@ -47,7 +47,7 @@ The database implements **36 PostgreSQL functions** organized into 4 main catego
 | Trigger Functions | 5 | ❌ No | Automatic timestamp updates, audit logging |
 | Permission Functions | 11 | ❌ No | RLS policy evaluation |
 
-**Total:** 36 functions
+**Total:** 36+ functions
 
 ---
 
@@ -104,7 +104,7 @@ These functions are **callable from the frontend** via Supabase client's `.rpc()
 
 #### `crear_persona`
 
-Create a natural person using the Class Table Inheritance (CTI) pattern.
+Create a natural person using Class Table Inheritance (CTI) pattern.
 
 **Signature:**
 ```sql
@@ -155,7 +155,7 @@ CREATE FUNCTION crear_persona(
 
 #### `crear_empresa`
 
-Create a company using the Class Table Inheritance (CTI) pattern.
+Create a company using Class Table Inheritance (CTI) pattern.
 
 **Signature:**
 ```sql
@@ -250,7 +250,7 @@ CREATE FUNCTION crear_relacion_bp(
 **Business Rules:**
 - Both BPs must exist in the same organization
 - Cannot create self-referencing relationship (origen ≠ destino)
-- `es_vigente` generated column defaults to TRUE
+- `es_actual` generated column defaults to TRUE
 - Auto-sets `creado_por` to `auth.uid()`
 
 **Example Usage:** See [../api/BP_RELACIONES.md](../api/BP_RELACIONES.md#crear_relacion_bp)
@@ -292,11 +292,11 @@ CREATE FUNCTION finalizar_relacion_bp(
 ) RETURNS bp_relaciones
 ```
 
-**Returns:** Updated `bp_relaciones` record with `es_vigente = FALSE`
+**Returns:** Updated `bp_relaciones` record with `es_actual = FALSE`
 
 **Business Rules:**
 - Sets `fecha_fin` to provided date (default: today)
-- `es_vigente` generated column becomes FALSE
+- `es_actual` generated column becomes FALSE
 - Relationship preserved in database (soft finalize, not delete)
 
 ---
@@ -344,7 +344,7 @@ CREATE FUNCTION obtener_relaciones_bp(
 
 **Business Rules:**
 - Returns relationships where BP is origen OR destino (bidirectional)
-- Filters by `es_vigente` if `solo_vigentes = TRUE`
+- Filters by `es_actual` if `solo_vigentes = TRUE`
 - Excludes soft-deleted relationships (`eliminado_en IS NULL`)
 
 **Example Usage:** See [../api/BP_RELACIONES.md](../api/BP_RELACIONES.md#obtener_relaciones_bp)
@@ -450,7 +450,7 @@ CREATE FUNCTION finalizar_asignacion_accion(
 
 #### `generar_siguiente_subcodigo`
 
-Generate the next available subcode for an assignment type.
+Generate of next available subcode for an assignment type.
 
 **Signature:**
 ```sql
@@ -482,13 +482,13 @@ CREATE FUNCTION generar_siguiente_subcodigo(
 
 ## Helper Functions
 
-These functions are **internal** and cannot be called directly from the frontend.
+These functions are **internal** and cannot be called directly from frontend.
 
 ### Validation Functions
 
 #### `calcular_digito_verificacion_nit`
 
-Calculate the verification digit for a Colombian NIT (tax ID).
+Calculate verification digit for a Colombian NIT (tax ID).
 
 **Signature:**
 ```sql
@@ -649,7 +649,7 @@ CREATE FUNCTION enforce_created_by()
 RETURNS TRIGGER
 ```
 
-**Trigger:** BEFORE UPDATE ON all tables with `creado_por`
+**Trigger:** BEFORE UPDATE on all tables with `creado_por`
 
 **Logic:**
 - If `creado_por` differs between OLD and NEW, restore OLD value
@@ -902,20 +902,20 @@ Check if organization has another owner besides specified user.
 **Signature:**
 ```sql
 CREATE FUNCTION org_has_other_owner_v2(
-  org_id UUID,
-  excluded_user_id UUID
+  p_org UUID,
+  p_excluded_user_id UUID
 ) RETURNS BOOLEAN
 ```
 
 **Returns:** TRUE if there's at least one other owner
 
 **Usage:**
-- Prevent deleting or demoting the last owner
+- Prevents deleting or demoting last owner
 - Used in organization_members DELETE/UPDATE policies
 
 **Example:**
 ```sql
--- Cannot remove member if they are the last owner
+-- Cannot remove member if they are last owner
 DELETE FROM organization_members
 WHERE id = 'xxx'
   AND org_has_other_owner_v2(organization_id, user_id);
@@ -931,7 +931,7 @@ WHERE id = 'xxx'
 - **[TABLES.md](./TABLES.md)** - Data dictionary for all tables
 - **[VIEWS.md](./VIEWS.md)** - Pre-built views reference
 - **[RLS.md](./RLS.md)** - Row Level Security policies
-- **[QUERIES.md](./QUERIES.md)** - SQL cookbook with patterns
+- **[QUERIES.md](./QUERIES.md)** - SQL cookbook and patterns
 
 ### API Documentation
 - **[../api/README.md](../api/README.md)** - API overview and RPC index
@@ -942,7 +942,6 @@ WHERE id = 'xxx'
 
 ---
 
-**Last Generated:** 2025-12-28
-**Total Functions:** 36 (11 user-facing RPC + 25 internal)
-**Database Version:** PostgreSQL 15 (Supabase)
-
+**Last Generated:** 2026-01-03
+**Total Functions:** 36+ (11 user-facing RPC + 25+ internal)
+**Database Version:** PostgreSQL 17 (Supabase)

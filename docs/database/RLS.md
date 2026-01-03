@@ -2,7 +2,7 @@
 
 > **Complete security documentation for database-level access control**
 >
-> Last updated: 2025-12-28 | Auto-generated from live Supabase schema
+> Last updated: 2026-01-03 | Auto-generated from live Supabase schema
 
 ---
 
@@ -21,7 +21,7 @@
 
 ## Overview
 
-Row Level Security (RLS) is **enabled on all 10 tables** in this database. Security is enforced at the PostgreSQL level, ensuring that application code cannot bypass access controls.
+Row Level Security (RLS) is **enabled on all 13 tables** in this database. Security is enforced at PostgreSQL level, ensuring that application code cannot bypass access controls.
 
 ### Key Benefits
 
@@ -29,7 +29,7 @@ Row Level Security (RLS) is **enabled on all 10 tables** in this database. Secur
 ✅ **Role-based access control** - Flexible permission system
 ✅ **Organization-based isolation** - Multi-tenancy support
 ✅ **Audit trail** - All access controlled and logged
-✅ **Defense in depth** - Security at the data layer
+✅ **Defense in depth** - Security at data layer
 
 ### Security Architecture
 
@@ -56,7 +56,7 @@ Data Access Granted/Denied
 | Type | When Applied | Purpose |
 |------|--------------|---------|
 | **SELECT** | Reading data | Controls which rows user can view |
-| **INSERT** | Creating data | Controls what data user can create (WITH CHECK) |
+| **INSERT** | Creating data | Controls what data user can create (WITH CHECK clause) |
 | **UPDATE** | Modifying data | Controls what user can update (USING + WITH CHECK) |
 | **DELETE** | Removing data | Controls what user can delete |
 
@@ -84,7 +84,7 @@ CREATE POLICY "bp_insert"
 ### Coverage Summary
 
 | Table | RLS Enabled | Policies | SELECT | INSERT | UPDATE | DELETE |
-|-------|-------------|----------|--------|--------|--------|--------|
+|-------|-------------|----------|--------|--------|--------|
 | organizations | ✅ | 4 | ✅ | ✅ | ✅ | ✅ |
 | business_partners | ✅ | 4 | ✅ | ✅ | ✅ | ✅ |
 | personas | ✅ | 3 | ✅ | ✅ | ✅ | ❌ |
@@ -95,13 +95,16 @@ CREATE POLICY "bp_insert"
 | organization_members | ✅ | 4 | ✅ | ✅ | ✅ | ✅ |
 | roles | ✅ | 4 | ✅ | ✅ | ✅ | ✅ |
 | role_permissions | ✅ | 4 | ✅ | ✅ | ✅ | ✅ |
-| **TOTAL** | **10/10** | **38** | **10** | **10** | **10** | **8** |
+| oportunidades | ✅ | 4 | ✅ | ✅ | ✅ | ✅ |
+| tareas | ✅ | 4 | ✅ | ✅ | ✅ | ✅ |
+| **TOTAL** | **13/13** | **50** | **13** | **13** | **13** | **12** |
 
 ### Notes
 
 - ❌ **personas/empresas DELETE**: Deletions handled via business_partners (CTI pattern)
-- All policies use the `can_user_v2()` helper function for permission checks
+- All policies use `can_user_v2()` helper function for permission checks
 - Soft delete pattern recommended (UPDATE eliminado_en) instead of hard DELETE
+- **New tables**: `oportunidades` and `tareas` have RLS enabled with full CRUD policies
 
 ---
 
@@ -134,7 +137,7 @@ CREATE POLICY "table_delete"
   USING (can_user_v2('table_name', 'delete', organizacion_id));
 ```
 
-**Used by:** business_partners, acciones, asignaciones_acciones, bp_relaciones
+**Used by:** business_partners, acciones, asignaciones_acciones, bp_relaciones, oportunidades, tareas
 
 ### Pattern 2: Soft Delete Filter
 
@@ -225,7 +228,7 @@ CREATE POLICY "orgs_insert"
 CREATE POLICY "orgs_update"
   ON organizations FOR UPDATE
   USING (is_org_admin_v2(id))
-  WITH CHECK (is_org_admin(id));
+  WITH CHECK (is_org_admin_v2(id));
 ```
 **Logic:** Only admins/owners can update organization details.
 
@@ -420,7 +423,7 @@ CREATE POLICY "om_delete_members"
     )
   );
 ```
-**Logic:** Owners can remove anyone. Admins can remove members except the last owner.
+**Logic:** Owners can remove anyone. Admins can remove members except last owner.
 
 ---
 
@@ -472,11 +475,39 @@ USING (
 
 ---
 
+### oportunidades (4 policies)
+
+#### oportunidades_select / oportunidades_insert / oportunidades_update / oportunidades_delete
+
+All four CRUD policies follow Pattern 1 (Organization-Based Access):
+
+```sql
+USING (can_user_v2('oportunidades', 'ACTION', organizacion_id))
+```
+
+**Logic:** Users with appropriate permissions can manage opportunities based on their role and organization membership.
+
+---
+
+### tareas (4 policies)
+
+#### tareas_select / tareas_insert / tareas_update / tareas_delete
+
+All four CRUD policies follow Pattern 1 (Organization-Based Access):
+
+```sql
+USING (can_user_v2('tareas', 'ACTION', organizacion_id))
+```
+
+**Logic:** Users with appropriate permissions can manage tasks based on their role and organization membership.
+
+---
+
 ## Helper Functions
 
 ### can_user_v2(resource, action, org_id)
 
-**Primary permission check function** used by most policies.
+**Primary permission check** used by most policies.
 
 ```sql
 CREATE OR REPLACE FUNCTION can_user_v2(
@@ -498,19 +529,21 @@ RETURNS boolean AS $$
 $$ LANGUAGE sql SECURITY DEFINER;
 ```
 
-**Returns:** `true` if user has the specified permission, `false` otherwise.
+**Returns:** `true` if user has permission, `false` otherwise
 
 **Example:**
 ```sql
-SELECT can_user_v2('business_partners', 'select', 'org-uuid');
--- Returns true if current user can SELECT from business_partners in that org
+-- Check if current user can insert into business_partners
+SELECT can_user_v2('business_partners', 'select', '..org-id..');
 ```
+
+**See [FUNCTIONS.md](./FUNCTIONS.md) for usage in policies.**
 
 ---
 
 ### is_org_admin_v2(org_id)
 
-Checks if current user is an admin or owner of the organization.
+Checks if current user is an admin or owner of organization.
 
 ```sql
 CREATE OR REPLACE FUNCTION is_org_admin_v2(p_org uuid)
@@ -525,11 +558,17 @@ RETURNS boolean AS $$
 $$ LANGUAGE sql SECURITY DEFINER;
 ```
 
+**Returns:** TRUE if user role is 'admin' or 'owner'
+
+**Usage:**
+- Restrict admin-only operations
+- Used in organization_members policies
+
 ---
 
 ### is_org_owner_v2(org_id)
 
-Checks if current user is the owner of the organization.
+Checks if current user is owner of organization.
 
 ```sql
 CREATE OR REPLACE FUNCTION is_org_owner_v2(p_org uuid)
@@ -544,11 +583,16 @@ RETURNS boolean AS $$
 $$ LANGUAGE sql SECURITY DEFINER;
 ```
 
+**Returns:** TRUE if user role is 'owner'
+
+**Usage:**
+- Owner-only operations (delete organization, assign owner role)
+
 ---
 
 ### can_view_org_membership_v2(org_id)
 
-Checks if user belongs to the organization (for viewing membership lists).
+Checks if user belongs to organization (for viewing membership lists).
 
 ```sql
 CREATE OR REPLACE FUNCTION can_view_org_membership_v2(p_org uuid)
@@ -563,11 +607,16 @@ RETURNS boolean AS $$
 $$ LANGUAGE sql SECURITY DEFINER;
 ```
 
+**Returns:** TRUE if user is member of organization (any role)
+
+**Usage:**
+- SELECT policy on `organization_members`
+
 ---
 
 ### org_has_other_owner_v2(org_id, excluded_user_id)
 
-Checks if organization has other owners besides specified user.
+Checks if organization has another owner besides specified user.
 
 ```sql
 CREATE OR REPLACE FUNCTION org_has_other_owner_v2(
@@ -585,7 +634,19 @@ RETURNS boolean AS $$
 $$ LANGUAGE sql SECURITY DEFINER;
 ```
 
-**Used by:** Prevents removing the last owner from an organization.
+**Returns:** TRUE if there's at least one other owner
+
+**Usage:**
+- Prevents deleting or demoting last owner
+- Used in organization_members DELETE/UPDATE policies
+
+**Example:**
+```sql
+-- Cannot remove member if they are last owner
+DELETE FROM organization_members
+WHERE id = 'xxx'
+  AND org_has_other_owner_v2(organization_id, user_id);
+```
 
 ---
 
@@ -594,7 +655,7 @@ $$ LANGUAGE sql SECURITY DEFINER;
 ### Test as Different Users
 
 ```sql
--- Set the JWT auth context to simulate a user
+-- Set JWT auth context to simulate a user
 SET request.jwt.claims = '{"sub": "user-uuid-here"}';
 
 -- Test SELECT
@@ -744,36 +805,41 @@ ORDER BY resource, action;
 5. **Validate organization membership** in WITH CHECK clauses
 6. **Use SECURITY DEFINER** carefully in functions
 7. **Document policy logic** for maintenance
+8. **Prevent last owner deletion** with safety checks
+9. **Apply RLS to new tables** immediately after creation
+10. **Use organization-based access** for multi-tenancy
 
 ### ❌ DON'T
 
 1. **Don't bypass RLS** with superuser queries in application code
 2. **Don't hard-code** organization IDs in policies
 3. **Don't forget** soft delete filters
-4. **Don't allow** removing the last owner
+4. **Don't allow** removing last owner
 5. **Don't duplicate** permission logic across policies
 6. **Don't skip testing** with non-admin users
 7. **Don't use** SELECT * in RLS functions (performance)
+8. **Don't create policies** without permission checks
 
 ---
 
 ## Summary
 
 **Current Implementation:**
-- ✅ 10/10 tables with RLS enabled
-- ✅ 38 active policies
-- ✅ 10 SELECT policies (100%)
-- ✅ 10 INSERT policies (100%)
-- ✅ 10 UPDATE policies (100%)
-- ✅ 8 DELETE policies (80% - personas/empresas use BP for deletes)
+- ✅ 13/13 tables with RLS enabled
+- ✅ 50 active policies
+- ✅ 13 SELECT policies (100%)
+- ✅ 13 INSERT policies (100%)
+- ✅ 13 UPDATE policies (100%)
+- ✅ 12 DELETE policies (92% - personas/empresas use BP for deletes)
+- ✅ 2 new tables (oportunidades, tareas) with full RLS policies
 
 **Security Level:** 🟢 **Production Ready**
 
-All critical tables have comprehensive RLS policies enforcing organization-based access control with role-based permissions.
+All critical tables have comprehensive RLS policies enforcing organization-based access control with role-based permissions, including the new operations management tables (opportunities and tareas).
 
 ---
 
-**Last Generated:** 2025-12-28
-**Total Policies:** 38
+**Last Generated:** 2026-01-03
+**Total Policies:** 50
 **Helper Functions:** 5
 **Security Pattern:** Organization-based + Role-based Access Control (RBAC)

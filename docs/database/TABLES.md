@@ -2,7 +2,7 @@
 
 > **Comprehensive field-level reference for all database tables**
 >
-> Last updated: 2025-12-28 | Auto-generated from live Supabase schema
+> Last updated: 2026-01-03 | Auto-generated from live Supabase schema
 
 ---
 
@@ -19,6 +19,8 @@
 - [organization_members](#organization_members)
 - [roles](#roles)
 - [role_permissions](#role_permissions)
+- [oportunidades](#oportunidades)
+- [tareas](#tareas)
 
 ---
 
@@ -108,7 +110,7 @@
 
 **Purpose:** Base table for Class Table Inheritance pattern - contains common fields for all business partners.
 
-**Row Count:** 13 | **RLS:** ✅ Enabled
+**Row Count:** 17 | **RLS:** ✅ Enabled
 
 ### Fields
 
@@ -173,7 +175,7 @@
 
 **Purpose:** Natural persons specialization - extends business_partners with person-specific fields.
 
-**Row Count:** 9 | **RLS:** ✅ Enabled
+**Row Count:** 13 | **RLS:** ✅ Enabled
 
 ### Fields
 
@@ -181,7 +183,7 @@
 |--------|------|----------|---------|-------------|
 | `id` | uuid | NOT NULL | - | **PK & FK** to business_partners.id (1:1) |
 | `tipo_documento` | text | NOT NULL | - | Document type: CC, CE, TI, PA, RC, NIT, PEP, PPT, DNI, NUIP |
-| `numero_documento` | text | NOT NULL | - | Identification number (numbers only, 5-20 digits) |
+| `numero_documento` | text | NOT NULL | - | Identification number (alphanumeric, 5-20 chars) |
 | `fecha_expedicion` | date | NULL | - | Document issue date |
 | `lugar_expedicion` | text | NULL | - | Document issue location |
 | `primer_nombre` | text | NOT NULL | - | **Required** - First name |
@@ -217,6 +219,9 @@
 | `perfil_preferencias` | jsonb | NULL | `'{}'::jsonb` | Operational preferences (HOW to be served) |
 | `perfil_metricas` | jsonb | NULL | `'{}'::jsonb` | Value metrics and AI scores (LTV, Engagement) |
 | `perfil_compliance` | jsonb | NULL | `'{}'::jsonb` | Legal history, habeas data, contracts |
+| `direccion_residencia` | text | NULL | - | Residence address |
+| `barrio_residencia` | text | NULL | - | Neighborhood of residence |
+| `ciudad_residencia` | text | NULL | - | City of residence |
 | `creado_en` | timestamptz | NOT NULL | `now()` | Timestamp of record creation |
 | `actualizado_en` | timestamptz | NOT NULL | `now()` | Timestamp of last update |
 | `creado_por` | uuid | NULL | - | FK to auth.users - Creator |
@@ -229,8 +234,9 @@
 - **PRIMARY KEY:** `id`
 - **FOREIGN KEY:** `id` → `business_partners.id` (1:1 relationship)
 - **FOREIGN KEY:** `contacto_emergencia_id` → `personas.id`
+- **FOREIGN KEY:** `lugar_nacimiento_id` → `geographic_locations.id`
 - **CHECK:** `tipo_documento IN ('CC', 'CE', 'TI', 'PA', 'RC', 'NIT', 'PEP', 'PPT', 'DNI', 'NUIP')`
-- **CHECK:** `numero_documento ~ '^[0-9]{5,20}$'` (5-20 digits)
+- **CHECK:** `numero_documento ~ '^[A-Za-z0-9-]{5,20}$'` (5-20 alphanumeric chars)
 - **CHECK:** `genero IN ('masculino', 'femenino', 'otro', 'no_especifica')`
 - **CHECK:** `estado_civil IN ('soltero', 'casado', 'union_libre', 'divorciado', 'viudo', 'separado')`
 - **CHECK:** `nivel_educacion IN ('primaria', 'bachillerato', 'tecnico', 'tecnologo', 'pregrado', 'posgrado', 'maestria', 'doctorado')`
@@ -258,6 +264,8 @@
 3. Age validation: `fecha_nacimiento` must be at least 18 years ago
 4. Emergency contact must reference another persona (cannot be empresa)
 5. `eliminado_en` synced with business_partners for consistency
+6. Residence fields (`direccion_residencia`, `barrio_residencia`, `ciudad_residencia`) provide structured address data
+7. `lugar_nacimiento_id` provides FK to `geographic_locations` for structured birth place
 
 ### JSONB Schemas
 
@@ -308,6 +316,7 @@
 
 - **Base:** `business_partners` (via `id`)
 - **Emergency Contact:** Self-reference via `contacto_emergencia_id`
+- **Birth Place:** `geographic_locations` (via `lugar_nacimiento_id`)
 - **Empresa Representation:** `empresas.representante_legal_id` can reference personas
 
 ---
@@ -349,6 +358,7 @@
 | `ingresos_anuales` | numeric | NULL | - | Annual revenue/income |
 | `numero_empleados` | integer | NULL | - | Number of employees |
 | `atributos` | jsonb | NULL | `'{}'::jsonb` | Custom attributes (address, certifications, branches) |
+| `digito_verificacion` | text | NULL | - | NIT verification digit (auto-calculated) |
 | `creado_en` | timestamptz | NOT NULL | `now()` | Timestamp of record creation |
 | `actualizado_en` | timestamptz | NOT NULL | `now()` | Timestamp of last update |
 | `creado_por` | uuid | NULL | - | FK to auth.users - Creator |
@@ -425,7 +435,7 @@
 
 **Purpose:** Manages relationships (family, employment, commercial, etc.) between business partners.
 
-**Row Count:** 1 | **RLS:** ✅ Enabled
+**Row Count:** 3 | **RLS:** ✅ Enabled
 
 ### Fields
 
@@ -440,7 +450,7 @@
 | `rol_destino` | text | NOT NULL | - | Specific role of destination in relationship context |
 | `atributos` | jsonb | NOT NULL | `'{}'::jsonb` | Additional relationship metadata |
 | `fecha_inicio` | date | NULL | - | Relationship start date |
-| `fecha_fin` | date | NULL | - | Relationship end date (NULL = current) |
+| `fecha_fin` | date | NULL | - | Relationship end date (NULL if active) |
 | `es_actual` | boolean | NULL (generated) | `(fecha_fin IS NULL)` | **GENERATED** - true if relationship is current |
 | `es_bidireccional` | boolean | NOT NULL | `false` | Auto-query from both directions |
 | `notas` | text | NULL | - | Additional notes |
@@ -455,12 +465,12 @@
 
 | Value | Description |
 |-------|-------------|
-| `familiar` | Family relationship (both must be personas) |
-| `laboral` | Employment (origin=persona, destination=empresa) |
-| `referencia` | Reference/referral relationship |
+| `familiar` | Family relationship |
+| `laboral` | Employment relationship |
+| `referencia` | Reference/referral |
 | `membresia` | Membership relationship |
 | `comercial` | Commercial/business relationship |
-| `otra` | Other type of relationship |
+| `otra` | Other relationship type |
 
 ### Constraints
 
@@ -721,6 +731,81 @@ Accion 4398:
 
 ---
 
+## geographic_locations
+
+**Purpose:** Reference table for cities and geographic locations used in location pickers (birth place, residence, etc.).
+
+**Row Count:** 1367 | **RLS:** ✅ Enabled (public read access)
+
+### Fields
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| `id` | uuid | NOT NULL | `gen_random_uuid()` | Primary key - Unique location identifier |
+| `country_code` | text | NOT NULL | - | ISO 3166-1 alpha-2 country code (CO, US, MX, etc.) |
+| `country_name` | text | NOT NULL | - | Full country name (Colombia, United States, México) |
+| `state_name` | text | NULL | - | State/department name (Antioquia, Caldas, etc.) |
+| `city_name` | text | NOT NULL | - | City name (Medellín, Bogotá, etc.) |
+| `city_code` | text | NULL | - | City code for reference |
+| `search_text` | text | NOT NULL | - | Combined text for FTS/autocomplete search |
+
+### Constraints
+
+- **PRIMARY KEY:** `id`
+- **NOT NULL:** `country_code`, `country_name`, `city_name`, `search_text`
+
+### Indexes
+
+- `geographic_locations_pkey` PRIMARY KEY on `id`
+- `idx_geographic_locations_country` on `country_code`
+- `idx_geographic_locations_city` on `city_name`
+
+### Triggers
+
+- `actualizar_timestamp` - Auto-update `actualizado_en` on UPDATE
+
+### RLS Policies
+
+**Policy:** `"Public read access to locations"`
+- **Operation:** SELECT
+- **Using:** `true` (public read access - locations are reference data)
+
+### Business Rules
+
+1. Reference data table - contains cities and geographic locations
+2. Used by LocationPicker component for structured location selection
+3. Public read access (no sensitive data)
+4. Data seeded with major Colombian cities (expandable to international cities)
+5. Optimized for search with `search_text` field
+
+### Related Functions
+
+**`search_locations(search_term TEXT)`**
+- Fuzzy search function for location picker
+- Returns max 20 results ordered by relevance
+- Prioritizes exact matches and Colombian cities
+- Requires minimum 2 characters
+
+### Usage Example
+
+```sql
+-- Search for cities matching "mede"
+SELECT * FROM search_locations('mede');
+
+-- Direct query
+SELECT id, city_name, state_name, country_name
+FROM geographic_locations
+WHERE country_code = 'CO'
+ORDER BY city_name;
+```
+
+### Referenced By
+
+- **personas:** `lugar_nacimiento_id` (birth place)
+- **Future:** Can be used for residence, expedition place, etc.
+
+---
+
 ## organization_members
 
 **Purpose:** Maps users to organizations with role-based permissions.
@@ -825,7 +910,7 @@ Accion 4398:
 
 **Purpose:** Fine-grained permission mappings for role-based access control.
 
-**Row Count:** 82 | **RLS:** ✅ Enabled
+**Row Count:** 102 | **RLS:** ✅ Enabled
 
 ### Fields
 
@@ -885,82 +970,161 @@ VALUES ('analyst', 'business_partners', 'select');
 
 ---
 
-## geographic_locations
+## oportunidades
 
-**Purpose:** Reference table for cities and geographic locations used in location pickers (birth place, residence, etc.).
+**Purpose:** Manages business opportunities such as membership withdrawal requests and new member applications.
 
-**Row Count:** Variable (seeded with major cities) | **RLS:** ✅ Enabled (public read access)
+**Row Count:** 0 | **RLS:** ✅ Enabled
 
 ### Fields
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
-| `id` | uuid | NOT NULL | `gen_random_uuid()` | Primary key - Unique location identifier |
-| `country_code` | text | NOT NULL | - | ISO 3166-1 alpha-2 country code (CO, US, MX, etc.) |
-| `country_name` | text | NOT NULL | - | Full country name (Colombia, United States, México) |
-| `state_code` | text | NULL | - | State/department code (ANT, CAL, etc.) |
-| `state_name` | text | NULL | - | State/department name (Antioquia, Caldas, etc.) |
-| `city_name` | text | NOT NULL | - | City name (Medellín, Bogotá, etc.) |
-| `timezone` | text | NULL | - | IANA timezone identifier (America/Bogota, America/New_York) |
-| `latitude` | numeric(10,7) | NULL | - | Geographic latitude for map features |
-| `longitude` | numeric(10,7) | NULL | - | Geographic longitude for map features |
-| `creado_en` | timestamptz | NOT NULL | `now()` | Timestamp of record creation |
-| `actualizado_en` | timestamptz | NOT NULL | `now()` | Timestamp of last modification |
+| `id` | uuid | NOT NULL | `gen_random_uuid()` | Primary key |
+| `codigo` | text | NOT NULL | - | **UNIQUE** - Opportunity code |
+| `tipo` | tipo_oportunidad_enum | NOT NULL | - | Opportunity type: Solicitud Retiro, Solicitud Ingreso |
+| `fecha_solicitud` | date | NOT NULL | `CURRENT_DATE` | Request date |
+| `estado` | estado_oportunidad_enum | NOT NULL | `'abierta'::estado_oportunidad_enum` | Current state |
+| `solicitante_id` | uuid | NOT NULL | - | FK to business_partners - Requester |
+| `responsable_id` | uuid | NULL | - | FK to auth.users - Assigned staff member |
+| `organizacion_id` | uuid | NOT NULL | - | FK to organizations - Organization |
+| `monto_estimado` | numeric | NULL | - | Estimated monetary amount |
+| `notas` | text | NULL | - | Additional notes |
+| `atributos` | jsonb | NULL | `'{}'::jsonb` | Custom metadata |
+| `creado_en` | timestamptz | NOT NULL | `now()` | Timestamp of creation |
+| `creado_por` | uuid | NULL | - | FK to auth.users - Creator |
+| `actualizado_en` | timestamptz | NOT NULL | `now()` | Timestamp of last update |
+| `actualizado_por` | uuid | NULL | - | FK to auth.users - Updater |
+| `eliminado_en` | timestamptz | NULL | - | Soft delete timestamp |
+| `eliminado_por` | uuid | NULL | - | FK to auth.users - Deleter |
+
+### Enum Types
+
+**tipo_oportunidad_enum:**
+- `Solicitud Retiro` - Member withdrawal request
+- `Solicitud Ingreso` - New member application
+
+**estado_oportunidad_enum:**
+- `abierta` - New/open request
+- `en_proceso` - Being processed
+- `ganada` - Approved/completed
+- `perdida` - Rejected
+- `cancelada` - Cancelled by requester
 
 ### Constraints
 
 - **PRIMARY KEY:** `id`
-- **NOT NULL:** `country_code`, `country_name`, `city_name`
+- **UNIQUE:** `codigo`
+- **FOREIGN KEYS:**
+  - `organizacion_id` → `organizations.id`
+  - `solicitante_id` → `business_partners.id`
+  - `responsable_id` → `auth.users.id`
+  - `creado_por`, `actualizado_por`, `eliminado_por` → `auth.users.id`
 
 ### Indexes
 
-- `geographic_locations_pkey` PRIMARY KEY on `id`
-- `idx_geographic_locations_country` on `country_code`
-- `idx_geographic_locations_city` on `city_name`
+- `oportunidades_pkey` PRIMARY KEY on `id`
+- `oportunidades_codigo_key` UNIQUE on `codigo`
 
 ### Triggers
 
-- `actualizar_timestamp` - Auto-update `actualizado_en` on UPDATE
-
-### RLS Policies
-
-**Policy:** `"Public read access to locations"`
-- **Operation:** SELECT
-- **Using:** `true` (public read access - locations are reference data)
+- `set_audit_user_columns` - Auto-set audit fields
+- `actualizar_timestamp` - Auto-update `actualizado_en`
+- `set_deleted_by_on_soft_delete` - Auto-set `eliminado_por`
 
 ### Business Rules
 
-1. Reference data table - contains cities and geographic locations
-2. Used by LocationPicker component for structured location selection
-3. Public read access (no sensitive data)
-4. Data seeded with major Colombian cities (expandable to international cities)
-5. Optimized for search with trigram indexes (if enabled)
+1. Opportunities track business requests (withdrawals, new memberships)
+2. Each opportunity has a requester (business partner)
+3. Staff member can be assigned as responsible
+4. Status workflow: abierta → en_proceso → ganada/perdida/cancelada
+5. Soft delete pattern applies
+6. Estimated amount can be tracked for financial opportunities
 
-### Related Functions
+### Related Tables
 
-**`search_locations(search_term TEXT)`**
-- Fuzzy search function for location picker
-- Returns max 20 results ordered by relevance
-- Prioritizes exact matches and Colombian cities
-- Requires minimum 2 characters
+- **Business Partners:** `business_partners` (via `solicitante_id`)
+- **Organizations:** `organizations` (via `organizacion_id`)
+- **Tasks:** `tareas` (via `oportunidad_id`)
 
-### Usage Example
+---
 
-```sql
--- Search for cities matching "mede"
-SELECT * FROM search_locations('mede');
+## tareas
 
--- Direct query
-SELECT id, city_name, state_name, country_name
-FROM geographic_locations
-WHERE country_code = 'CO'
-ORDER BY city_name;
-```
+**Purpose:** Manages tasks and activities related to opportunities and business partners.
 
-### Referenced By
+**Row Count:** 0 | **RLS:** ✅ Enabled
 
-- **personas:** `lugar_nacimiento_id` (birth place)
-- **Future:** Can be used for residence, expedition place, etc.
+### Fields
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| `id` | uuid | NOT NULL | `gen_random_uuid()` | Primary key |
+| `titulo` | text | NOT NULL | - | Task title |
+| `descripcion` | text | NULL | - | Task description |
+| `prioridad` | prioridad_tarea_enum | NOT NULL | `'media'::prioridad_tarea_enum` | Priority level |
+| `estado` | estado_tarea_enum | NOT NULL | `'pendiente'::estado_tarea_enum` | Current status |
+| `fecha_vencimiento` | date | NULL | - | Due date |
+| `oportunidad_id` | uuid | NULL | - | FK to oportunidades - Related opportunity |
+| `asignado_a` | uuid | NULL | - | FK to auth.users - Assigned user |
+| `organizacion_id` | uuid | NOT NULL | - | FK to organizations - Organization |
+| `relacionado_con_bp` | uuid | NULL | - | FK to business_partners - Related BP |
+| `creado_en` | timestamptz | NOT NULL | `now()` | Timestamp of creation |
+| `creado_por` | uuid | NULL | - | FK to auth.users - Creator |
+| `actualizado_en` | timestamptz | NOT NULL | `now()` | Timestamp of last update |
+| `actualizado_por` | uuid | NULL | - | FK to auth.users - Updater |
+| `eliminado_en` | timestamptz | NULL | - | Soft delete timestamp |
+| `eliminado_por` | uuid | NULL | - | FK to auth.users - Deleter |
+
+### Enum Types
+
+**prioridad_tarea_enum:**
+- `baja` - Low priority
+- `media` - Medium priority
+- `alta` - High priority
+- `critica` - Critical priority
+
+**estado_tarea_enum:**
+- `pendiente` - Pending
+- `en_progreso` - In progress
+- `bloqueada` - Blocked
+- `hecha` - Completed
+- `cancelada` - Cancelled
+
+### Constraints
+
+- **PRIMARY KEY:** `id`
+- **FOREIGN KEYS:**
+  - `organizacion_id` → `organizations.id`
+  - `oportunidad_id` → `oportunidades.id`
+  - `asignado_a` → `auth.users.id`
+  - `relacionado_con_bp` → `business_partners.id`
+  - `creado_por`, `actualizado_por`, `eliminado_por` → `auth.users.id`
+
+### Indexes
+
+- `tareas_pkey` PRIMARY KEY on `id`
+
+### Triggers
+
+- `set_audit_user_columns` - Auto-set audit fields
+- `actualizar_timestamp` - Auto-update `actualizado_en`
+- `set_deleted_by_on_soft_delete` - Auto-set `eliminado_por`
+
+### Business Rules
+
+1. Tasks track activities and to-do items
+2. Can be linked to opportunities or business partners
+3. Priority levels help with task management
+4. Status workflow: pendiente → en_progreso → hecha (or bloqueada/cancelada)
+5. Due dates can be set for time-sensitive tasks
+6. Soft delete pattern applies
+
+### Related Tables
+
+- **Opportunities:** `oportunidades` (via `oportunidad_id`)
+- **Business Partners:** `business_partners` (via `relacionado_con_bp`)
+- **Users:** `auth.users` (via `asignado_a`)
 
 ---
 
@@ -969,20 +1133,22 @@ ORDER BY city_name;
 | Table | Rows | Columns | RLS | Triggers | Indexes |
 |-------|------|---------|-----|----------|---------|
 | organizations | 1 | 16 | ✅ | 4 | 2 |
-| business_partners | 13 | 13 | ✅ | 4 | 3 |
-| personas | 9 | 41 | ✅ | 3 | 2 |
+| business_partners | 17 | 13 | ✅ | 4 | 3 |
+| personas | 13 | 44 | ✅ | 3 | 2 |
 | empresas | 4 | 33 | ✅ | 3 | 2 |
-| bp_relaciones | 1 | 17 | ✅ | 4 | 3 |
+| bp_relaciones | 3 | 17 | ✅ | 4 | 3 |
 | acciones | 25 | 10 | ✅ | 3 | 2 |
 | asignaciones_acciones | 2 | 20 | ✅ | 5 | 3 |
-| geographic_locations | ~100+ | 11 | ✅ | 1 | 3 |
+| geographic_locations | 1367 | 7 | ✅ | 1 | 3 |
 | organization_members | 1 | 5 | ✅ | 1 | 1 |
 | roles | 4 | 1 | ✅ | 0 | 1 |
-| role_permissions | 82 | 4 | ✅ | 0 | 1 |
-| **TOTAL** | **242+** | **181** | **11/11** | **28** | **23** |
+| role_permissions | 102 | 4 | ✅ | 0 | 1 |
+| oportunidades | 0 | 16 | ✅ | 3 | 2 |
+| tareas | 0 | 16 | ✅ | 3 | 1 |
+| **TOTAL** | **1539+** | **215** | **13/13** | **34** | **26** |
 
 ---
 
-**Last Generated:** 2026-01-02 (Updated with geographic_locations table)
+**Last Generated:** 2026-01-03 (Updated with live Supabase schema)
 **Source:** Live Supabase database via MCP
 **Validation:** ✅ All constraints verified against live schema

@@ -2,7 +2,7 @@
 
 > **Complete schema documentation with ERD diagrams**
 >
-> Last updated: 2025-12-28 | Auto-generated from live database schema
+> Last updated: 2026-01-03 | Auto-generated from live database schema
 
 ---
 
@@ -15,7 +15,8 @@
   - [3. Acciones Domain](#3-acciones-domain)
   - [4. Relationships Domain](#4-relationships-domain)
   - [5. Access Control Domain](#5-access-control-domain)
-  - [6. Simplified High-Level View](#6-simplified-high-level-view)
+  - [6. Operations Management Domain](#6-operations-management-domain)
+  - [7. Simplified High-Level View](#7-simplified-high-level-view)
 - [Tables Summary](#tables-summary)
 - [Custom Types](#custom-types)
 - [Database Functions](#database-functions)
@@ -29,22 +30,23 @@
 
 ## Schema Overview
 
-The database implements a comprehensive business partner management system using PostgreSQL on Supabase. The schema is organized into 4 main domains:
+The database implements a comprehensive business partner management system using PostgreSQL on Supabase. The schema is organized into 5 main domains:
 
 1. **Business Partners** - Organizations, personas (natural persons), empresas (companies)
 2. **Acciones** - Club shares with temporal ownership tracking
 3. **Relationships** - Connections between business partners
 4. **Access Control** - Multi-tenancy, roles, and permissions
+5. **Operations Management** - Opportunities and tasks
 
 ### Key Statistics
 
-- **Tables:** 10 (all with RLS enabled)
-- **Functions:** 36 total (11 user-facing RPC)
+- **Tables:** 13 (all with RLS enabled)
+- **Functions:** 36+ total (11 user-facing RPC)
 - **Views:** 7 (with SECURITY INVOKER)
-- **Triggers:** 5 trigger functions
-- **Enums:** 1 custom type (tipo_relacion_bp)
-- **Policies:** 38 RLS policies
-- **Indexes:** 24 indexes (performance optimization)
+- **Triggers:** 5+ trigger functions
+- **Enums:** 5 custom types (tipo_relacion_bp, tipo_oportunidad_enum, estado_oportunidad_enum, prioridad_tarea_enum, estado_tarea_enum)
+- **Policies:** 38+ RLS policies
+- **Indexes:** 26+ indexes (performance optimization)
 
 ### Architecture Patterns
 
@@ -61,30 +63,39 @@ The database implements a comprehensive business partner management system using
 
 ### 1. Complete Database ERD
 
-**All 10 tables with foreign key relationships**
+**All 13 tables with foreign key relationships**
 
 ```mermaid
 erDiagram
     organizations ||--o{ business_partners : "organizacion_id"
     organizations ||--o{ organization_members : "organization_id"
     organizations ||--o{ acciones : "organizacion_id"
+    organizations ||--o{ bp_relaciones : "organizacion_id"
+    organizations ||--o{ oportunidades : "organizacion_id"
+    organizations ||--o{ tareas : "organizacion_id"
 
     business_partners ||--|| personas : "id (1:1)"
     business_partners ||--|| empresas : "id (1:1)"
     business_partners ||--o{ bp_relaciones : "bp_origen_id"
     business_partners ||--o{ bp_relaciones : "bp_destino_id"
-    business_partners ||--o{ asignaciones_acciones : "persona_id"
+    business_partners ||--o{ asignaciones_acciones : "business_partner_id"
     business_partners ||--o{ empresas : "representante_legal_id"
+    business_partners ||--o{ oportunidades : "solicitante_id"
+    business_partners ||--o{ tareas : "relacionado_con_bp"
 
     acciones ||--o{ asignaciones_acciones : "accion_id"
 
     organization_members }o--|| roles : "role_id"
     roles ||--o{ role_permissions : "role_id"
 
+    tareas }o--|| oportunidades : "oportunidad_id"
+
     organizations {
         uuid id PK
         text nombre
-        uuid parent_id FK
+        text slug UK
+        text tipo
+        uuid organizacion_padre_id FK
         timestamptz creado_en
     }
 
@@ -105,7 +116,11 @@ erDiagram
         text apellidos
         text tipo_documento
         text numero_documento
+        uuid lugar_nacimiento_id FK
         jsonb perfil_persona
+        text direccion_residencia
+        text barrio_residencia
+        text ciudad_residencia
     }
 
     empresas {
@@ -136,6 +151,7 @@ erDiagram
         text codigo UK "4398"
         text nombre
         uuid organizacion_id FK
+        text estado
         jsonb metadatos
         timestamptz eliminado_en
     }
@@ -143,7 +159,7 @@ erDiagram
     asignaciones_acciones {
         uuid id PK
         uuid accion_id FK
-        uuid persona_id FK
+        uuid business_partner_id FK
         text tipo_asignacion "dueño|titular|beneficiario"
         text subcodigo "00-99"
         text codigo_completo UK "GENERATED 439800"
@@ -155,15 +171,14 @@ erDiagram
     }
 
     organization_members {
-        uuid id PK
-        uuid organization_id FK
-        uuid user_id
+        uuid user_id PK FK1
+        uuid organization_id PK FK2
         uuid role_id FK
+        timestamptz created_at
     }
 
     roles {
-        uuid id PK
-        text name UK "owner|admin|analyst|auditor"
+        uuid role PK "owner|admin|analyst|auditor"
         text description
     }
 
@@ -172,6 +187,44 @@ erDiagram
         uuid role_id FK
         text resource "table_name"
         text action "select|insert|update|delete"
+        boolean allow
+    }
+
+    oportunidades {
+        uuid id PK
+        text codigo UK
+        tipo_oportunidad_enum tipo
+        estado_oportunidad_enum estado
+        uuid solicitante_id FK
+        uuid responsable_id FK
+        uuid organizacion_id FK
+        numeric monto_estimado
+        jsonb atributos
+        timestamptz eliminado_en
+    }
+
+    tareas {
+        uuid id PK
+        text titulo
+        text descripcion
+        prioridad_tarea_enum prioridad
+        estado_tarea_enum estado
+        uuid oportunidad_id FK
+        uuid asignado_a FK
+        uuid organizacion_id FK
+        uuid relacionado_con_bp FK
+        date fecha_vencimiento
+        timestamptz eliminado_en
+    }
+
+    geographic_locations {
+        uuid id PK
+        text country_code
+        text country_name
+        text state_name
+        text city_name
+        text city_code
+        text search_text
     }
 ```
 
@@ -193,7 +246,8 @@ erDiagram
     organizations {
         uuid id PK
         text nombre "Organization name"
-        uuid parent_id FK "Parent organization"
+        text slug UK "URL-friendly ID"
+        uuid organizacion_padre_id FK "Parent organization"
         jsonb metadata
         timestamptz creado_en
     }
@@ -221,6 +275,10 @@ erDiagram
         text tipo_documento "CC|CE|PA|etc"
         text numero_documento
         date fecha_nacimiento
+        uuid lugar_nacimiento_id FK "Structured birth place"
+        text direccion_residencia "Residence address"
+        text barrio_residencia "Neighborhood"
+        text ciudad_residencia "City of residence"
         jsonb perfil_persona "Demographics, preferences"
         text notas
     }
@@ -244,6 +302,8 @@ erDiagram
 - **Shared Fields**: Common fields (email, phone, organizacion_id) in base table
 - **Specialized Fields**: Unique fields (nombres/apellidos for personas, nit/razon_social for empresas)
 - **Relationship**: Empresas can reference a business_partner as `representante_legal_id`
+- **Structured Data**: `lugar_nacimiento_id` provides FK to [`geographic_locations`](docs/database/TABLES.md:888)
+- **Residence Fields**: New structured residence fields (`direccion_residencia`, `barrio_residencia`, `ciudad_residencia`)
 
 ---
 
@@ -255,7 +315,7 @@ erDiagram
 erDiagram
     organizations ||--o{ acciones : "organizacion_id"
     acciones ||--o{ asignaciones_acciones : "accion_id"
-    business_partners ||--o{ asignaciones_acciones : "persona_id"
+    business_partners ||--o{ asignaciones_acciones : "business_partner_id"
 
     organizations {
         uuid id PK
@@ -276,7 +336,7 @@ erDiagram
     asignaciones_acciones {
         uuid id PK
         uuid accion_id FK
-        uuid persona_id FK "FK to business_partners"
+        uuid business_partner_id FK "FK to business_partners"
         text tipo_asignacion CHK "dueño|titular|beneficiario"
         text subcodigo "00-09 dueño, 10-19 titular, 20-99 beneficiario"
         text codigo_completo UK "GENERATED: codigo+subcodigo (439800)"
@@ -336,7 +396,7 @@ erDiagram
         text descripcion "Relationship description"
         date fecha_inicio "Relationship start"
         date fecha_fin "Relationship end (NULL if active)"
-        boolean es_vigente "GENERATED: fecha_fin IS NULL"
+        boolean es_actual "GENERATED: fecha_fin IS NULL"
         jsonb atributos "Relationship metadata"
         timestamptz creado_en
         timestamptz actualizado_en
@@ -387,16 +447,14 @@ erDiagram
     }
 
     organization_members {
-        uuid id PK
-        uuid organization_id FK
-        uuid user_id "FK to auth.users"
+        uuid user_id PK FK1
+        uuid organization_id PK FK2
         uuid role_id FK
-        timestamptz creado_en
+        timestamptz created_at
     }
 
     roles {
-        uuid id PK
-        text name UK "owner|admin|analyst|auditor"
+        uuid role PK "owner|admin|analyst|auditor"
         text description
         int level "Permission hierarchy"
         timestamptz creado_en
@@ -407,6 +465,7 @@ erDiagram
         uuid role_id FK
         text resource "Table name (business_partners, acciones, etc)"
         text action "select|insert|update|delete"
+        boolean allow
         timestamptz creado_en
     }
 ```
@@ -431,7 +490,96 @@ erDiagram
 
 ---
 
-### 6. Simplified High-Level View
+### 6. Operations Management Domain
+
+**Business opportunities and task management**
+
+```mermaid
+erDiagram
+    organizations ||--o{ oportunidades : "organizacion_id"
+    organizations ||--o{ tareas : "organizacion_id"
+    business_partners ||--o{ oportunidades : "solicitante_id"
+    business_partners ||--o{ tareas : "relacionado_con_bp"
+    tareas }o--|| oportunidades : "oportunidad_id"
+
+    organizations {
+        uuid id PK
+        text nombre
+    }
+
+    oportunidades {
+        uuid id PK
+        text codigo UK
+        tipo_oportunidad_enum tipo "Solicitud Retiro|Solicitud Ingreso"
+        estado_oportunidad_enum estado "abierta|en_proceso|ganada|perdida|cancelada"
+        uuid solicitante_id FK
+        uuid responsable_id FK
+        uuid organizacion_id FK
+        numeric monto_estimado
+        jsonb atributos
+        timestamptz creado_en
+        timestamptz eliminado_en
+    }
+
+    tareas {
+        uuid id PK
+        text titulo
+        text descripcion
+        prioridad_tarea_enum prioridad "baja|media|alta|critica"
+        estado_tarea_enum estado "pendiente|en_progreso|bloqueada|hecha|cancelada"
+        uuid oportunidad_id FK
+        uuid asignado_a FK
+        uuid organizacion_id FK
+        uuid relacionado_con_bp FK
+        date fecha_vencimiento
+        timestamptz creado_en
+        timestamptz eliminado_en
+    }
+
+    business_partners {
+        uuid id PK
+        text codigo_bp UK
+    }
+```
+
+**Enum Types:**
+
+**tipo_oportunidad_enum:**
+- `Solicitud Retiro` - Member withdrawal request
+- `Solicitud Ingreso` - New member application
+
+**estado_oportunidad_enum:**
+- `abierta` - New/open request
+- `en_proceso` - Being processed
+- `ganada` - Approved/completed
+- `perdida` - Rejected
+- `cancelada` - Cancelled by requester
+
+**prioridad_tarea_enum:**
+- `baja` - Low priority
+- `media` - Medium priority
+- `alta` - High priority
+- `critica` - Critical priority
+
+**estado_tarea_enum:**
+- `pendiente` - Pending
+- `en_progreso` - In progress
+- `bloqueada` - Blocked
+- `hecha` - Completed
+- `cancelada` - Cancelled
+
+**Key Concepts:**
+
+- **Opportunities**: Track business requests (withdrawals, new memberships)
+- **Tasks**: Activities linked to opportunities or business partners
+- **Workflow**: Status-based process management
+- **Assignment**: Tasks can be assigned to staff members
+- **Priority**: Priority levels for task management
+- **Due Dates**: Time-sensitive task tracking
+
+---
+
+### 7. Simplified High-Level View
 
 **Main entities only (no field details)**
 
@@ -440,16 +588,22 @@ erDiagram
     ORGANIZATIONS ||--o{ BUSINESS_PARTNERS : contains
     ORGANIZATIONS ||--o{ ACCIONES : owns
     ORGANIZATIONS ||--o{ MEMBERS : has
+    ORGANIZATIONS ||--o{ OPPORTUNITIES : manages
+    ORGANIZATIONS ||--o{ TAREAS : tracks
 
     BUSINESS_PARTNERS ||--o{ PERSONAS : specializes
     BUSINESS_PARTNERS ||--o{ EMPRESAS : specializes
     BUSINESS_PARTNERS ||--o{ RELATIONSHIPS : participates
     BUSINESS_PARTNERS ||--o{ ASSIGNMENTS : receives
+    BUSINESS_PARTNERS ||--o{ OPPORTUNITIES : requests
+    BUSINESS_PARTNERS ||--o{ TAREAS : related
 
     ACCIONES ||--o{ ASSIGNMENTS : assigned_to
 
     MEMBERS }o--|| ROLES : has
     ROLES ||--o{ PERMISSIONS : grants
+
+    TAREAS }o--|| OPPORTUNITIES : linked
 
     ORGANIZATIONS["🏢 ORGANIZATIONS<br/>Multi-tenancy foundation"]
     BUSINESS_PARTNERS["👥 BUSINESS PARTNERS<br/>CTI base table"]
@@ -461,6 +615,8 @@ erDiagram
     MEMBERS["👤 MEMBERS<br/>Organization users"]
     ROLES["🔑 ROLES<br/>Access levels"]
     PERMISSIONS["✅ PERMISSIONS<br/>Resource actions"]
+    OPPORTUNITIES["💼 OPPORTUNITIES<br/>Business requests"]
+    TAREAS["✅ TAREAS<br/>Task management"]
 ```
 
 **Use this diagram for:**
@@ -473,22 +629,25 @@ erDiagram
 
 ## Tables Summary
 
-### Core Tables (10 total)
+### Core Tables (13 total)
 
 | Table | Rows | RLS | Purpose | Domain |
 |-------|------|-----|---------|--------|
 | **organizations** | 1 | ✅ | Multi-tenancy foundation | Access Control |
-| **business_partners** | 13 | ✅ | CTI base table for all partners | Business Partners |
-| **personas** | 9 | ✅ | Natural persons specialization | Business Partners |
+| **business_partners** | 17 | ✅ | CTI base table for all partners | Business Partners |
+| **personas** | 13 | ✅ | Natural persons specialization | Business Partners |
 | **empresas** | 4 | ✅ | Companies specialization | Business Partners |
-| **bp_relaciones** | 1 | ✅ | Relationships between BPs | Relationships |
+| **bp_relaciones** | 3 | ✅ | Relationships between BPs | Relationships |
 | **acciones** | 25 | ✅ | Club shares/actions | Acciones |
 | **asignaciones_acciones** | 2 | ✅ | Share ownership assignments | Acciones |
 | **organization_members** | 1 | ✅ | User membership | Access Control |
 | **roles** | 4 | ✅ | Access levels | Access Control |
-| **role_permissions** | 82 | ✅ | Fine-grained permissions | Access Control |
+| **role_permissions** | 102 | ✅ | Fine-grained permissions | Access Control |
+| **oportunidades** | 0 | ✅ | Business opportunities | Operations |
+| **tareas** | 0 | ✅ | Task management | Operations |
+| **geographic_locations** | 1367 | ✅ | Reference data | Reference |
 
-**Total Columns:** 170 across all tables
+**Total Columns:** 215+ across all tables
 
 ---
 
@@ -506,12 +665,52 @@ CREATE TYPE tipo_relacion_bp AS ENUM (
   'comercial',   -- Commercial relationship
   'otra'         -- Other relationship type
 );
+
+-- Opportunity types
+CREATE TYPE tipo_oportunidad_enum AS ENUM (
+  'Solicitud Retiro',  -- Member withdrawal request
+  'Solicitud Ingreso'  -- New member application
+);
+
+-- Opportunity states
+CREATE TYPE estado_oportunidad_enum AS ENUM (
+  'abierta',     -- New/open request
+  'en_proceso',   -- Being processed
+  'ganada',       -- Approved/completed
+  'perdida',      -- Rejected
+  'cancelada'      -- Cancelled by requester
+);
+
+-- Task priorities
+CREATE TYPE prioridad_tarea_enum AS ENUM (
+  'baja',      -- Low priority
+  'media',      -- Medium priority
+  'alta',       -- High priority
+  'critica'     -- Critical priority
+);
+
+-- Task states
+CREATE TYPE estado_tarea_enum AS ENUM (
+  'pendiente',   -- Pending
+  'en_progreso', -- In progress
+  'bloqueada',   -- Blocked
+  'hecha',       -- Completed
+  'cancelada'    -- Cancelled
+);
 ```
 
 **Usage:**
 ```sql
 -- In bp_relaciones table
 tipo_relacion tipo_relacion_bp NOT NULL
+
+-- In oportunidades table
+tipo tipo_oportunidad_enum NOT NULL
+estado estado_oportunidad_enum NOT NULL
+
+-- In tareas table
+prioridad prioridad_tarea_enum NOT NULL
+estado estado_tarea_enum NOT NULL
 ```
 
 ---
@@ -527,7 +726,7 @@ tipo_relacion tipo_relacion_bp NOT NULL
 | **Trigger Functions** | 5 | Automatic data management |
 | **Permission Functions** | 11 | RLS policy helpers |
 
-**Total:** 36 functions
+**Total:** 36+ functions
 
 ### User-Facing RPC Functions
 
@@ -578,7 +777,7 @@ can_view_org_membership_v2(org_id UUID) RETURNS BOOLEAN
 org_has_other_owner_v2(org_id UUID, excluded_user_id UUID) RETURNS BOOLEAN
 ```
 
-**See [FUNCTIONS.md](./FUNCTIONS.md) for detailed documentation of all 36 functions.**
+**See [FUNCTIONS.md](./FUNCTIONS.md) for detailed documentation of all 36+ functions.**
 
 ---
 
@@ -632,44 +831,15 @@ LEFT JOIN empresas e ON bp.id = e.id
 WHERE bp.eliminado_en IS NULL
 ```
 
-**`v_personas_org`** - Active personas per organization
-```sql
--- Filtered view with organization filter
-SELECT p.*, bp.organizacion_id, bp.codigo_bp
-FROM personas p
-JOIN business_partners bp ON p.id = bp.id
-WHERE bp.eliminado_en IS NULL
-```
-
-**`v_empresas_org`** - Active empresas per organization
-**`v_empresas_completa`** - Complete empresa data with joins
+**`v_personas_org`** - Filtered view of active personas per organization
+**`v_empresas_org`** - Filtered view of active empresas per organization
+**`v_empresas_completa`** - Complete empresa data with joins to organizations and rep legal
 
 #### Acciones Views
 
-**`v_asignaciones_vigentes`** - Current active assignments
-```sql
-SELECT
-  aa.*,
-  a.codigo as accion_codigo,
-  bp.codigo_bp as persona_codigo,
-  COALESCE(p.nombres || ' ' || p.apellidos, e.razon_social) as nombre_persona
-FROM asignaciones_acciones aa
-WHERE aa.es_vigente = TRUE
-  AND aa.eliminado_en IS NULL
-```
-
-**`v_asignaciones_historial`** - Complete assignment history
-
-**`v_acciones_asignadas`** - Summary showing owner + beneficiaries per action
-```sql
-SELECT
-  a.codigo,
-  (SELECT persona_codigo FROM v_asignaciones_vigentes WHERE tipo_asignacion = 'dueño') as dueno,
-  (SELECT persona_codigo FROM v_asignaciones_vigentes WHERE tipo_asignacion = 'titular') as titular,
-  array_agg(persona_codigo) FILTER (WHERE tipo_asignacion = 'beneficiario') as beneficiarios
-FROM acciones a
-GROUP BY a.codigo
-```
+**`v_asignaciones_vigentes`** - Current active assignments with BP details
+**`v_asignaciones_historial`** - Complete assignment history with status tracking
+**`v_acciones_asignadas`** - Summary view showing dueño, titular, and beneficiarios per action
 
 **See [VIEWS.md](./VIEWS.md) for complete view definitions and usage examples.**
 
@@ -677,13 +847,13 @@ GROUP BY a.codigo
 
 ## Indexes
 
-### Performance Optimization (24 indexes)
+### Performance Optimization (26+ indexes)
 
-#### Primary Keys (10 indexes)
+#### Primary Keys (13 indexes)
 - Automatically created for all `id` columns
 - UUID type with `gen_random_uuid()` default
 
-#### Unique Constraints (8 indexes)
+#### Unique Constraints (9 indexes)
 ```sql
 -- Business Partners
 CREATE UNIQUE INDEX business_partners_codigo_bp_key ON business_partners(codigo_bp);
@@ -692,17 +862,16 @@ CREATE UNIQUE INDEX business_partners_codigo_bp_key ON business_partners(codigo_
 CREATE UNIQUE INDEX empresas_nit_key ON empresas(nit);
 
 -- Acciones
-CREATE UNIQUE INDEX acciones_codigo_key ON acciones(codigo);
+CREATE UNIQUE INDEX acciones_codigo_accion_key ON acciones(codigo_accion);
 
--- Asignaciones
-CREATE UNIQUE INDEX asignaciones_acciones_codigo_completo_key
-  ON asignaciones_acciones(codigo_completo);
+-- Opportunities
+CREATE UNIQUE INDEX oportunidades_codigo_key ON oportunidades(codigo);
 
 -- Roles
-CREATE UNIQUE INDEX roles_name_key ON roles(name);
+CREATE UNIQUE INDEX roles_role_key ON roles(role);
 ```
 
-#### Foreign Key Indexes (6 indexes)
+#### Foreign Key Indexes (8+ indexes)
 ```sql
 -- For JOIN performance
 CREATE INDEX idx_bp_organizacion_id ON business_partners(organizacion_id);
@@ -710,7 +879,7 @@ CREATE INDEX idx_empresas_rep_legal ON empresas(representante_legal_id);
 CREATE INDEX idx_bp_relaciones_origen ON bp_relaciones(bp_origen_id);
 CREATE INDEX idx_bp_relaciones_destino ON bp_relaciones(bp_destino_id);
 CREATE INDEX idx_asignaciones_accion ON asignaciones_acciones(accion_id);
-CREATE INDEX idx_asignaciones_persona ON asignaciones_acciones(persona_id);
+CREATE INDEX idx_asignaciones_persona ON asignaciones_acciones(business_partner_id);
 ```
 
 ---
@@ -749,10 +918,10 @@ CREATE INDEX idx_asignaciones_persona ON asignaciones_acciones(persona_id);
 
 ### Database Documentation
 - **[OVERVIEW.md](./OVERVIEW.md)** - Architecture patterns and quick reference
-- **[TABLES.md](./TABLES.md)** - Complete data dictionary (170 columns)
-- **[FUNCTIONS.md](./FUNCTIONS.md)** - All 36 database functions
+- **[TABLES.md](./TABLES.md)** - Complete data dictionary (215+ columns)
+- **[FUNCTIONS.md](./FUNCTIONS.md)** - All 36+ database functions
 - **[VIEWS.md](./VIEWS.md)** - 7 pre-built views with examples
-- **[RLS.md](./RLS.md)** - 38 Row Level Security policies
+- **[RLS.md](./RLS.md)** - 38+ Row Level Security policies
 - **[QUERIES.md](./QUERIES.md)** - SQL cookbook and patterns
 
 ### API Documentation
@@ -764,7 +933,6 @@ CREATE INDEX idx_asignaciones_persona ON asignaciones_acciones(persona_id);
 
 ---
 
-**Last Generated:** 2025-12-28
-**Database Version:** PostgreSQL 15 (Supabase)
-**Total Tables:** 10 | **Total Functions:** 36 | **Total Views:** 7
-
+**Last Generated:** 2026-01-03
+**Database Version:** PostgreSQL 17 (Supabase)
+**Total Tables:** 13 | **Total Functions:** 36+ | **Total Views:** 7

@@ -2,7 +2,7 @@
 
 > **Complete reference for the Supabase backend architecture**
 >
-> Last updated: 2025-12-28 | Auto-generated from live database schema
+> Last updated: 2026-01-03 | Auto-generated from live database schema
 
 ---
 
@@ -31,6 +31,8 @@ This Supabase backend implements a comprehensive business partner management sys
 - ✅ **Row Level Security (RLS)** - Database-enforced permissions
 - ✅ **JSONB Flexibility** - Extensible metadata storage
 - ✅ **Automated Auditing** - Complete change tracking
+- ✅ **Opportunity Management** - Business opportunities tracking
+- ✅ **Task Management** - Task assignment and tracking
 
 ---
 
@@ -114,10 +116,10 @@ Relationships and action assignments support time-based validity:
 | Table | Rows | Purpose |
 |-------|------|---------|
 | **organizations** | 1 | Multi-tenancy foundation, club/division hierarchy |
-| **business_partners** | 13 | Base table for all partners (CTI pattern) |
-| **personas** | 9 | Natural persons (members, contacts) |
+| **business_partners** | 17 | Base table for all partners (CTI pattern) |
+| **personas** | 13 | Natural persons (members, contacts) |
 | **empresas** | 4 | Companies (corporate members, sponsors) |
-| **bp_relaciones** | 1 | Relationships between business partners |
+| **bp_relaciones** | 3 | Relationships between business partners |
 
 ### Acciones Domain (Club Shares)
 
@@ -132,9 +134,22 @@ Relationships and action assignments support time-based validity:
 |-------|------|---------|
 | **organization_members** | 1 | User membership in organizations |
 | **roles** | 4 | Available roles (owner, admin, analyst, auditor) |
-| **role_permissions** | 82 | Fine-grained permission mappings |
+| **role_permissions** | 102 | Fine-grained permission mappings |
 
-**Total:** 10 tables, all with RLS enabled ✅
+### Operations Management Domain
+
+| Table | Rows | Purpose |
+|-------|------|---------|
+| **oportunidades** | 0 | Business opportunities (retirement/ingress requests) |
+| **tareas** | 0 | Tasks and activities management |
+
+### Reference Data
+
+| Table | Rows | Purpose |
+|-------|------|---------|
+| **geographic_locations** | 1367 | Cities and geographic locations for structured data |
+
+**Total:** 13 tables, all with RLS enabled ✅
 
 ---
 
@@ -165,10 +180,10 @@ All views use `SECURITY INVOKER` to respect RLS policies.
 
 ### Row Level Security (RLS)
 
-**Status:** ✅ All 10 tables have RLS enabled
+**Status:** ✅ All 13 tables have RLS enabled
 
 **Implementation:**
-- 38 active RLS policies
+- 38+ active RLS policies
 - Permission-based access via `can_user_v2()` function
 - Organization membership validation via `organization_members`
 - Role-based permissions via `role_permissions` table
@@ -204,7 +219,7 @@ CREATE POLICY "personas_select"
 
 | Entity | Format | Example | Generator |
 |--------|--------|---------|-----------|
-| Business Partners | `BP-0000001` | BP-0000123 | Trigger: `generar_codigo_bp` |
+| Business Partners | `BP-0000001` | BP-0000017 | Trigger: `generar_codigo_bp` |
 | Acciones | `0000` | 4398 | Manual (4 digits, unique) |
 | Asignaciones | `000000` | 439800 | accion_codigo + subcodigo |
 
@@ -251,16 +266,19 @@ CREATE POLICY "personas_select"
 
 ## Database Statistics
 
-**Current State (as of 2025-12-28):**
+**Current State (as of 2026-01-03):**
 
-- 📊 **10 tables** (all with RLS enabled)
-- 🔐 **38 RLS policies** (SELECT, INSERT, UPDATE, DELETE)
-- 🔧 **36 database functions** (11 user-facing RPC functions)
+- 📊 **13 tables** (all with RLS enabled)
+- 🔐 **38+ RLS policies** (SELECT, INSERT, UPDATE, DELETE)
+- 🔧 **36+ database functions** (11 user-facing RPC functions)
 - 📋 **7 database views** (with SECURITY INVOKER)
-- 🎯 **1 custom enum type** (tipo_relacion_bp)
-- 📦 **13 business partners** (9 personas + 4 empresas)
+- 🎯 **4 custom enum types** (tipo_relacion_bp, tipo_oportunidad_enum, estado_oportunidad_enum, prioridad_tarea_enum, estado_tarea_enum)
+- 📦 **17 business partners** (13 personas + 4 empresas)
 - 🎫 **25 club shares** (acciones)
-- 🔗 **1 active relationship** (bp_relaciones)
+- 🔗 **3 active relationships** (bp_relaciones)
+- 📍 **1367 geographic locations** (reference data)
+- 💼 **0 opportunities** (ready for use)
+- ✅ **0 tasks** (ready for use)
 
 ---
 
@@ -286,6 +304,6 @@ CREATE POLICY "personas_select"
 
 ---
 
-**Last Generated:** 2025-12-28
-**Database Version:** Supabase PostgreSQL 15
+**Last Generated:** 2026-01-03
+**Database Version:** Supabase PostgreSQL 17
 **Total Documentation Pages:** 7 (database) + 5 (API)
