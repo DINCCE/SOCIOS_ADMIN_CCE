@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useState, useMemo } from "react"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { Clock, User, Users, Receipt, HeartPulse, ShieldCheck, Settings, LayoutDashboard, ChevronDown, MessageSquare, Pencil } from "lucide-react"
 import { Persona } from "@/features/socios/types/socios-schema"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -33,26 +33,35 @@ interface PersonTabsContentProps {
 
 export function PersonTabsContent({ persona }: PersonTabsContentProps) {
     const searchParams = useSearchParams()
-    const initialTab = searchParams.get("tab") || "overview"
-    const [activeTab, setActiveTab] = useState(initialTab)
-    const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
-    const [editingSection, setEditingSection] = useState<string | null>(null)
+    const router = useRouter()
+    const pathname = usePathname()
 
-    // Update active tab when URL changes
-    useEffect(() => {
+    // Derive tab from URL params, with fallback to overview
+    const activeTab = useMemo(() => {
         const tabParam = searchParams.get("tab")
         if (tabParam && ["overview", "profile", "relationships", "history"].includes(tabParam)) {
-            setActiveTab(tabParam)
+            return tabParam
         }
+        return "overview"
     }, [searchParams])
+
+    const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
+    const [editingSection, setEditingSection] = useState<string | null>(null)
 
     const handleEdit = (sectionKey: string) => {
         setEditingSection(sectionKey)
         setIsEditSheetOpen(true)
     }
 
+    const handleTabChange = (value: string) => {
+        // Update URL with new tab parameter
+        const params = new URLSearchParams(searchParams.toString())
+        params.set("tab", value)
+        router.push(`${pathname}?${params.toString()}`)
+    }
+
     return (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <div className="border-b mb-6">
                 <TabsList className="grid w-full grid-cols-4 bg-transparent p-0 h-auto gap-0">
                     <TabsTrigger
@@ -87,16 +96,16 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem className="gap-2" onClick={() => setActiveTab("timeline")}>
+                            <DropdownMenuItem className="gap-2" onClick={() => handleTabChange("timeline")}>
                                 <Clock className="h-4 w-4" /> Timeline
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2" onClick={() => setActiveTab("relations")}>
+                            <DropdownMenuItem className="gap-2" onClick={() => handleTabChange("relations")}>
                                 <Users className="h-4 w-4" /> Relaciones
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2" onClick={() => setActiveTab("consumptions")}>
+                            <DropdownMenuItem className="gap-2" onClick={() => handleTabChange("consumptions")}>
                                 <Receipt className="h-4 w-4" /> Consumos
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2" onClick={() => setActiveTab("settings")}>
+                            <DropdownMenuItem className="gap-2" onClick={() => handleTabChange("settings")}>
                                 <Settings className="h-4 w-4" /> Configuración
                             </DropdownMenuItem>
                         </DropdownMenuContent>
