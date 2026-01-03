@@ -97,3 +97,116 @@ export async function crearEmpresa(params: CrearEmpresaParams) {
 
   return result
 }
+
+/**
+ * Update empresa data
+ *
+ * @param id - The UUID of the empresa
+ * @param data - Partial empresa data to update
+ * @returns Object with { success, message, error? }
+ */
+export async function actualizarEmpresa(
+  id: string,
+  data: Partial<{
+    razon_social: string
+    nombre_comercial: string
+    nit: string
+    digito_verificacion: string
+    tipo_sociedad: string
+    fecha_constitucion: string
+    ciudad_constitucion: string
+    pais_constitucion: string
+    numero_registro: string
+    codigo_ciiu: string
+    sector_industria: string
+    actividad_economica: string
+    tamano_empresa: string
+    representante_legal_id: string
+    cargo_representante: string
+    email_secundario: string
+    telefono_secundario: string
+    whatsapp: string
+    website: string
+    linkedin_url: string
+    facebook_url: string
+    instagram_handle: string
+    twitter_handle: string
+    logo_url: string
+    ingresos_anuales: number
+    numero_empleados: number
+    atributos: Record<string, unknown>
+  }>
+) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('empresas')
+    .update(data)
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error updating empresa:', error)
+    return {
+      success: false,
+      message: `Error al actualizar empresa: ${error.message}`,
+      error
+    }
+  }
+
+  // Revalidate pages
+  revalidatePath('/admin/socios/empresas')
+
+  return {
+    success: true,
+    message: 'Empresa actualizada correctamente'
+  }
+}
+
+/**
+ * Soft delete an empresa by setting eliminado_en timestamp
+ * Also updates business_partners.eliminado_en for consistency
+ *
+ * @param id - The UUID of the empresa to soft delete
+ * @returns Object with { success, message, error? }
+ */
+export async function softDeleteEmpresa(id: string) {
+  const supabase = await createClient()
+
+  // 1. Soft delete empresas record
+  const { error: empresaError } = await supabase
+    .from('empresas')
+    .update({ eliminado_en: new Date().toISOString() })
+    .eq('id', id)
+
+  if (empresaError) {
+    console.error('Error soft deleting empresa:', empresaError)
+    return {
+      success: false,
+      message: `Error al eliminar empresa: ${empresaError.message}`,
+      error: empresaError
+    }
+  }
+
+  // 2. Soft delete corresponding business_partners record
+  const { error: bpError } = await supabase
+    .from('business_partners')
+    .update({ eliminado_en: new Date().toISOString() })
+    .eq('id', id)
+
+  if (bpError) {
+    console.error('Error soft deleting business_partner:', bpError)
+    return {
+      success: false,
+      message: `Error al eliminar business partner: ${bpError.message}`,
+      error: bpError
+    }
+  }
+
+  // Revalidate pages
+  revalidatePath('/admin/socios/empresas')
+
+  return {
+    success: true,
+    message: 'Empresa eliminada correctamente'
+  }
+}

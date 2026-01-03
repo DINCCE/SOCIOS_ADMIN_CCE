@@ -422,3 +422,53 @@ export async function updatePersonaSecurity(
     message: 'Datos de salud y emergencia actualizados correctamente',
   }
 }
+
+/**
+ * Soft delete a persona by setting eliminado_en timestamp
+ * Also updates business_partners.eliminado_en for consistency
+ *
+ * @param id - The UUID of the persona to soft delete
+ * @returns Object with { success, message, error? }
+ */
+export async function softDeletePersona(id: string) {
+  const supabase = await createClient()
+
+  // 1. Soft delete personas record
+  const { error: personaError } = await supabase
+    .from('personas')
+    .update({ eliminado_en: new Date().toISOString() })
+    .eq('id', id)
+
+  if (personaError) {
+    console.error('Error soft deleting persona:', personaError)
+    return {
+      success: false,
+      message: `Error al eliminar persona: ${personaError.message}`,
+      error: personaError
+    }
+  }
+
+  // 2. Soft delete corresponding business_partners record
+  const { error: bpError } = await supabase
+    .from('business_partners')
+    .update({ eliminado_en: new Date().toISOString() })
+    .eq('id', id)
+
+  if (bpError) {
+    console.error('Error soft deleting business_partner:', bpError)
+    return {
+      success: false,
+      message: `Error al eliminar business partner: ${bpError.message}`,
+      error: bpError
+    }
+  }
+
+  // Revalidate pages
+  revalidatePath('/admin/socios/personas')
+  revalidatePath(`/admin/socios/personas/${id}`)
+
+  return {
+    success: true,
+    message: 'Persona eliminada correctamente'
+  }
+}
