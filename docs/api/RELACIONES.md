@@ -152,9 +152,9 @@ const result = await eliminarRelacion('relacion-uuid')
 
 ---
 
-### `obtenerRelaciones(bp_id: string, solo_vigentes?: boolean)`
+### `obtenerRelaciones(bp_id: string, solo_vigentes?: boolean, tipo_relacion?: string)`
 
-Get all relationships for a business partner (bidirectional).
+Get all relationships for a business partner (bidirectional) with complete partner information.
 
 **Parameters:**
 
@@ -162,13 +162,14 @@ Get all relationships for a business partner (bidirectional).
 |-----------|------|-----------|-------------|
 | `bp_id` | string | ✅ | UUID of the business partner |
 | `solo_vigentes` | boolean | ❌ | Return only active relationships (default: true) |
+| `tipo_relacion` | string | ❌ | Filter by specific relationship type (e.g., 'familiar', 'laboral') |
 
 **Returns:**
 
 ```typescript
 {
   success: boolean,
-  data?: Array<Relationship>  // Array of relationship objects
+  data?: Array<Relationship>  // Array of relationship objects with complete partner info
 }
 ```
 
@@ -182,6 +183,67 @@ const result = await obtenerRelaciones('bp-uuid', true)
 
 // Get all relationships including inactive
 const allResult = await obtenerRelaciones('bp-uuid', false)
+
+// Get only family relationships
+const familyResult = await obtenerRelaciones('bp-uuid', true, 'familiar')
+
+// Get only work relationships (including inactive)
+const workResult = await obtenerRelaciones('bp-uuid', false, 'laboral')
+```
+
+**Enhanced Response Structure:**
+
+The function now returns complete information for both origin and destination partners:
+
+```typescript
+{
+  id: string,
+  bp_origen_id: string,
+  bp_destino_id: string,
+  tipo_relacion: string,
+  rol_origen: string,
+  rol_destino: string,
+  es_bidireccional: boolean,
+  fecha_inicio: string,
+  fecha_fin: string | null,
+  es_actual: boolean,
+  atributos: Record<string, unknown>,
+  notas: string | null,
+  creado_en: string,
+  actualizado_en: string,
+  
+  // Origin partner details
+  origen_id: string,
+  origen_codigo_bp: string,
+  origen_tipo_actor: string,
+  origen_primer_nombre: string | null,
+  origen_segundo_nombre: string | null,
+  origen_primer_apellido: string | null,
+  origen_segundo_apellido: string | null,
+  origen_nombre_completo: string | null,
+  origen_tipo_documento: string | null,
+  origen_numero_documento: string | null,
+  origen_identificacion: string | null,
+  origen_fecha_nacimiento: string | null,
+  origen_foto_url: string | null,
+  origen_whatsapp: string | null,
+  
+  // Destination partner details
+  destino_id: string,
+  destino_codigo_bp: string,
+  destino_tipo_actor: string,
+  destino_primer_nombre: string | null,
+  destino_segundo_nombre: string | null,
+  destino_primer_apellido: string | null,
+  destino_segundo_apellido: string | null,
+  destino_nombre_completo: string | null,
+  destino_tipo_documento: string | null,
+  destino_numero_documento: string | null,
+  destino_identificacion: string | null,
+  destino_fecha_nacimiento: string | null,
+  destino_foto_url: string | null,
+  destino_whatsapp: string | null
+}
 ```
 
 ---

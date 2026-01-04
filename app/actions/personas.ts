@@ -472,3 +472,95 @@ export async function softDeletePersona(id: string) {
     message: 'Persona eliminada correctamente'
   }
 }
+
+/**
+ * Search for persons available to create a relationship with
+ * Excludes persons that already have a relationship with the given bp_id
+ *
+ * @param bp_id - The business partner ID to check existing relationships
+ * @param query - Search query (name or document number)
+ * @param organizacion_id - Organization ID for filtering
+ * @returns Array of available persons
+ */
+export async function buscarPersonasDisponiblesParaRelacion(
+  bp_id: string,
+  query: string,
+  organizacion_id: string
+) {
+  const supabase = await createClient()
+
+  // 1. Get existing relationship IDs for this bp
+  const { data: relacionesExistentes } = await supabase
+    .rpc('obtener_relaciones_bp', {
+      p_bp_id: bp_id,
+      p_solo_vigentes: true
+    })
+
+  // Extract all related bp_ids (both origen and destino)
+  const bpIdsRelacionados = new Set<string>()
+  relacionesExistentes?.forEach((rel: any) => {
+    bpIdsRelacionados.add(rel.bp_origen_id)
+    bpIdsRelacionados.add(rel.bp_destino_id)
+  })
+
+  // 2. Search persons excluding those already related
+  // Use direct query to personas with business_partners join to avoid view issues
+  const { data, error } = await supabase
+    .from('personas')
+    .select(`
+      id,
+      primer_nombre,
+      segundo_nombre,
+      primer_apellido,
+      segundo_apellido,
+      tipo_documento,
+      numero_documento,
+      fecha_nacimiento,
+      foto_url,
+      business_partners!inner(
+        codigo_bp,
+        organizacion_id,
+        email_principal,
+        telefono_principal
+      )
+    `)
+    .eq('business_partners.organizacion_id', organizacion_id)
+    .eq('business_partners.tipo_actor', 'persona')
+    .is('business_partners.eliminado_en', null)
+    .is('eliminado_en', null)
+    .or(
+      `primer_nombre.ilike.%${query}%,` +
+      `segundo_nombre.ilike.%${query}%,` +
+      `primer_apellido.ilike.%${query}%,` +
+      `segundo_apellido.ilike.%${query}%,` +
+      `numero_documento.ilike.%${query}%`
+    )
+    .limit(50)
+
+  if (error) {
+    console.error('Error searching persons:', error)
+    return { success: false, data: [] }
+  }
+
+  // 3. Transform and filter out persons already related
+  const disponibles = data?.map((persona: any) => {
+    const bp = persona.business_partners
+    return {
+      id: persona.id,
+      codigo_bp: bp?.codigo_bp,
+      nombre_completo: [persona.primer_nombre, persona.segundo_nombre, persona.primer_apellido, persona.segundo_apellido]
+        .filter(Boolean)
+        .join(' '),
+      identificacion: `${persona.tipo_documento} ${persona.numero_documento}`,
+      email_principal: bp?.email_principal,
+      telefono: bp?.telefono_principal,
+      tipo_actor: 'persona',
+      foto_url: persona.foto_url
+    }
+  }).filter((persona: any) => !bpIdsRelacionados.has(persona.id)) || []
+
+  return {
+    success: true,
+    data: disponibles
+  }
+}

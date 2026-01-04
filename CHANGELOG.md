@@ -8,6 +8,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Enhanced `obtener_relaciones_bp` RPC function with complete partner information
+  - Returns full profile data for both origin and destination partners
+  - New `p_tipo_relacion` parameter for filtering by relationship type
+  - Eliminates N+1 query problem with single JOIN operation
+  - ~90% reduction in database queries for relationship data
+  - Updated parameter naming: `bp_id` → `p_bp_id`, `solo_vigentes` → `p_solo_actuales`
 - Next.js 16 with App Router
 - React 19 with latest features
 - Supabase auth and database

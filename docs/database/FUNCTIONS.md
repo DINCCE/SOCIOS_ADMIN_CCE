@@ -323,29 +323,89 @@ CREATE FUNCTION eliminar_relacion_bp(
 
 #### `obtener_relaciones_bp`
 
-Get all relationships for a business partner (bidirectional).
+Get all relationships for a business partner (bidirectional) with complete partner information.
 
 **Signature:**
 ```sql
 CREATE FUNCTION obtener_relaciones_bp(
-  bp_id UUID,
-  solo_vigentes BOOLEAN DEFAULT TRUE
-) RETURNS SETOF bp_relaciones
+  p_bp_id UUID,
+  p_solo_actuales BOOLEAN DEFAULT TRUE,
+  p_tipo_relacion TEXT DEFAULT NULL
+) RETURNS TABLE(
+  -- Relationship fields
+  id UUID,
+  bp_origen_id UUID,
+  bp_destino_id UUID,
+  tipo_relacion TEXT,
+  rol_origen TEXT,
+  rol_destino TEXT,
+  es_bidireccional BOOLEAN,
+  fecha_inicio DATE,
+  fecha_fin DATE,
+  es_actual BOOLEAN,
+  atributos JSONB,
+  notas TEXT,
+  creado_en TIMESTAMPTZ,
+  actualizado_en TIMESTAMPTZ,
+  
+  -- Origin partner fields
+  origen_id UUID,
+  origen_codigo_bp TEXT,
+  origen_tipo_actor TEXT,
+  origen_primer_nombre TEXT,
+  origen_segundo_nombre TEXT,
+  origen_primer_apellido TEXT,
+  origen_segundo_apellido TEXT,
+  origen_nombre_completo TEXT,
+  origen_tipo_documento TEXT,
+  origen_numero_documento TEXT,
+  origen_identificacion TEXT,
+  origen_fecha_nacimiento DATE,
+  origen_foto_url TEXT,
+  origen_whatsapp TEXT,
+  
+  -- Destination partner fields
+  destino_id UUID,
+  destino_codigo_bp TEXT,
+  destino_tipo_actor TEXT,
+  destino_primer_nombre TEXT,
+  destino_segundo_nombre TEXT,
+  destino_primer_apellido TEXT,
+  destino_segundo_apellido TEXT,
+  destino_nombre_completo TEXT,
+  destino_tipo_documento TEXT,
+  destino_numero_documento TEXT,
+  destino_identificacion TEXT,
+  destino_fecha_nacimiento DATE,
+  destino_foto_url TEXT,
+  destino_whatsapp TEXT
+)
 ```
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `bp_id` | UUID | ✅ | Business partner ID |
-| `solo_vigentes` | BOOLEAN | ❌ | Return only active relationships (default: TRUE) |
+| `p_bp_id` | UUID | ✅ | Business partner ID to query relationships for |
+| `p_solo_actuales` | BOOLEAN | ❌ | Only return current/active relationships (default: TRUE) |
+| `p_tipo_relacion` | TEXT | ❌ | Filter by specific relationship type (e.g., 'familiar', 'laboral') |
 
-**Returns:** Array of `bp_relaciones` records
+**Returns:** Table with complete relationship and partner information
 
 **Business Rules:**
 - Returns relationships where BP is origen OR destino (bidirectional)
-- Filters by `es_actual` if `solo_vigentes = TRUE`
+- Filters by `es_actual` if `p_solo_actuales = TRUE`
+- Filters by `tipo_relacion` if `p_tipo_relacion` is provided
 - Excludes soft-deleted relationships (`eliminado_en IS NULL`)
+- Orders by `fecha_inicio DESC`, then `creado_en DESC`
+- Includes complete person information for both partners when `tipo_actor = 'persona'`
+
+**Key Improvements:**
+- **Complete partner data**: Returns full name, identification, contact info, and profile data for both origin and destination partners
+- **Type filtering**: New `p_tipo_relacion` parameter allows filtering by relationship type
+- **Rich metadata**: Returns `atributos` JSONB and `notas` fields
+- **Bidirectional context**: Returns roles for both sides of the relationship (`rol_origen`, `rol_destino`)
+- **Flexible queries**: Can filter by current status and/or relationship type
 
 **Example Usage:** See [../api/BP_RELACIONES.md](../api/BP_RELACIONES.md#obtener_relaciones_bp)
 

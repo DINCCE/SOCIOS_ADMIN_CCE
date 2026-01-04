@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { Clock, User, Users, Receipt, HeartPulse, ShieldCheck, Settings, LayoutDashboard, ChevronDown, MessageSquare, Pencil } from "lucide-react"
+import { FamilyGroupSection } from "./family-group-section"
 import { Persona } from "@/features/socios/types/socios-schema"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -90,8 +91,8 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                             <DropdownMenuItem className="gap-2" onClick={() => setActiveTab("timeline")}>
                                 <Clock className="h-4 w-4" /> Timeline
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2" onClick={() => setActiveTab("relations")}>
-                                <Users className="h-4 w-4" /> Relaciones
+                            <DropdownMenuItem className="gap-2" onClick={() => setActiveTab("family")}>
+                                <Users className="h-4 w-4" /> Grupo Familiar
                             </DropdownMenuItem>
                             <DropdownMenuItem className="gap-2" onClick={() => setActiveTab("consumptions")}>
                                 <Receipt className="h-4 w-4" /> Consumos
@@ -417,22 +418,8 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                 />
             </TabsContent>
 
-            <TabsContent value="relations" className="mt-0">
-                <Card className="shadow-none border">
-                    <CardHeader className="bg-muted/40 border-b py-4">
-                        <CardTitle className="text-base font-semibold tracking-tight flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            Red de Relaciones
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-12">
-                        <div className="flex flex-col items-center justify-center text-center">
-                            <Users className="h-10 w-10 text-muted-foreground/30 mb-4" />
-                            <p className="text-sm font-medium text-muted-foreground">No hay relaciones vinculadas aún</p>
-                            <p className="text-xs text-muted-foreground/60">Aquí se mostrarán hijos, cónyuges y relaciones laborales</p>
-                        </div>
-                    </CardContent>
-                </Card>
+            <TabsContent value="family" className="mt-0">
+                <FamilyGroupSection bp_id={persona.id} organizacion_id={persona.organizacion_id} />
             </TabsContent>
 
             <TabsContent value="consumptions" className="mt-0">

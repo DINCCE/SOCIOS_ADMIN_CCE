@@ -41,10 +41,20 @@ import { Separator } from "@/components/ui/separator"
 import { crearPersonaFromPersonFormValues } from "@/app/actions/personas"
 import { personSchema, type PersonFormValues } from "@/lib/schemas/person-schema"
 
-export function NewPersonSheet() {
-    const [open, setOpen] = useState(false)
+interface NewPersonSheetProps {
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
+    onSuccess?: (bp_id: string) => void
+}
+
+export function NewPersonSheet({ open: controlledOpen, onOpenChange, onSuccess }: NewPersonSheetProps) {
+    const [internalOpen, setInternalOpen] = useState(false)
     const [isPending, setIsPending] = useState(false)
     const router = useRouter()
+    
+    // Use controlled open if provided, otherwise use internal state
+    const open = controlledOpen !== undefined ? controlledOpen : internalOpen
+    const setOpen = onOpenChange || setInternalOpen
 
     const form = useForm({
         resolver: zodResolver(personSchema),
@@ -82,8 +92,12 @@ export function NewPersonSheet() {
             form.reset()
             setOpen(false)
 
-            // Navigate to the newly created person detail page (profile tab)
-            if (result.bp_id) {
+            // Call onSuccess callback if provided (for nested sheet usage)
+            if (onSuccess && result.bp_id) {
+                onSuccess(result.bp_id)
+            }
+            // Otherwise navigate to the newly created person detail page (default behavior)
+            else if (result.bp_id) {
                 router.push(`/admin/socios/personas/${result.bp_id}?tab=profile`)
             } else {
                 router.refresh()
@@ -98,12 +112,15 @@ export function NewPersonSheet() {
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nueva Persona
-                </Button>
-            </SheetTrigger>
+            {/* Only show trigger if not controlled (i.e., used as standalone) */}
+            {controlledOpen === undefined && (
+                <SheetTrigger asChild>
+                    <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Nueva Persona
+                    </Button>
+                </SheetTrigger>
+            )}
             <SheetContent className="sm:max-w-xl w-[90vw] flex flex-col p-0 gap-0 border-l shadow-2xl">
                 {/* Header Section */}
                 <div className="bg-background shrink-0 px-6 py-6 border-b">
