@@ -11,6 +11,9 @@ interface PageHeaderProps {
 /**
  * PageHeader - Standardized page header with optional metadata
  *
+ * @deprecated Use PageHeader from @/components/shell/page-header instead
+ * Este componente será removido en v2.0
+ *
  * Metadata appears as low-opacity text next to title (e.g., "128 total")
  * to avoid "Badge fatigue" while providing data context.
  *
@@ -30,6 +33,14 @@ export function PageHeader({
   className,
   children,
 }: PageHeaderProps) {
+  if (process.env.NODE_ENV === 'development') {
+    console.warn(
+      '[DEPRECATED] PageHeader from @/components/page-header is deprecated. ' +
+      'Use PageHeader from @/components/shell/page-header instead. ' +
+      'This component will be removed in v2.0.'
+    )
+  }
+
   return (
     <div className={cn("mb-6 flex items-center justify-between", className)}>
       <div>

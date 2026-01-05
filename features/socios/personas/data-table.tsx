@@ -1,244 +1,116 @@
 "use client"
 
-import * as React from "react"
-import {
-  ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
-import { useRouter } from "next/navigation"
-import { AnimatePresence } from "framer-motion"
+import { flexRender, type Table } from "@tanstack/react-table"
+import type { useRouter } from "next/navigation"
 
 import { cn } from "@/lib/utils"
-
-import { CommandSearch } from "@/components/ui/command-search"
-import { FloatingActionBar } from "@/components/ui/floating-action-bar"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Table,
+  Table as UITable,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { DataTablePagination } from "@/features/socios/components/data-table-pagination"
-import { DataTableViewOptions } from "@/features/socios/components/data-table-view-options"
+import type { Persona } from "@/features/socios/types/socios-schema"
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[]
+interface PersonasDataTableProps {
+  table: Table<Persona>
+  router: ReturnType<typeof useRouter>
 }
 
-export function PersonasDataTable<TData, TValue>({
-  columns,
-  data,
-}: DataTableProps<TData, TValue>) {
-  const router = useRouter()
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({
-      codigo: false,
-      genero: false,
-      fecha_nacimiento: false,
-      nacionalidad: false,
-      tipo_sangre: false,
-      eps: false,
-      ocupacion: false,
-      fecha_socio: false,
-      estado_vital: false,
-      whatsapp: false,
-      organizacion_nombre: false,
-    })
-  const [rowSelection, setRowSelection] = React.useState({})
-
-  // Dynamic visibility for "tags" column
-  React.useEffect(() => {
-    const hasTags = data.some((item) => {
-      const typedItem = item as { tags?: string[] }
-      return (typedItem.tags || []).length > 0
-    })
-    setColumnVisibility(prev => ({
-      ...prev,
-      tags: hasTags
-    }))
-  }, [data])
-
-  const table = useReactTable({
-    data,
-    columns,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
-    },
-    enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  })
-
+/**
+ * PersonasDataTable - Presentation component for personas table
+ *
+ * This component now receives a pre-configured table instance from the parent,
+ * allowing the toolbar, pagination, and floating action bar to be managed externally.
+ *
+ * @example
+ * ```tsx
+ * const table = useReactTable({ data, columns, ... })
+ * return (
+ *   <div className="overflow-hidden rounded-md border">
+ *     <PersonasDataTable table={table} router={router} />
+ *   </div>
+ * )
+ * ```
+ */
+export function PersonasDataTable({ table, router }: PersonasDataTableProps) {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-1 items-center space-x-2">
-          <CommandSearch
-            placeholder="Buscar por nombre, documento o email..."
-            value={
-              (table.getColumn("nombre_completo")?.getFilterValue() as string) ??
-              ""
-            }
-            onChange={(value) =>
-              table.getColumn("nombre_completo")?.setFilterValue(value)
-            }
-            aria-label="Buscar personas"
-          />
-          <Select
-            value={
-              (table.getColumn("estado")?.getFilterValue() as string) ?? "all"
-            }
-            onValueChange={(value) =>
-              table
-                .getColumn("estado")
-                ?.setFilterValue(value === "all" ? "" : value)
-            }
-          >
-            <SelectTrigger className="h-8 w-[130px]">
-              <SelectValue placeholder="Estado" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="activo">Activo</SelectItem>
-              <SelectItem value="inactivo">Inactivo</SelectItem>
-              <SelectItem value="suspendido">Suspendido</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <DataTableViewOptions table={table} />
-      </div>
-      <div className="overflow-hidden rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead
-                      key={header.id}
-                      className={cn(
-                        header.column.id === "select" && "sticky left-0 z-20 bg-slate-50",
-                        header.column.id === "nombre_completo" && "min-w-[250px] sticky left-[48px] z-20 bg-slate-50 shadow-[2px_0_8px_-2px_rgba(0,0,0,0.05)]",
-                        header.column.id !== "nombre_completo" && header.column.id !== "select" && "w-auto whitespace-nowrap"
-                      )}
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className="group cursor-pointer transition-colors hover:bg-muted/50"
-                  onClick={(e) => {
-                    // Don't navigate if clicking checkbox or action button
-                    const target = e.target as HTMLElement
-                    if (
-                      target.closest('button') ||
-                      target.closest('input') ||
-                      target.closest('a') ||
-                      target.getAttribute('role') === 'checkbox'
-                    ) {
-                      return
-                    }
-                    router.push(`/admin/socios/personas/${(row.original as { id: string }).id}`)
-                  }}
+    <UITable>
+      <TableHeader>
+        {table.getHeaderGroups().map((headerGroup) => (
+          <TableRow key={headerGroup.id}>
+            {headerGroup.headers.map((header) => {
+              return (
+                <TableHead
+                  key={header.id}
+                  className={cn(
+                    header.column.id === "select" && "sticky left-0 z-20 bg-slate-50",
+                    header.column.id === "nombre_completo" && "min-w-[250px] sticky left-[48px] z-20 bg-slate-50 shadow-[2px_0_8px_-2px_rgba(0,0,0,0.05)]",
+                    header.column.id !== "nombre_completo" && header.column.id !== "select" && "w-auto whitespace-nowrap"
+                  )}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className={cn(
-                        cell.column.id === "select" && "sticky left-0 z-10 bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted",
-                        cell.column.id === "nombre_completo" && "sticky left-[48px] z-10 bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted shadow-[2px_0_8px_-2px_rgba(0,0,0,0.05)]"
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
                       )}
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
+                </TableHead>
+              )
+            })}
+          </TableRow>
+        ))}
+      </TableHeader>
+      <TableBody>
+        {table.getRowModel().rows?.length ? (
+          table.getRowModel().rows.map((row) => (
+            <TableRow
+              key={row.id}
+              data-state={row.getIsSelected() && "selected"}
+              className="group cursor-pointer transition-colors hover:bg-muted/50"
+              onClick={(e) => {
+                // Don't navigate if clicking checkbox or action button
+                const target = e.target as HTMLElement
+                if (
+                  target.closest('button') ||
+                  target.closest('input') ||
+                  target.closest('a') ||
+                  target.getAttribute('role') === 'checkbox'
+                ) {
+                  return
+                }
+                router.push(`/admin/socios/personas/${(row.original as { id: string }).id}`)
+              }}
+            >
+              {row.getVisibleCells().map((cell) => (
                 <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
+                  key={cell.id}
+                  className={cn(
+                    cell.column.id === "select" && "sticky left-0 z-10 bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted",
+                    cell.column.id === "nombre_completo" && "sticky left-[48px] z-10 bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted shadow-[2px_0_8px_-2px_rgba(0,0,0,0.05)]"
+                  )}
                 >
-                  No se encontraron resultados.
+                  {flexRender(
+                    cell.column.columnDef.cell,
+                    cell.getContext()
+                  )}
                 </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <DataTablePagination table={table} />
-
-      {/* Floating Action Bar */}
-      <AnimatePresence>
-        {table.getFilteredSelectedRowModel().rows.length > 0 && (
-          <FloatingActionBar
-            selectedCount={table.getFilteredSelectedRowModel().rows.length}
-            totalCount={table.getFilteredRowModel().rows.length}
-            onExport={() => {
-              const selectedRows = table.getFilteredSelectedRowModel().rows.map(row => row.original)
-              console.log('Export', selectedRows)
-              // Future: CSV/Excel export
-            }}
-            onChangeStatus={() => {
-              console.log('Change status')
-              // Future: Open dialog with estado dropdown
-            }}
-            onDelete={() => {
-              console.log('Delete')
-              // Future: Open confirmation dialog with soft delete
-            }}
-          />
+              ))}
+            </TableRow>
+          ))
+        ) : (
+          <TableRow>
+            <TableCell
+              colSpan={table.getAllColumns().length}
+              className="h-24 text-center"
+            >
+              No se encontraron resultados.
+            </TableCell>
+          </TableRow>
         )}
-      </AnimatePresence>
-    </div>
+      </TableBody>
+    </UITable>
   )
 }

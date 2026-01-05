@@ -1,8 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
-import { PersonasDataTable } from "@/features/socios/personas/data-table"
+import { PersonasPageClient } from "./personas-page-client"
 import { columns } from "@/features/socios/personas/columns"
-import { NewPersonSheet } from "@/components/socios/personas/new-person-sheet"
-import { PageHeader } from "@/components/page-header"
 
 export const metadata = {
   title: "Personas | SOCIOS ADMIN",
@@ -21,11 +19,7 @@ export default async function PersonasPage() {
   if (error) {
     console.error("Error fetching personas:", error)
     return (
-      <div className="container mx-auto py-10">
-        <PageHeader
-          title="Personas"
-          description="Gestiona las personas registradas como socios de negocio"
-        />
+      <div className="p-8">
         <div className="rounded-md bg-destructive/10 p-4">
           <p className="text-destructive">
             Error al cargar los datos. Por favor, intente nuevamente.
@@ -35,16 +29,5 @@ export default async function PersonasPage() {
     )
   }
 
-  return (
-    <div className="container mx-auto py-10">
-      <PageHeader
-        title="Personas"
-        description="Gestiona las personas registradas como socios de negocio"
-        metadata={`${personas?.length || 0} total`}
-      >
-        <NewPersonSheet />
-      </PageHeader>
-      <PersonasDataTable columns={columns} data={personas || []} />
-    </div>
-  )
+  return <PersonasPageClient initialData={personas || []} columns={columns} />
 }
