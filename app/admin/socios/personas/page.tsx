@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
 import { PersonasPageClient } from "./personas-page-client"
-import { columns } from "@/features/socios/personas/columns"
 
 export const metadata = {
   title: "Personas | SOCIOS ADMIN",
@@ -29,5 +28,5 @@ export default async function PersonasPage() {
     )
   }
 
-  return <PersonasPageClient initialData={personas || []} columns={columns} />
+  return <PersonasPageClient initialData={personas || []} />
 }

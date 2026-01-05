@@ -34,13 +34,13 @@ import { DataTablePagination } from '@/features/socios/components/data-table-pag
 import { FloatingActionBar } from '@/components/ui/floating-action-bar'
 import { Separator } from '@/components/ui/separator'
 import type { Empresa } from '@/features/socios/types/socios-schema'
+import { columns } from '@/features/socios/empresas/columns'
 
 interface EmpresasPageClientProps {
   initialData: Empresa[]
-  columns: ColumnDef<Empresa, unknown>[]
 }
 
-export function EmpresasPageClient({ initialData, columns }: EmpresasPageClientProps) {
+export function EmpresasPageClient({ initialData }: EmpresasPageClientProps) {
   const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -70,6 +70,8 @@ export function EmpresasPageClient({ initialData, columns }: EmpresasPageClientP
       rowSelection,
     },
     enableRowSelection: true,
+    enableColumnResizing: true,
+    columnResizeMode: "onChange",
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,

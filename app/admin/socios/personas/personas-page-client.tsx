@@ -34,13 +34,13 @@ import { DataTablePagination } from '@/features/socios/components/data-table-pag
 import { FloatingActionBar } from '@/components/ui/floating-action-bar'
 import { Separator } from '@/components/ui/separator'
 import type { Persona } from '@/features/socios/types/socios-schema'
+import { columns } from '@/features/socios/personas/columns'
 
 interface PersonasPageClientProps {
   initialData: Persona[]
-  columns: ColumnDef<Persona, unknown>[]
 }
 
-export function PersonasPageClient({ initialData, columns }: PersonasPageClientProps) {
+export function PersonasPageClient({ initialData }: PersonasPageClientProps) {
   const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -80,6 +80,8 @@ export function PersonasPageClient({ initialData, columns }: PersonasPageClientP
       rowSelection,
     },
     enableRowSelection: true,
+    enableColumnResizing: true,
+    columnResizeMode: "onChange",
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,

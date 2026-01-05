@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
 import { EmpresasPageClient } from "./empresas-page-client"
-import { columns } from "@/features/socios/empresas/columns"
 
 export const metadata = {
   title: "Empresas | SOCIOS ADMIN",
@@ -29,5 +28,5 @@ export default async function EmpresasPage() {
     )
   }
 
-  return <EmpresasPageClient initialData={empresas || []} columns={columns} />
+  return <EmpresasPageClient initialData={empresas || []} />
 }

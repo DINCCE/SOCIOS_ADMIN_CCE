@@ -45,18 +45,39 @@ export function PersonasDataTable({ table, router }: PersonasDataTableProps) {
               return (
                 <TableHead
                   key={header.id}
+                  colSpan={header.colSpan}
+                  style={{ width: header.getSize() }}
                   className={cn(
+                    "relative group",
                     header.column.id === "select" && "sticky left-0 z-20 bg-slate-50",
                     header.column.id === "nombre_completo" && "min-w-[250px] sticky left-[48px] z-20 bg-slate-50 shadow-[2px_0_8px_-2px_rgba(0,0,0,0.05)]",
-                    header.column.id !== "nombre_completo" && header.column.id !== "select" && "w-auto whitespace-nowrap"
+                    header.column.id !== "nombre_completo" && header.column.id !== "select" && "whitespace-nowrap"
                   )}
                 >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
+                  <div className={cn(
+                    "flex items-center",
+                    header.column.getCanSort() && "cursor-pointer select-none"
+                  )}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </div>
+
+                  {/* Column Resize Handle */}
+                  {header.column.getCanResize() && (
+                    <div
+                      onMouseDown={header.getResizeHandler()}
+                      onTouchStart={header.getResizeHandler()}
+                      className={cn(
+                        "absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none transition-opacity",
+                        "bg-primary/20 opacity-0 group-hover:opacity-100",
+                        header.column.getIsResizing() && "bg-primary opacity-100"
                       )}
+                    />
+                  )}
                 </TableHead>
               )
             })}
