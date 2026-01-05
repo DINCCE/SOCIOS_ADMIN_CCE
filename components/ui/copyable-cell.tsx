@@ -2,10 +2,11 @@
 
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { ReactNode } from "react"
 
 interface CopyableCellProps {
   value: string
-  label?: string // Lo que se muestra (si es diferente al valor copiado)
+  label?: ReactNode // Lo que se muestra (si es diferente al valor copiado)
   className?: string
 }
 

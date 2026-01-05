@@ -9,8 +9,7 @@ export function createClient() {
                 persistSession: true,
                 autoRefreshToken: true,
                 detectSessionInUrl: true,
-                flow: 'pkce',
-                storage: window.localStorage, // Explicitly use localStorage
+                storage: typeof window !== 'undefined' ? window.localStorage : undefined, // Check for window
                 storageKey: 'sb-ywazlajzxwkmqzjhlmao-auth-token', // Match cookie name
             },
             db: { schema: 'public' },
