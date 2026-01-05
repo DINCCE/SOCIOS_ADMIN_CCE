@@ -1,8 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
-import { EmpresasDataTable } from "@/features/socios/empresas/data-table"
+import { EmpresasPageClient } from "./empresas-page-client"
 import { columns } from "@/features/socios/empresas/columns"
-import { PageHeader } from "@/components/page-header"
-import { NewCompanySheet } from "@/components/socios/empresas/new-company-sheet"
 
 export const metadata = {
   title: "Empresas | SOCIOS ADMIN",
@@ -21,11 +19,7 @@ export default async function EmpresasPage() {
   if (error) {
     console.error("Error fetching empresas:", error)
     return (
-      <div className="container mx-auto py-10">
-        <PageHeader
-          title="Empresas"
-          description="Gestiona las empresas registradas como socios de negocio"
-        />
+      <div className="p-8">
         <div className="rounded-md bg-destructive/10 p-4">
           <p className="text-destructive">
             Error al cargar los datos. Por favor, intente nuevamente.
@@ -35,16 +29,5 @@ export default async function EmpresasPage() {
     )
   }
 
-  return (
-    <div className="container mx-auto py-10">
-      <PageHeader
-        title="Empresas"
-        description="Gestiona las empresas registradas como socios de negocio"
-        metadata={`${empresas?.length || 0} total`}
-      >
-        <NewCompanySheet />
-      </PageHeader>
-      <EmpresasDataTable columns={columns} data={empresas || []} />
-    </div>
-  )
+  return <EmpresasPageClient initialData={empresas || []} columns={columns} />
 }

@@ -1,24 +1,34 @@
 import { Suspense } from 'react'
+import { PageShell } from '@/components/shell/page-shell'
+import { PageHeader } from '@/components/shell/page-header'
+import { PageToolbar } from '@/components/shell/page-toolbar'
+import { PageContent } from '@/components/shell/page-content'
 import { ViewToggle } from '@/components/procesos/view-toggle'
 import { OportunidadesBoard } from '@/components/procesos/oportunidades/oportunidades-board'
 import { OportunidadesList } from '@/components/procesos/oportunidades/oportunidades-list'
-import { PageHeader } from '@/components/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function OportunidadesPage() {
   return (
-    <div className="space-y-6">
+    <PageShell>
+      {/* Header */}
       <PageHeader
         title="Oportunidades"
         description="Gestiona las oportunidades de negocio y solicitudes"
-      >
-        <ViewToggle defaultValue="list" />
-      </PageHeader>
+      />
 
-      <Suspense fallback={<OportunidadesSkeleton />}>
-        <OportunidadesContent />
-      </Suspense>
-    </div>
+      {/* Toolbar */}
+      <PageToolbar
+        right={<ViewToggle defaultValue="list" />}
+      />
+
+      {/* Content */}
+      <PageContent>
+        <Suspense fallback={<OportunidadesSkeleton />}>
+          <OportunidadesContent />
+        </Suspense>
+      </PageContent>
+    </PageShell>
   )
 }
 
