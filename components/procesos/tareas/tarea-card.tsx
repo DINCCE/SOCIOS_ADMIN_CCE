@@ -1,0 +1,151 @@
+'use client'
+
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Avatar } from '@/components/ui/avatar'
+import { AlertCircle, AlertTriangle, CheckCircle2, Clock, XCircle } from 'lucide-react'
+import type { TareaView } from './tareas-board'
+import { EstadoTarea } from './tareas-board'
+import { PrioridadTarea } from './tareas-board'
+
+interface TareaCardProps {
+  tarea: TareaView
+  isDragging?: boolean
+}
+
+const ESTADO_CONFIG: Record<
+  EstadoTarea,
+  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: any }
+> = {
+  pendiente: { label: 'Pendiente', variant: 'default', icon: Clock },
+  en_progreso: { label: 'En Progreso', variant: 'secondary', icon: AlertCircle },
+  bloqueada: { label: 'Bloqueada', variant: 'secondary', icon: AlertTriangle },
+  hecha: { label: 'Hecha', variant: 'default', icon: CheckCircle2 },
+  cancelada: { label: 'Cancelada', variant: 'outline', icon: XCircle },
+}
+
+const PRIORIDAD_CONFIG: Record<
+  PrioridadTarea,
+  { label: string; color: string; bgColor: string; icon: any }
+> = {
+  critica: { 
+    label: 'Crítica', 
+    color: 'text-red-700', 
+    bgColor: 'bg-red-50', 
+    icon: AlertCircle 
+  },
+  alta: { 
+    label: 'Alta', 
+    color: 'text-orange-700', 
+    bgColor: 'bg-orange-50', 
+    icon: AlertTriangle 
+  },
+  media: { 
+    label: 'Media', 
+    color: 'text-blue-700', 
+    bgColor: 'bg-blue-50', 
+    icon: Clock 
+  },
+  baja: { 
+    label: 'Baja', 
+    color: 'text-gray-700', 
+    bgColor: 'bg-gray-50', 
+    icon: Clock 
+  },
+}
+
+export function TareaCard({ tarea, isDragging }: TareaCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging: isSortableDragging,
+  } = useSortable({ id: tarea.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  const dragging = isDragging || isSortableDragging
+  const EstadoIcon = ESTADO_CONFIG[tarea.estado as EstadoTarea].icon
+  const PrioridadIcon = PRIORIDAD_CONFIG[tarea.prioridad as PrioridadTarea].icon
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`
+        p-3 cursor-grab active:cursor-grabbing
+        transition-all duration-200
+        hover:border-primary/50
+        ${dragging ? 'shadow-xl rotate-2 scale-105' : ''}
+      `}
+    >
+      <div className="space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className={`${PRIORIDAD_CONFIG[tarea.prioridad as PrioridadTarea].bgColor} p-1 rounded`}>
+              <PrioridadIcon className={`h-3 w-3 ${PRIORIDAD_CONFIG[tarea.prioridad as PrioridadTarea].color}`} />
+            </div>
+            <p className="text-sm font-medium line-clamp-2 flex-1">
+              {tarea.titulo}
+            </p>
+          </div>
+          <Badge variant={ESTADO_CONFIG[tarea.estado as EstadoTarea].variant} className="text-xs shrink-0">
+            <EstadoIcon className="h-3 w-3 mr-1" />
+            {ESTADO_CONFIG[tarea.estado as EstadoTarea].label}
+          </Badge>
+        </div>
+
+        {tarea.descripcion && (
+          <p className="text-xs text-muted-foreground line-clamp-2">
+            {tarea.descripcion}
+          </p>
+        )}
+
+        <div className="flex items-center justify-between pt-2 border-t">
+          {tarea.fecha_vencimiento && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              <span>
+                {new Date(tarea.fecha_vencimiento).toLocaleDateString('es-CO', {
+                  day: 'numeric',
+                  month: 'short',
+                })}
+              </span>
+            </div>
+          )}
+          {tarea.asignado_email && (
+            <Avatar className="h-6 w-6">
+              <div className="h-full w-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium">
+                {tarea.asignado_email.charAt(0).toUpperCase()}
+              </div>
+            </Avatar>
+          )}
+        </div>
+
+        {(tarea.relacionado_codigo_bp || tarea.oportunidad_codigo) && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {tarea.relacionado_codigo_bp && (
+              <span className="bg-muted px-1.5 py-0.5 rounded">
+                {tarea.relacionado_codigo_bp}
+              </span>
+            )}
+            {tarea.oportunidad_codigo && (
+              <span className="bg-muted px-1.5 py-0.5 rounded">
+                {tarea.oportunidad_codigo}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}

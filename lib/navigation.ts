@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   Building2,
+  Kanban,
   LayoutDashboard,
   Settings2,
   Users,
@@ -44,6 +45,21 @@ export const NAVIGATION_CONFIG: NavItem[] = [
       {
         title: 'Empresas',
         url: '/admin/socios/empresas',
+      },
+    ],
+  },
+  {
+    title: 'Procesos',
+    url: '/admin/procesos',
+    icon: Kanban,
+    items: [
+      {
+        title: 'Oportunidades',
+        url: '/admin/procesos/oportunidades',
+      },
+      {
+        title: 'Tareas',
+        url: '/admin/procesos/tareas',
       },
     ],
   },
