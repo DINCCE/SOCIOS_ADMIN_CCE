@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
+import { ModeToggle } from '@/components/ui/mode-toggle'
 import {
   Avatar,
   AvatarFallback,
@@ -119,6 +120,13 @@ export function NavUser({
                 Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <div className="flex items-center justify-between w-full pr-2">
+                <span>Theme</span>
+                <ModeToggle />
+              </div>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
               <LogOut />
