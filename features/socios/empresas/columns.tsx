@@ -12,6 +12,7 @@ import { NullCell } from "@/components/ui/null-cell"
 import { DataDate } from "@/components/ui/data-date"
 import { DataEnum } from "@/components/ui/data-enum"
 import { FormattedNumber } from "@/components/ui/formatted-number"
+import { CopyableCell } from "@/components/ui/copyable-cell"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { DataTableColumnHeader } from "@/features/socios/components/data-table-column-header"
 import { Empresa } from "@/features/socios/types/socios-schema"
+import { formatDocumentId } from "@/lib/utils"
 
 const estadoVariants: Record<string, string> = {
   activo: "status-active",
@@ -43,6 +45,7 @@ export const columns: ColumnDef<Empresa>[] = [
         }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Seleccionar todas"
+        className="translate-y-[2px]"
       />
     ),
     cell: ({ row }) => (
@@ -50,10 +53,15 @@ export const columns: ColumnDef<Empresa>[] = [
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
         aria-label="Seleccionar fila"
+        className="translate-y-[2px]"
       />
     ),
     enableSorting: false,
     enableHiding: false,
+    enableResizing: false,
+    size: 40,
+    minSize: 40,
+    maxSize: 40,
   },
   {
     accessorKey: "codigo",
@@ -62,9 +70,12 @@ export const columns: ColumnDef<Empresa>[] = [
     ),
     cell: ({ row }) => (
       <div className="font-medium">
-        <DataId>{row.getValue("codigo")}</DataId>
+        <CopyableCell value={row.getValue("codigo")} />
       </div>
     ),
+    meta: {
+      size: 100,
+    },
   },
   {
     accessorKey: "razon_social",
@@ -80,6 +91,10 @@ export const columns: ColumnDef<Empresa>[] = [
         />
       )
     },
+    meta: {
+      size: 220,
+      minSize: 200,
+    },
   },
   {
     accessorKey: "nit_completo",
@@ -87,14 +102,19 @@ export const columns: ColumnDef<Empresa>[] = [
       <DataTableColumnHeader column={column} title="NIT" className="text-left" />
     ),
     cell: ({ row }) => {
+      const nitValue = row.getValue("nit_completo")
       return (
         <div className="font-medium whitespace-nowrap">
-          <FormattedNumber
-            value={row.getValue("nit_completo")}
-            type="document"
+          <CopyableCell
+            value={nitValue}
+            label={<span className="font-mono text-xs">{formatDocumentId(nitValue)}</span>}
+            className="text-xs"
           />
         </div>
       )
+    },
+    meta: {
+      size: 140,
     },
   },
   {
@@ -106,9 +126,12 @@ export const columns: ColumnDef<Empresa>[] = [
       const email = row.getValue("email_principal") as string | null
       return email ? (
         <div className="max-w-[200px] truncate tabular-nums text-xs tracking-wide text-slate-600 whitespace-nowrap">
-          {email}
+          <CopyableCell value={email} />
         </div>
       ) : <NullCell />
+    },
+    meta: {
+      size: 240,
     },
   },
   {
@@ -116,9 +139,18 @@ export const columns: ColumnDef<Empresa>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Teléfono" className="text-left" />
     ),
-    cell: ({ row }) => (
-      <FormattedNumber value={row.getValue("telefono_principal") as string} type="phone" />
-    ),
+    cell: ({ row }) => {
+      const telefono = row.getValue("telefono_principal") as string
+      return telefono ? (
+        <CopyableCell
+          value={telefono}
+          label={<FormattedNumber value={telefono} type="phone" />}
+        />
+      ) : <NullCell />
+    },
+    meta: {
+      size: 130,
+    },
   },
   {
     accessorKey: "tipo_sociedad",
@@ -138,6 +170,9 @@ export const columns: ColumnDef<Empresa>[] = [
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id))
     },
+    meta: {
+      size: 90,
+    },
   },
   // --- Optional Columns (Hidden by default) ---
   {
@@ -146,6 +181,9 @@ export const columns: ColumnDef<Empresa>[] = [
       <DataTableColumnHeader column={column} title="Nombre Comercial" />
     ),
     enableHiding: true,
+    meta: {
+      size: 150,
+    },
   },
   {
     accessorKey: "sector_industria",
@@ -153,6 +191,9 @@ export const columns: ColumnDef<Empresa>[] = [
       <DataTableColumnHeader column={column} title="Sector" />
     ),
     enableHiding: true,
+    meta: {
+      size: 120,
+    },
   },
   {
     accessorKey: "tamano_empresa",
@@ -160,6 +201,9 @@ export const columns: ColumnDef<Empresa>[] = [
       <DataTableColumnHeader column={column} title="Tamaño" />
     ),
     enableHiding: true,
+    meta: {
+      size: 100,
+    },
   },
   {
     accessorKey: "actividad_economica",
@@ -167,6 +211,9 @@ export const columns: ColumnDef<Empresa>[] = [
       <DataTableColumnHeader column={column} title="Actividad Económica" />
     ),
     enableHiding: true,
+    meta: {
+      size: 150,
+    },
   },
   {
     accessorKey: "nombre_representante_legal",
@@ -174,6 +221,9 @@ export const columns: ColumnDef<Empresa>[] = [
       <DataTableColumnHeader column={column} title="Representante Legal" />
     ),
     enableHiding: true,
+    meta: {
+      size: 180,
+    },
   },
   {
     accessorKey: "cargo_representante",
@@ -181,6 +231,9 @@ export const columns: ColumnDef<Empresa>[] = [
       <DataTableColumnHeader column={column} title="Cargo Repr." />
     ),
     enableHiding: true,
+    meta: {
+      size: 120,
+    },
   },
   {
     accessorKey: "ingresos_anuales",
@@ -196,6 +249,9 @@ export const columns: ColumnDef<Empresa>[] = [
       ) : <span className="text-xs tracking-wide text-slate-600">$0</span>
     },
     enableHiding: true,
+    meta: {
+      size: 120,
+    },
   },
   {
     accessorKey: "numero_empleados",
@@ -211,6 +267,9 @@ export const columns: ColumnDef<Empresa>[] = [
       ) : <NullCell />
     },
     enableHiding: true,
+    meta: {
+      size: 100,
+    },
   },
   {
     accessorKey: "website",
@@ -226,6 +285,9 @@ export const columns: ColumnDef<Empresa>[] = [
       ) : <NullCell />
     },
     enableHiding: true,
+    meta: {
+      size: 150,
+    },
   },
   {
     accessorKey: "whatsapp",
@@ -235,10 +297,16 @@ export const columns: ColumnDef<Empresa>[] = [
     cell: ({ row }) => {
       const val = row.getValue("whatsapp") as string
       return val ? (
-        <FormattedNumber value={val} type="phone" />
+        <CopyableCell
+          value={val}
+          label={<FormattedNumber value={val} type="phone" />}
+        />
       ) : <NullCell />
     },
     enableHiding: true,
+    meta: {
+      size: 140,
+    },
   },
   {
     accessorKey: "estado",
@@ -250,16 +318,21 @@ export const columns: ColumnDef<Empresa>[] = [
       // "Activo" is neutral/subtle in SaaS 2025
       const variant = (estadoVariants[estado] || "status-neutral") as "status-active" | "status-inactive" | "status-destructive" | "status-warning" | "status-neutral"
       return (
-        <Badge
-          variant={variant}
-          showDot
-        >
-          {estado.charAt(0).toUpperCase() + estado.slice(1)}
-        </Badge>
+        <div className="flex justify-start">
+          <Badge
+            variant={variant}
+            showDot
+          >
+            {estado.charAt(0).toUpperCase() + estado.slice(1)}
+          </Badge>
+        </div>
       )
     },
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id))
+    },
+    meta: {
+      size: 110,
     },
   },
   {
@@ -278,7 +351,10 @@ export const columns: ColumnDef<Empresa>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(empresa.id)}
+              onClick={(e) => {
+                e.stopPropagation()
+                navigator.clipboard.writeText(empresa.id)
+              }}
             >
               Copiar ID: <DataId className="ml-1">{empresa.id.substring(0, 8)}...</DataId>
             </DropdownMenuItem>
@@ -294,5 +370,9 @@ export const columns: ColumnDef<Empresa>[] = [
     },
     enableSorting: false,
     enableHiding: false,
+    enableResizing: false,
+    size: 40,
+    minSize: 40,
+    maxSize: 40,
   },
 ]

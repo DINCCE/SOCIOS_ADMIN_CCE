@@ -11,6 +11,7 @@ import { DataId } from "@/components/ui/data-id"
 import { IdentityCell } from "@/components/ui/identity-cell"
 import { NullCell } from "@/components/ui/null-cell"
 import { FormattedNumber } from "@/components/ui/formatted-number"
+import { CopyableCell } from "@/components/ui/copyable-cell"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,7 @@ import {
 import { DataTableColumnHeader } from "@/features/socios/components/data-table-column-header"
 import { Persona } from "@/features/socios/types/socios-schema"
 import { formatRelativeDate, formatShortDate, TABULAR_NUMS } from "@/lib/format"
+import { formatDocumentId } from "@/lib/utils"
 import { User, UserMinus } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -48,6 +50,7 @@ export const columns: ColumnDef<Persona>[] = [
         }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Seleccionar todas"
+        className="translate-y-[2px]"
       />
     ),
     cell: ({ row }) => (
@@ -55,10 +58,15 @@ export const columns: ColumnDef<Persona>[] = [
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
         aria-label="Seleccionar fila"
+        className="translate-y-[2px]"
       />
     ),
     enableSorting: false,
     enableHiding: false,
+    enableResizing: false,
+    size: 40,
+    minSize: 40,
+    maxSize: 40,
   },
   {
     accessorKey: "codigo",
@@ -67,9 +75,12 @@ export const columns: ColumnDef<Persona>[] = [
     ),
     cell: ({ row }) => (
       <div className="font-medium">
-        <DataId>{row.getValue("codigo")}</DataId>
+        <CopyableCell value={row.getValue("codigo")} />
       </div>
     ),
+    meta: {
+      size: 100,
+    },
   },
   {
     accessorKey: "nombre_completo",
@@ -87,28 +98,36 @@ export const columns: ColumnDef<Persona>[] = [
         />
       )
     },
+    meta: {
+      size: 220,
+      minSize: 200,
+    },
   },
   {
     accessorKey: "numero_documento",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Documento" className="text-center" />
+      <DataTableColumnHeader column={column} title="Documento" className="text-left" />
     ),
     cell: ({ row }) => {
       const tipoDocumento = row.original.tipo_documento
       const numeroDocumento = row.getValue("numero_documento") as string
       return (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center gap-2">
           <Badge
             variant="metadata-outline"
           >
             {tipoDocumento}
           </Badge>
-          <FormattedNumber
+          <CopyableCell
             value={numeroDocumento}
-            type="document"
+            className="font-mono text-xs"
+            label={formatDocumentId(numeroDocumento)}
           />
         </div>
       )
+    },
+    meta: {
+      size: 140,
     },
   },
 
@@ -135,17 +154,33 @@ export const columns: ColumnDef<Persona>[] = [
       const rowTags = row.getValue(id) as string[]
       return value.some((tag: string) => rowTags.includes(tag))
     },
+    meta: {
+      size: 130,
+    },
   },
   {
     accessorKey: "telefono_principal",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Teléfono" className="text-center" />
+      <DataTableColumnHeader column={column} title="Teléfono" />
     ),
-    cell: ({ row }) => (
-      <div className="text-center">
-        <FormattedNumber value={row.getValue("telefono_principal")} type="phone" />
-      </div>
-    ),
+    cell: ({ row }) => {
+      const telefono = row.getValue("telefono_principal") as string
+      return (
+        <div className="text-left">
+          {telefono ? (
+            <CopyableCell
+              value={telefono}
+              label={<FormattedNumber value={telefono} type="phone" />}
+            />
+          ) : (
+            <FormattedNumber value={telefono} type="phone" />
+          )}
+        </div>
+      )
+    },
+    meta: {
+      size: 130,
+    },
   },
   // --- Optional Columns (Hidden by default) ---
   {
@@ -165,6 +200,9 @@ export const columns: ColumnDef<Persona>[] = [
         </div>
       )
     },
+    meta: {
+      size: 100,
+    },
   },
   {
     accessorKey: "fecha_nacimiento",
@@ -180,6 +218,9 @@ export const columns: ColumnDef<Persona>[] = [
       ) : <NullCell />
     },
     enableHiding: true,
+    meta: {
+      size: 120,
+    },
   },
   {
     accessorKey: "nacionalidad",
@@ -193,6 +234,9 @@ export const columns: ColumnDef<Persona>[] = [
       ) : <NullCell />
     },
     enableHiding: true,
+    meta: {
+      size: 120,
+    },
   },
   {
     accessorKey: "tipo_sangre",
@@ -206,6 +250,9 @@ export const columns: ColumnDef<Persona>[] = [
       ) : <NullCell />
     },
     enableHiding: true,
+    meta: {
+      size: 80,
+    },
   },
   {
     accessorKey: "eps",
@@ -219,6 +266,9 @@ export const columns: ColumnDef<Persona>[] = [
       ) : <NullCell />
     },
     enableHiding: true,
+    meta: {
+      size: 150,
+    },
   },
   {
     accessorKey: "ocupacion",
@@ -232,6 +282,9 @@ export const columns: ColumnDef<Persona>[] = [
       ) : <NullCell />
     },
     enableHiding: true,
+    meta: {
+      size: 150,
+    },
   },
   {
     accessorKey: "fecha_socio",
@@ -247,6 +300,9 @@ export const columns: ColumnDef<Persona>[] = [
       ) : <NullCell />
     },
     enableHiding: true,
+    meta: {
+      size: 120,
+    },
   },
   {
     accessorKey: "estado_vital",
@@ -265,6 +321,9 @@ export const columns: ColumnDef<Persona>[] = [
       return null
     },
     enableHiding: true,
+    meta: {
+      size: 60,
+    },
   },
   {
     accessorKey: "whatsapp",
@@ -272,6 +331,9 @@ export const columns: ColumnDef<Persona>[] = [
       <DataTableColumnHeader column={column} title="WhatsApp" />
     ),
     enableHiding: true,
+    meta: {
+      size: 140,
+    },
   },
   {
     accessorKey: "organizacion_nombre",
@@ -279,19 +341,22 @@ export const columns: ColumnDef<Persona>[] = [
       <DataTableColumnHeader column={column} title="Organización" />
     ),
     enableHiding: true,
+    meta: {
+      size: 150,
+    },
   },
   // --- Status Column ---
   {
     accessorKey: "estado",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Estado" className="text-center" />
+      <DataTableColumnHeader column={column} title="Estado" className="text-left" />
     ),
     cell: ({ row }) => {
       const estado = (row.getValue("estado") as string)?.toLowerCase()
       // "Activo" is neutral secondary in SaaS 2025
       const variant = (estadoVariants[estado] || "status-neutral") as "status-active" | "status-inactive" | "status-destructive" | "status-warning" | "status-neutral"
       return (
-        <div className="flex justify-center">
+        <div className="flex justify-start">
           <Badge
             variant={variant}
             showDot
@@ -303,6 +368,9 @@ export const columns: ColumnDef<Persona>[] = [
     },
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id))
+    },
+    meta: {
+      size: 110,
     },
   },
   {
@@ -321,7 +389,10 @@ export const columns: ColumnDef<Persona>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(persona.id)}
+              onClick={(e) => {
+                e.stopPropagation()
+                navigator.clipboard.writeText(persona.id)
+              }}
             >
               Copiar ID: <DataId className="ml-1">{persona.id.substring(0, 8)}...</DataId>
             </DropdownMenuItem>
@@ -337,5 +408,9 @@ export const columns: ColumnDef<Persona>[] = [
     },
     enableSorting: false,
     enableHiding: false,
+    enableResizing: false,
+    size: 40,
+    minSize: 40,
+    maxSize: 40,
   },
 ]
