@@ -238,9 +238,8 @@ export function OportunidadesPageClient() {
     queryFn: async () => {
       const supabase = createClient()
       const { data, error } = await supabase
-        .from('oportunidades_view')
+        .from('v_oportunidades_org')
         .select('*')
-        .is('eliminado_en', null)
         .order('fecha_solicitud', { ascending: false })
 
       if (error) throw error

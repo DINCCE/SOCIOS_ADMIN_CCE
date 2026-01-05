@@ -337,9 +337,8 @@ export function TareasPageClient() {
     queryFn: async () => {
       const supabase = createClient()
       const { data, error } = await supabase
-        .from('tareas_view')
+        .from('v_tareas_org')
         .select('*')
-        .is('eliminado_en', null)
         .order('fecha_vencimiento', { ascending: true })
 
       if (error) throw error

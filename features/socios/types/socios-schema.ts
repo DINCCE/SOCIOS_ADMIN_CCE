@@ -124,8 +124,9 @@ export const empresaSchema = z.object({
   organizacion_nombre: z.string(),
 
   // Computed fields
-  nit_completo: z.string(),
+  nit_completo: z.string().nullable(), // Can be null if DV is missing
   nombre_representante_legal: z.string().nullable(),
+  tags: z.array(z.string()).optional().default([]), // Optional since not all views have it
 })
 
 export type Empresa = z.infer<typeof empresaSchema>

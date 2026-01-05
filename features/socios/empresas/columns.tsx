@@ -102,7 +102,9 @@ export const columns: ColumnDef<Empresa>[] = [
       <DataTableColumnHeader column={column} title="NIT" className="text-left" />
     ),
     cell: ({ row }) => {
-      const nitValue = row.getValue("nit_completo")
+      const empresa = row.original
+      // Use nit_completo if available, otherwise fall back to nit
+      const nitValue = empresa.nit_completo || empresa.nit
       return (
         <div className="font-medium whitespace-nowrap">
           <CopyableCell
@@ -115,6 +117,33 @@ export const columns: ColumnDef<Empresa>[] = [
     },
     meta: {
       size: 140,
+    },
+  },
+  {
+    accessorKey: "tags",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Etiquetas" />
+    ),
+    cell: ({ row }) => {
+      const tags = (row.getValue("tags") as string[]) || []
+      return (
+        <div className="flex flex-wrap gap-1 max-w-[200px]">
+          {tags.length > 0 ? (
+            tags.map((tag) => (
+              <Badge key={tag} variant="metadata-outline">
+                {tag}
+              </Badge>
+            ))
+          ) : null}
+        </div>
+      )
+    },
+    filterFn: (row, id, value) => {
+      const rowTags = row.getValue(id) as string[]
+      return value.some((tag: string) => rowTags.includes(tag))
+    },
+    meta: {
+      size: 130,
     },
   },
   {
@@ -153,6 +182,22 @@ export const columns: ColumnDef<Empresa>[] = [
     },
   },
   {
+    accessorKey: "sector_industria",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Sector" />
+    ),
+    cell: ({ row }) => {
+      const val = row.getValue("sector_industria") as string
+      return val ? (
+        <span className="text-xs text-slate-600">{val}</span>
+      ) : <NullCell />
+    },
+    enableHiding: true,
+    meta: {
+      size: 120,
+    },
+  },
+  {
     accessorKey: "tipo_sociedad",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Tipo" />
@@ -174,6 +219,33 @@ export const columns: ColumnDef<Empresa>[] = [
       size: 90,
     },
   },
+  {
+    accessorKey: "estado",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Estado" className="text-left" />
+    ),
+    cell: ({ row }) => {
+      const estado = (row.getValue("estado") as string)?.toLowerCase()
+      // "Activo" is neutral/subtle in SaaS 2025
+      const variant = (estadoVariants[estado] || "status-neutral") as "status-active" | "status-inactive" | "status-destructive" | "status-warning" | "status-neutral"
+      return (
+        <div className="flex justify-start">
+          <Badge
+            variant={variant}
+            showDot
+          >
+            {estado.charAt(0).toUpperCase() + estado.slice(1)}
+          </Badge>
+        </div>
+      )
+    },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
+    },
+    meta: {
+      size: 110,
+    },
+  },
   // --- Optional Columns (Hidden by default) ---
   {
     accessorKey: "nombre_comercial",
@@ -183,16 +255,6 @@ export const columns: ColumnDef<Empresa>[] = [
     enableHiding: true,
     meta: {
       size: 150,
-    },
-  },
-  {
-    accessorKey: "sector_industria",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Sector" />
-    ),
-    enableHiding: true,
-    meta: {
-      size: 120,
     },
   },
   {
@@ -306,33 +368,6 @@ export const columns: ColumnDef<Empresa>[] = [
     enableHiding: true,
     meta: {
       size: 140,
-    },
-  },
-  {
-    accessorKey: "estado",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Estado" className="text-left" />
-    ),
-    cell: ({ row }) => {
-      const estado = (row.getValue("estado") as string)?.toLowerCase()
-      // "Activo" is neutral/subtle in SaaS 2025
-      const variant = (estadoVariants[estado] || "status-neutral") as "status-active" | "status-inactive" | "status-destructive" | "status-warning" | "status-neutral"
-      return (
-        <div className="flex justify-start">
-          <Badge
-            variant={variant}
-            showDot
-          >
-            {estado.charAt(0).toUpperCase() + estado.slice(1)}
-          </Badge>
-        </div>
-      )
-    },
-    filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id))
-    },
-    meta: {
-      size: 110,
     },
   },
   {

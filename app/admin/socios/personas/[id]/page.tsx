@@ -14,7 +14,7 @@ export default async function PersonDetailPage({ params }: PersonPageProps) {
     const supabase = await createClient()
 
     const { data: persona, error } = await supabase
-        .from("v_personas_completa")
+        .from("v_personas_org")
         .select("*")
         .eq("id", id)
         .single()

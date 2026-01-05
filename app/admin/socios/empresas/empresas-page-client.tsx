@@ -14,6 +14,8 @@ import {
 } from '@tanstack/react-table'
 import { AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { useQuery } from '@tanstack/react-query'
 
 import { PageShell } from '@/components/shell/page-shell'
 import { PageHeader } from '@/components/shell/page-header'
@@ -36,18 +38,14 @@ import { Separator } from '@/components/ui/separator'
 import type { Empresa } from '@/features/socios/types/socios-schema'
 import { columns } from '@/features/socios/empresas/columns'
 
-interface EmpresasPageClientProps {
-  initialData: Empresa[]
-}
-
-export function EmpresasPageClient({ initialData }: EmpresasPageClientProps) {
+export function EmpresasPageClient() {
   const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
     codigo: false,
+    tags: false,
     nombre_comercial: false,
-    sector_industria: false,
     tamano_empresa: false,
     actividad_economica: false,
     nombre_representante_legal: false,
@@ -60,6 +58,32 @@ export function EmpresasPageClient({ initialData }: EmpresasPageClientProps) {
   })
   const [rowSelection, setRowSelection] = React.useState({})
 
+  // Client-side data fetching
+  const { data: initialData = [], isLoading } = useQuery({
+    queryKey: ['empresas'],
+    queryFn: async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('v_empresas_org')
+        .select('*')
+        .order('razon_social', { ascending: true })
+
+      if (error) throw error
+      return data as Empresa[]
+    },
+  })
+
+  // Dynamic visibility for "tags" column - only run when data length changes
+  React.useEffect(() => {
+    const hasTags = initialData.some((item) => {
+      return (item.tags || []).length > 0
+    })
+    setColumnVisibility(prev => ({
+      ...prev,
+      tags: hasTags
+    }))
+  }, [initialData.length]) // Only depend on length, not the array itself
+
   const table = useReactTable({
     data: initialData,
     columns,
@@ -67,7 +91,6 @@ export function EmpresasPageClient({ initialData }: EmpresasPageClientProps) {
       sorting,
       columnFilters,
       columnVisibility,
-      rowSelection,
     },
     enableRowSelection: true,
     enableColumnResizing: true,
@@ -81,6 +104,18 @@ export function EmpresasPageClient({ initialData }: EmpresasPageClientProps) {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
   })
+
+  if (isLoading) {
+    return (
+      <PageShell>
+        <PageContent>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-muted-foreground">Cargando...</div>
+          </div>
+        </PageContent>
+      </PageShell>
+    )
+  }
 
   return (
     <PageShell>

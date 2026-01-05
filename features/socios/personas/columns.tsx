@@ -104,34 +104,6 @@ export const columns: ColumnDef<Persona>[] = [
     },
   },
   {
-    accessorKey: "numero_documento",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Documento" className="text-left" />
-    ),
-    cell: ({ row }) => {
-      const tipoDocumento = row.original.tipo_documento
-      const numeroDocumento = row.getValue("numero_documento") as string
-      return (
-        <div className="flex items-center gap-2">
-          <Badge
-            variant="metadata-outline"
-          >
-            {tipoDocumento}
-          </Badge>
-          <CopyableCell
-            value={numeroDocumento}
-            className="font-mono text-xs"
-            label={formatDocumentId(numeroDocumento)}
-          />
-        </div>
-      )
-    },
-    meta: {
-      size: 140,
-    },
-  },
-
-  {
     accessorKey: "tags",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Etiquetas" />
@@ -159,6 +131,52 @@ export const columns: ColumnDef<Persona>[] = [
     },
   },
   {
+    accessorKey: "numero_documento",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Documento" className="text-left" />
+    ),
+    cell: ({ row }) => {
+      const tipoDocumento = row.original.tipo_documento
+      const numeroDocumento = row.getValue("numero_documento") as string
+      return (
+        <div className="flex items-center gap-2">
+          <Badge
+            variant="metadata-outline"
+          >
+            {tipoDocumento}
+          </Badge>
+          <CopyableCell
+            value={numeroDocumento}
+            className="font-mono text-xs"
+            label={formatDocumentId(numeroDocumento)}
+          />
+        </div>
+      )
+    },
+    meta: {
+      size: 140,
+    },
+  },
+  {
+    accessorKey: "email_principal",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Email" />
+    ),
+    cell: ({ row }) => {
+      const email = row.getValue("email_principal") as string
+      return (
+        <div className="text-left">
+          {email ? (
+            <CopyableCell value={email} />
+          ) : <NullCell />}
+        </div>
+      )
+    },
+    meta: {
+      size: 200,
+    },
+  },
+  {
     accessorKey: "telefono_principal",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Teléfono" />
@@ -182,6 +200,51 @@ export const columns: ColumnDef<Persona>[] = [
       size: 130,
     },
   },
+  {
+    accessorKey: "estado",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Estado" className="text-left" />
+    ),
+    cell: ({ row }) => {
+      const estado = (row.getValue("estado") as string)?.toLowerCase()
+      // "Activo" is neutral secondary in SaaS 2025
+      const variant = (estadoVariants[estado] || "status-neutral") as "status-active" | "status-inactive" | "status-destructive" | "status-warning" | "status-neutral"
+      return (
+        <div className="flex justify-start">
+          <Badge
+            variant={variant}
+            showDot
+          >
+            {estado.charAt(0).toUpperCase() + estado.slice(1)}
+          </Badge>
+        </div>
+      )
+    },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
+    },
+    meta: {
+      size: 110,
+    },
+  },
+  {
+    accessorKey: "fecha_nacimiento",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Fecha Nacimiento" />
+    ),
+    cell: ({ row }) => {
+      const val = row.getValue("fecha_nacimiento") as string
+      return val ? (
+        <span className="tabular-nums text-xs tracking-wide text-slate-600 whitespace-nowrap" style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {formatShortDate(val)}
+        </span>
+      ) : <NullCell />
+    },
+    enableHiding: true,
+    meta: {
+      size: 120,
+    },
+  },
   // --- Optional Columns (Hidden by default) ---
   {
     accessorKey: "genero",
@@ -202,24 +265,6 @@ export const columns: ColumnDef<Persona>[] = [
     },
     meta: {
       size: 100,
-    },
-  },
-  {
-    accessorKey: "fecha_nacimiento",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Fecha Nacimiento" />
-    ),
-    cell: ({ row }) => {
-      const val = row.getValue("fecha_nacimiento") as string
-      return val ? (
-        <span className="tabular-nums text-xs tracking-wide text-slate-600 whitespace-nowrap" style={{ fontVariantNumeric: 'tabular-nums' }}>
-          {formatShortDate(val)}
-        </span>
-      ) : <NullCell />
-    },
-    enableHiding: true,
-    meta: {
-      size: 120,
     },
   },
   {
@@ -343,34 +388,6 @@ export const columns: ColumnDef<Persona>[] = [
     enableHiding: true,
     meta: {
       size: 150,
-    },
-  },
-  // --- Status Column ---
-  {
-    accessorKey: "estado",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Estado" className="text-left" />
-    ),
-    cell: ({ row }) => {
-      const estado = (row.getValue("estado") as string)?.toLowerCase()
-      // "Activo" is neutral secondary in SaaS 2025
-      const variant = (estadoVariants[estado] || "status-neutral") as "status-active" | "status-inactive" | "status-destructive" | "status-warning" | "status-neutral"
-      return (
-        <div className="flex justify-start">
-          <Badge
-            variant={variant}
-            showDot
-          >
-            {estado.charAt(0).toUpperCase() + estado.slice(1)}
-          </Badge>
-        </div>
-      )
-    },
-    filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id))
-    },
-    meta: {
-      size: 110,
     },
   },
   {

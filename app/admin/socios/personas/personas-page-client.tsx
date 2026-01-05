@@ -14,6 +14,8 @@ import {
 } from '@tanstack/react-table'
 import { AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { useQuery } from '@tanstack/react-query'
 
 import { PageShell } from '@/components/shell/page-shell'
 import { PageHeader } from '@/components/shell/page-header'
@@ -36,11 +38,7 @@ import { Separator } from '@/components/ui/separator'
 import type { Persona } from '@/features/socios/types/socios-schema'
 import { columns } from '@/features/socios/personas/columns'
 
-interface PersonasPageClientProps {
-  initialData: Persona[]
-}
-
-export function PersonasPageClient({ initialData }: PersonasPageClientProps) {
+export function PersonasPageClient() {
   const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -59,7 +57,25 @@ export function PersonasPageClient({ initialData }: PersonasPageClientProps) {
   })
   const [rowSelection, setRowSelection] = React.useState({})
 
-  // Dynamic visibility for "tags" column
+  // Client-side data fetching
+  const { data: initialData = [], isLoading, error } = useQuery({
+    queryKey: ['personas'],
+    queryFn: async () => {
+      const supabase = createClient()
+      const { data, error: queryError } = await supabase
+        .from('v_personas_org')
+        .select('*')
+        .order('primer_apellido', { ascending: true })
+
+      if (queryError) {
+        console.error('Query error:', queryError)
+        throw queryError
+      }
+      return data as Persona[]
+    },
+  })
+
+  // Dynamic visibility for "tags" column - only run when data length changes
   React.useEffect(() => {
     const hasTags = initialData.some((item) => {
       return (item.tags || []).length > 0
@@ -68,7 +84,7 @@ export function PersonasPageClient({ initialData }: PersonasPageClientProps) {
       ...prev,
       tags: hasTags
     }))
-  }, [initialData])
+  }, [initialData.length]) // Only depend on length, not the array itself
 
   const table = useReactTable({
     data: initialData,
@@ -91,6 +107,32 @@ export function PersonasPageClient({ initialData }: PersonasPageClientProps) {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
   })
+
+  if (isLoading) {
+    return (
+      <PageShell>
+        <PageContent>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-muted-foreground">Cargando...</div>
+          </div>
+        </PageContent>
+      </PageShell>
+    )
+  }
+
+  if (error) {
+    return (
+      <PageShell>
+        <PageContent>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-red-500">
+              Error: {error.message}
+            </div>
+          </div>
+        </PageContent>
+      </PageShell>
+    )
+  }
 
   return (
     <PageShell>
