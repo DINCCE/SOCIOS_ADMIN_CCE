@@ -130,7 +130,7 @@ export function NavUser({
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <div className="flex items-center justify-between w-full pr-2">
-                <span>Paleta</span>
+                <span>Color</span>
                 <ColorSchemeToggle />
               </div>
             </DropdownMenuItem>
