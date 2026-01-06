@@ -23,7 +23,8 @@ import { PageToolbar } from '@/components/shell/page-toolbar'
 import { PageContent } from '@/components/shell/page-content'
 import { PersonasDataTable } from '@/features/socios/personas/data-table'
 import { NewPersonSheet } from '@/components/socios/personas/new-person-sheet'
-import { CommandSearch } from '@/components/ui/command-search'
+import { Input } from '@/components/ui/input'
+import { Search } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -160,12 +161,15 @@ export function PersonasPageClient() {
       <PageToolbar
         left={
           <>
-            <CommandSearch
-              placeholder="Buscar por nombre, documento o email..."
-              value={(table.getColumn("nombre_completo")?.getFilterValue() as string) ?? ""}
-              onChange={(value) => table.getColumn("nombre_completo")?.setFilterValue(value)}
-              aria-label="Buscar personas"
-            />
+            <div className="relative w-64 lg:w-80">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nombre, documento o email..."
+                value={(table.getColumn("nombre_completo")?.getFilterValue() as string) ?? ""}
+                onChange={(e) => table.getColumn("nombre_completo")?.setFilterValue(e.target.value)}
+                className="pl-8 h-8 text-sm bg-background/50 focus:bg-background transition-colors"
+              />
+            </div>
             <Separator orientation="vertical" className="h-6" />
             <Select
               value={(table.getColumn("estado")?.getFilterValue() as string) ?? "all"}

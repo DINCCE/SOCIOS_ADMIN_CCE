@@ -48,23 +48,14 @@ export function PersonasDataTable({ table, router }: PersonasDataTableProps) {
                   colSpan={header.colSpan}
                   style={{ width: header.getSize() }}
                   className={cn(
-                    "relative group",
-                    header.column.id === "select" && "sticky left-0 z-20 bg-slate-50",
-                    header.column.id === "nombre_completo" && "min-w-[250px] sticky left-[48px] z-20 bg-slate-50 shadow-[2px_0_8px_-2px_rgba(0,0,0,0.05)]",
-                    header.column.id !== "nombre_completo" && header.column.id !== "select" && "whitespace-nowrap"
+                    "relative group whitespace-nowrap",
+                    header.column.getCanSort() && "cursor-pointer select-none"
                   )}
                 >
-                  <div className={cn(
-                    "flex items-center",
-                    header.column.getCanSort() && "cursor-pointer select-none"
-                  )}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </div>
+                  {flexRender(
+                    header.column.columnDef.header,
+                    header.getContext()
+                  )}
 
                   {/* Column Resize Handle */}
                   {header.column.getCanResize() && (
@@ -106,13 +97,7 @@ export function PersonasDataTable({ table, router }: PersonasDataTableProps) {
               }}
             >
               {row.getVisibleCells().map((cell) => (
-                <TableCell
-                  key={cell.id}
-                  className={cn(
-                    cell.column.id === "select" && "sticky left-0 z-10 bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted",
-                    cell.column.id === "nombre_completo" && "sticky left-[48px] z-10 bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted shadow-[2px_0_8px_-2px_rgba(0,0,0,0.05)]"
-                  )}
-                >
+                <TableCell key={cell.id}>
                   {flexRender(
                     cell.column.columnDef.cell,
                     cell.getContext()
