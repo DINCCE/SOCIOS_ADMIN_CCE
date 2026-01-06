@@ -40,7 +40,7 @@ export function FormattedNumber({
 
     if (type === 'phone') {
         if (cleanValue.length === 10) {
-            formattedValue = `${cleanValue.slice(0, 3)}\u00A0${cleanValue.slice(3, 6)}\u00A0${cleanValue.slice(6)}`
+            formattedValue = `${cleanValue.slice(0, 3)}\u00A0${cleanValue.slice(3, 6)}\u00A0${cleanValue.slice(6, 8)}\u00A0${cleanValue.slice(8)}`
         }
     } else if (type === 'document') {
         if (cleanValue.length > 0) {
@@ -65,7 +65,7 @@ export function FormattedNumber({
         }
     }
 
-    const baseStyles = "tabular-nums text-xs tracking-wide text-slate-600 whitespace-nowrap"
+    const baseStyles = "tabular-nums tracking-wide whitespace-nowrap"
 
     if (!copyable) {
         return (

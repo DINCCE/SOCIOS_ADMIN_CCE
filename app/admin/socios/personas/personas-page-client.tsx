@@ -201,7 +201,9 @@ export function PersonasPageClient() {
           </div>
 
           {/* Pagination */}
-          <DataTablePagination table={table} />
+          <div className="border-t bg-background p-2">
+            <DataTablePagination table={table} />
+          </div>
 
           {/* Floating Action Bar */}
           <AnimatePresence>

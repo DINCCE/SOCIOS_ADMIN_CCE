@@ -4,6 +4,33 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 /**
+ * Search for business partners (actores) by code or name
+ * Used in the Nueva Oportunidad drawer for solicitante selection
+ *
+ * @param query - Search query (codigo or nombre)
+ * @param organizacion_id - Organization ID for filtering
+ * @returns Object with { success, data }
+ */
+export async function buscarActores(query: string, organizacion_id: string) {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('v_actores_org')
+    .select('*')
+    .eq('organizacion_id', organizacion_id)
+    .or(`codigo.ilike.%${query}%, nombre.ilike.%${query}%`)
+    .order('codigo')
+    .limit(20)
+
+  if (error) {
+    console.error('Error searching actores:', error)
+    return { success: false, data: [] }
+  }
+
+  return { success: true, data: data || [] }
+}
+
+/**
  * Create a new oportunidad
  *
  * @param data - Oportunidad creation data
@@ -18,6 +45,7 @@ export async function crearOportunidad(data: {
   monto_estimado?: number
   notas?: string
   atributos?: Record<string, unknown>
+  tags?: string[]
 }) {
   const supabase = await createClient()
 
@@ -40,12 +68,26 @@ export async function crearOportunidad(data: {
     }
   }
 
+  // Update tags separately if provided
+  const oportunidadId = (rpcResponse as { id: string }).id
+  if (data.tags && data.tags.length > 0) {
+    const { error: tagsError } = await supabase
+      .from('oportunidades')
+      .update({ tags: data.tags })
+      .eq('id', oportunidadId)
+
+    if (tagsError) {
+      console.error('Error updating tags:', tagsError)
+      // Don't fail the whole operation if tags fail, just log it
+    }
+  }
+
   revalidatePath('/admin/oportunidades')
 
   return {
     success: true,
     message: 'Oportunidad creada correctamente',
-    oportunidad_id: (rpcResponse as { id: string }).id
+    oportunidad_id: oportunidadId
   }
 }
 

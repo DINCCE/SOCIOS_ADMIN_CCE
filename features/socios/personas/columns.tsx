@@ -25,10 +25,10 @@ import { formatShortDate } from "@/lib/format"
 import { formatDocumentId } from "@/lib/utils"
 
 const estadoVariants: Record<string, string> = {
-  activo: "status-active",
-  inactivo: "status-inactive",
-  suspendido: "status-destructive",
-  mora: "status-warning",
+  activo: "text-emerald-700 border-emerald-200",
+  inactivo: "text-slate-600 border-slate-200",
+  suspendido: "text-rose-700 border-rose-200",
+  mora: "text-amber-700 border-amber-200",
 }
 
 const generoIcons: Record<string, string> = {
@@ -71,9 +71,7 @@ export const columns: ColumnDef<Persona>[] = [
       <DataTableColumnHeader column={column} title="Código" />
     ),
     cell: ({ row }) => (
-      <div className="font-medium">
-        <CopyableCell value={row.getValue("codigo")} />
-      </div>
+      <CopyableCell value={row.getValue("codigo")} />
     ),
     meta: {
       size: 100,
@@ -144,7 +142,6 @@ export const columns: ColumnDef<Persona>[] = [
           </Badge>
           <CopyableCell
             value={numeroDocumento}
-            className="font-mono text-xs"
             label={formatDocumentId(numeroDocumento)}
           />
         </div>
@@ -161,13 +158,7 @@ export const columns: ColumnDef<Persona>[] = [
     ),
     cell: ({ row }) => {
       const email = row.getValue("email_principal") as string
-      return (
-        <div className="text-left">
-          {email ? (
-            <CopyableCell value={email} />
-          ) : <NullCell />}
-        </div>
-      )
+      return email ? <CopyableCell value={email} /> : <NullCell />
     },
     meta: {
       size: 200,
@@ -180,18 +171,12 @@ export const columns: ColumnDef<Persona>[] = [
     ),
     cell: ({ row }) => {
       const telefono = row.getValue("telefono_principal") as string
-      return (
-        <div className="text-left">
-          {telefono ? (
-            <CopyableCell
-              value={telefono}
-              label={<FormattedNumber value={telefono} type="phone" />}
-            />
-          ) : (
-            <FormattedNumber value={telefono} type="phone" />
-          )}
-        </div>
-      )
+      return telefono ? (
+        <CopyableCell
+          value={telefono}
+          label={<FormattedNumber value={telefono} type="phone" />}
+        />
+      ) : <NullCell />
     },
     meta: {
       size: 130,
@@ -204,13 +189,12 @@ export const columns: ColumnDef<Persona>[] = [
     ),
     cell: ({ row }) => {
       const estado = (row.getValue("estado") as string)?.toLowerCase()
-      // "Activo" is neutral secondary in SaaS 2025
-      const variant = (estadoVariants[estado] || "status-neutral") as "status-active" | "status-inactive" | "status-destructive" | "status-warning" | "status-neutral"
+      const className = estadoVariants[estado] || "text-slate-600 border-slate-200"
       return (
         <div className="flex justify-start">
           <Badge
-            variant={variant}
-            showDot
+            variant="metadata-outline"
+            className={className}
           >
             {estado.charAt(0).toUpperCase() + estado.slice(1)}
           </Badge>
@@ -231,11 +215,7 @@ export const columns: ColumnDef<Persona>[] = [
     ),
     cell: ({ row }) => {
       const val = row.getValue("fecha_nacimiento") as string
-      return val ? (
-        <span className="tabular-nums text-xs tracking-wide text-slate-600 whitespace-nowrap" style={{ fontVariantNumeric: 'tabular-nums' }}>
-          {formatShortDate(val)}
-        </span>
-      ) : <NullCell />
+      return val ? <span>{formatShortDate(val)}</span> : <NullCell />
     },
     enableHiding: true,
     meta: {
@@ -256,7 +236,7 @@ export const columns: ColumnDef<Persona>[] = [
       return (
         <div className="flex items-center gap-1.5">
           {icon && <span className="text-sm">{icon}</span>}
-          <span className="text-xs text-slate-600">{displayGenero}</span>
+          <span>{displayGenero}</span>
         </div>
       )
     },
@@ -271,9 +251,7 @@ export const columns: ColumnDef<Persona>[] = [
     ),
     cell: ({ row }) => {
       const val = row.getValue("nacionalidad") as string
-      return val ? (
-        <span className="text-xs text-slate-600">{val}</span>
-      ) : <NullCell />
+      return val ? <span>{val}</span> : <NullCell />
     },
     enableHiding: true,
     meta: {
@@ -287,9 +265,7 @@ export const columns: ColumnDef<Persona>[] = [
     ),
     cell: ({ row }) => {
       const val = row.getValue("tipo_sangre") as string
-      return val ? (
-        <span className="text-xs text-slate-600">{val}</span>
-      ) : <NullCell />
+      return val ? <span>{val}</span> : <NullCell />
     },
     enableHiding: true,
     meta: {
@@ -303,9 +279,7 @@ export const columns: ColumnDef<Persona>[] = [
     ),
     cell: ({ row }) => {
       const val = row.getValue("eps") as string
-      return val ? (
-        <span className="text-xs text-slate-600">{val}</span>
-      ) : <NullCell />
+      return val ? <span>{val}</span> : <NullCell />
     },
     enableHiding: true,
     meta: {
@@ -319,9 +293,7 @@ export const columns: ColumnDef<Persona>[] = [
     ),
     cell: ({ row }) => {
       const val = row.getValue("ocupacion") as string
-      return val ? (
-        <span className="text-xs text-slate-600">{val}</span>
-      ) : <NullCell />
+      return val ? <span>{val}</span> : <NullCell />
     },
     enableHiding: true,
     meta: {
@@ -335,11 +307,7 @@ export const columns: ColumnDef<Persona>[] = [
     ),
     cell: ({ row }) => {
       const val = row.getValue("fecha_socio") as string
-      return val ? (
-        <span className="tabular-nums text-xs tracking-wide text-slate-600 whitespace-nowrap">
-          {formatShortDate(val)}
-        </span>
-      ) : <NullCell />
+      return val ? <span className="whitespace-nowrap">{formatShortDate(val)}</span> : <NullCell />
     },
     enableHiding: true,
     meta: {

@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { CommandSearch } from '@/components/ui/command-search'
+import { Input } from '@/components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { COMPONENT_SOURCES } from '@/lib/component-categories'
 
@@ -54,12 +54,17 @@ export function ComponentToolbar({
     >
       {/* Left: Search */}
       <div className="flex items-center gap-4">
-        <CommandSearch
-          value={searchQuery}
-          onChange={handleSearchChange}
-          placeholder="Buscar componentes..."
-          aria-label="Buscar componentes"
-        />
+        <div className="relative w-64">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Buscar componentes..."
+            className="pl-8"
+            aria-label="Buscar componentes"
+          />
+        </div>
 
         {/* Result count */}
         <span className="text-sm text-muted-foreground">

@@ -26,10 +26,10 @@ import { Empresa } from "@/features/socios/types/socios-schema"
 import { formatDocumentId } from "@/lib/utils"
 
 const estadoVariants: Record<string, string> = {
-  activo: "status-active",
-  inactivo: "status-inactive",
-  suspendido: "status-destructive",
-  mora: "status-warning",
+  activo: "text-emerald-700 border-emerald-200",
+  inactivo: "text-slate-600 border-slate-200",
+  suspendido: "text-rose-700 border-rose-200",
+  mora: "text-amber-700 border-amber-200",
 }
 
 // Variants for tipo_sociedad are now handled by metadata-outline directly
@@ -69,9 +69,7 @@ export const columns: ColumnDef<Empresa>[] = [
       <DataTableColumnHeader column={column} title="Código" />
     ),
     cell: ({ row }) => (
-      <div className="font-medium">
-        <CopyableCell value={row.getValue("codigo")} />
-      </div>
+      <CopyableCell value={row.getValue("codigo")} />
     ),
     meta: {
       size: 100,
@@ -87,7 +85,7 @@ export const columns: ColumnDef<Empresa>[] = [
       return (
         <IdentityCell
           name={empresa.razon_social}
-          subtitle={empresa.email_principal}
+          subtitle={empresa.codigo}
         />
       )
     },
@@ -106,13 +104,10 @@ export const columns: ColumnDef<Empresa>[] = [
       // Use nit_completo if available, otherwise fall back to nit
       const nitValue = empresa.nit_completo || empresa.nit
       return (
-        <div className="font-medium whitespace-nowrap">
-          <CopyableCell
-            value={nitValue}
-            label={<span className="font-mono text-xs">{formatDocumentId(nitValue)}</span>}
-            className="text-xs"
-          />
-        </div>
+        <CopyableCell
+          value={nitValue}
+          label={formatDocumentId(nitValue)}
+        />
       )
     },
     meta: {
@@ -153,11 +148,7 @@ export const columns: ColumnDef<Empresa>[] = [
     ),
     cell: ({ row }) => {
       const email = row.getValue("email_principal") as string | null
-      return email ? (
-        <div className="max-w-[200px] truncate tabular-nums text-xs tracking-wide text-slate-600 whitespace-nowrap">
-          <CopyableCell value={email} />
-        </div>
-      ) : <NullCell />
+      return email ? <CopyableCell value={email} /> : <NullCell />
     },
     meta: {
       size: 240,
@@ -188,9 +179,7 @@ export const columns: ColumnDef<Empresa>[] = [
     ),
     cell: ({ row }) => {
       const val = row.getValue("sector_industria") as string
-      return val ? (
-        <span className="text-xs text-slate-600">{val}</span>
-      ) : <NullCell />
+      return val ? <span>{val}</span> : <NullCell />
     },
     enableHiding: true,
     meta: {
@@ -226,13 +215,12 @@ export const columns: ColumnDef<Empresa>[] = [
     ),
     cell: ({ row }) => {
       const estado = (row.getValue("estado") as string)?.toLowerCase()
-      // "Activo" is neutral/subtle in SaaS 2025
-      const variant = (estadoVariants[estado] || "status-neutral") as "status-active" | "status-inactive" | "status-destructive" | "status-warning" | "status-neutral"
+      const className = estadoVariants[estado] || "text-slate-600 border-slate-200"
       return (
         <div className="flex justify-start">
           <Badge
-            variant={variant}
-            showDot
+            variant="metadata-outline"
+            className={className}
           >
             {estado.charAt(0).toUpperCase() + estado.slice(1)}
           </Badge>
@@ -304,11 +292,7 @@ export const columns: ColumnDef<Empresa>[] = [
     ),
     cell: ({ row }) => {
       const val = row.getValue("ingresos_anuales") as number
-      return val ? (
-        <span className="tabular-nums text-xs tracking-wide text-slate-600">
-          ${val.toLocaleString()}
-        </span>
-      ) : <span className="text-xs tracking-wide text-slate-600">$0</span>
+      return <span>{val ? `$${val.toLocaleString()}` : '$0'}</span>
     },
     enableHiding: true,
     meta: {
@@ -322,11 +306,7 @@ export const columns: ColumnDef<Empresa>[] = [
     ),
     cell: ({ row }) => {
       const val = row.getValue("numero_empleados")
-      return val ? (
-        <span className="tabular-nums text-xs tracking-wide text-slate-600">
-          {val as string}
-        </span>
-      ) : <NullCell />
+      return val ? <span>{val as string}</span> : <NullCell />
     },
     enableHiding: true,
     meta: {
@@ -341,7 +321,7 @@ export const columns: ColumnDef<Empresa>[] = [
     cell: ({ row }) => {
       const val = row.getValue("website") as string
       return val ? (
-        <span className="text-xs tracking-wide text-slate-600 truncate max-w-[150px]" title={val}>
+        <span className="truncate max-w-[150px]" title={val}>
           {val}
         </span>
       ) : <NullCell />
