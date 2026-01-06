@@ -18,7 +18,7 @@ export async function buscarActores(query: string, organizacion_id: string) {
     .from('v_actores_org')
     .select('*')
     .eq('organizacion_id', organizacion_id)
-    .or(`codigo.ilike.%${query}%, nombre.ilike.%${query}%`)
+    .or(`codigo.ilike.%${query}%, nombre.ilike.%${query}%, identificacion.ilike.%${query}%`)
     .order('codigo')
     .limit(20)
 
