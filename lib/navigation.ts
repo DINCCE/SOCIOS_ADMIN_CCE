@@ -28,13 +28,13 @@ export interface BreadcrumbSegment {
 
 export const NAVIGATION_CONFIG: NavItem[] = [
   {
-    title: 'Dashboard',
+    title: 'Panel',
     url: '/admin',
     icon: LayoutDashboard,
     isActive: true,
   },
   {
-    title: 'Business Partners',
+    title: 'Socios de Negocio',
     url: '/admin/socios',
     icon: Users,
     items: [
@@ -64,21 +64,21 @@ export const NAVIGATION_CONFIG: NavItem[] = [
     ],
   },
   {
-    title: 'Organizations',
+    title: 'Organizaciones',
     url: '/admin/organizations',
     icon: Building2,
   },
   {
-    title: 'Settings',
+    title: 'Configuración',
     url: '/admin/settings',
     icon: Settings2,
     items: [
       {
-        title: 'Profile',
+        title: 'Perfil',
         url: '/admin/settings/profile',
       },
       {
-        title: 'Account',
+        title: 'Cuenta',
         url: '/admin/settings/account',
       },
     ],

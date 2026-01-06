@@ -37,7 +37,7 @@ export function NavMain({
   const pathname = usePathname()
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Platform</SidebarGroupLabel>
+      <SidebarGroupLabel>Plataforma</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
           // Check if current path matches this item or any of its sub-items

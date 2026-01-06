@@ -12,7 +12,10 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
   SidebarRail,
+  SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { NAVIGATION_CONFIG } from '@/lib/navigation'
 
@@ -47,7 +50,19 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <SidebarMenu>
+          <SidebarMenuItem className="flex items-center gap-2">
+            <div className="flex-1 min-w-0 group-data-[state=collapsed]:hidden">
+              <TeamSwitcher teams={data.teams} />
+            </div>
+            <div className="hidden group-data-[state=collapsed]:flex items-center justify-center w-full">
+              <SidebarTrigger className="h-8 w-8" />
+            </div>
+            <div className="group-data-[state=collapsed]:hidden">
+              <SidebarTrigger />
+            </div>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />

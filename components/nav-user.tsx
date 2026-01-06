@@ -52,11 +52,11 @@ export function NavUser({
     const { error } = await supabase.auth.signOut()
 
     if (error) {
-      toast.error('Failed to log out')
+      toast.error('Error al cerrar sesión')
       return
     }
 
-    toast.success('Logged out successfully')
+    toast.success('Sesión cerrada correctamente')
     router.push('/auth/login')
     router.refresh()
   }
@@ -103,41 +103,41 @@ export function NavUser({
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <Sparkles />
-                Upgrade to Pro
+                Actualizar a Pro
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <BadgeCheck />
-                Account
+                Cuenta
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <CreditCard />
-                Billing
+                Facturación
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Bell />
-                Notifications
+                Notificaciones
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <div className="flex items-center justify-between w-full pr-2">
-                <span>Theme</span>
+                <span>Tema</span>
                 <ModeToggle />
               </div>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <div className="flex items-center justify-between w-full pr-2">
-                <span>Palette</span>
+                <span>Paleta</span>
                 <ColorSchemeToggle />
               </div>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
               <LogOut />
-              Log out
+              Cerrar sesión
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
