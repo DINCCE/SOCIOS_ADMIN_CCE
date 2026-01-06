@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
@@ -15,18 +15,20 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
         outline: "text-foreground",
-        // SaaS 2025 Standardized Statuses
-        "status-active": "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100",
-        "status-inactive": "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200",
-        "status-warning": "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100",
-        "status-destructive": "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100",
-
-        // Metadata / Secondary Info
-        "metadata-outline": "bg-transparent border border-slate-200 text-slate-500 font-mono text-[10px] h-5 px-1.5 shadow-none",
-
-        // Compatibility / Utility variants
-        "status-neutral": "border text-muted-foreground border-border bg-transparent shadow-none font-medium",
-        "status-muted": "border bg-secondary/30 text-muted-foreground/80 border-transparent shadow-none",
+        // Custom variants for status badges
+        "status-active":
+          "border-transparent bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+        "status-inactive":
+          "border-transparent bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20",
+        "status-destructive":
+          "border-transparent bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+        "status-warning":
+          "border-transparent bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
+        "status-neutral":
+          "border-transparent bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20",
+        // Custom variant for metadata badges
+        "metadata-outline":
+          "border-border/50 bg-background/50 text-muted-foreground hover:bg-background",
       },
     },
     defaultVariants: {
@@ -37,28 +39,15 @@ const badgeVariants = cva(
 
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
-  VariantProps<typeof badgeVariants> {
+    VariantProps<typeof badgeVariants> {
   showDot?: boolean
-  dotAnimation?: "pulse" | "none"
 }
 
-function Badge({ className, variant, showDot = false, dotAnimation = "none", children, ...props }: BadgeProps) {
+function Badge({ className, variant, showDot, children, ...props }: BadgeProps) {
   return (
     <div className={cn(badgeVariants({ variant }), className)} {...props}>
       {showDot && (
-        <span
-          className={cn(
-            "mr-1.5 h-1.5 w-1.5 rounded-full",
-            dotAnimation === "pulse" && "animate-pulse",
-            // Match dot color to text color based on variant
-            (variant === "status-active" || variant?.includes("emerald")) && "bg-emerald-600",
-            (variant === "status-destructive" || variant?.includes("rose") || variant?.includes("destructive")) && "bg-rose-600",
-            (variant === "status-warning" || variant?.includes("amber")) && "bg-amber-600",
-            (variant === "status-inactive" || variant?.includes("slate")) && "bg-slate-600",
-            variant?.includes("blue") && "bg-blue-600",
-            variant?.includes("violet") && "bg-violet-600"
-          )}
-        />
+        <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-current" />
       )}
       {children}
     </div>

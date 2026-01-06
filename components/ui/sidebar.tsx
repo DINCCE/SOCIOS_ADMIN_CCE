@@ -233,7 +233,14 @@ const Sidebar = React.forwardRef<
       >
         {/* This is what handles the sidebar gap on desktop */}
         <div
-          className="relative hidden h-svh w-64 flex-shrink-0 bg-transparent transition-[width] duration-200 ease-linear group-data-[state=collapsed]:w-[4.25rem] md:block"
+          className={cn(
+            "relative w-[--sidebar-width] bg-transparent transition-[width] duration-200 ease-linear",
+            "group-data-[collapsible=offcanvas]:w-0",
+            "group-data-[side=right]:rotate-180",
+            variant === "floating" || variant === "inset"
+              ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
+              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]"
+          )}
         />
         <div
           className={cn(
@@ -251,7 +258,7 @@ const Sidebar = React.forwardRef<
         >
           <div
             data-sidebar="sidebar"
-            className="flex h-full w-full flex-col bg-sidebar/70 backdrop-blur-sm group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+            className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
           >
             {children}
           </div>
@@ -653,15 +660,10 @@ const SidebarMenuSkeleton = React.forwardRef<
     showIcon?: boolean
   }
 >(({ className, showIcon = false, ...props }, ref) => {
-  // Generate stable unique ID for this skeleton instance
-  const id = React.useId()
-  // Use a deterministic width based on the unique ID (between 50 to 90%)
+  // Random width between 50 to 90%.
   const width = React.useMemo(() => {
-    // Convert ID to a number (sum of char codes) to get a stable "random" value
-    const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-    const pseudoRandom = (hash % 40) + 50
-    return `${pseudoRandom}%`
-  }, [id])
+    return `${Math.floor(Math.random() * 40) + 50}%`
+  }, [])
 
   return (
     <div
