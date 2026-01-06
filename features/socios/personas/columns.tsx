@@ -174,7 +174,7 @@ export const columns: ColumnDef<Persona>[] = [
       return telefono ? (
         <CopyableCell
           value={telefono}
-          label={<FormattedNumber value={telefono} type="phone" />}
+          label={<FormattedNumber value={telefono} type="phone" copyable={false} />}
         />
       ) : <NullCell />
     },

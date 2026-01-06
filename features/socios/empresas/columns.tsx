@@ -164,7 +164,7 @@ export const columns: ColumnDef<Empresa>[] = [
       return telefono ? (
         <CopyableCell
           value={telefono}
-          label={<FormattedNumber value={telefono} type="phone" />}
+          label={<FormattedNumber value={telefono} type="phone" copyable={false} />}
         />
       ) : <NullCell />
     },
@@ -341,7 +341,7 @@ export const columns: ColumnDef<Empresa>[] = [
       return val ? (
         <CopyableCell
           value={val}
-          label={<FormattedNumber value={val} type="phone" />}
+          label={<FormattedNumber value={val} type="phone" copyable={false} />}
         />
       ) : <NullCell />
     },
