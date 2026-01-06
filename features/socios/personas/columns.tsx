@@ -1,7 +1,6 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import Link from "next/link"
 import { MoreHorizontal } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -22,10 +21,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { DataTableColumnHeader } from "@/features/socios/components/data-table-column-header"
 import { Persona } from "@/features/socios/types/socios-schema"
-import { formatRelativeDate, formatShortDate, TABULAR_NUMS } from "@/lib/format"
+import { formatShortDate } from "@/lib/format"
 import { formatDocumentId } from "@/lib/utils"
-import { User, UserMinus } from "lucide-react"
-import { cn } from "@/lib/utils"
 
 const estadoVariants: Record<string, string> = {
   activo: "status-active",
@@ -92,7 +89,7 @@ export const columns: ColumnDef<Persona>[] = [
       return (
         <IdentityCell
           name={persona.nombre_completo}
-          subtitle={persona.email_principal}
+          subtitle={persona.codigo}
           image={persona.foto_url}
           className="min-w-[200px] flex-1"
         />
