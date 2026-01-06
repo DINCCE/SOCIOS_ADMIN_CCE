@@ -81,6 +81,10 @@ export const NAVIGATION_CONFIG: NavItem[] = [
         title: 'Cuenta',
         url: '/admin/settings/account',
       },
+      {
+        title: 'Componentes',
+        url: '/admin/settings/componentes',
+      },
     ],
   },
 ]
