@@ -40,6 +40,7 @@ import { columns } from '@/features/socios/personas/columns'
 
 export function PersonasPageClient() {
   const router = useRouter()
+  const [hasMounted, setHasMounted] = React.useState(false)
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
@@ -75,16 +76,27 @@ export function PersonasPageClient() {
     },
   })
 
-  // Dynamic visibility for "tags" column - only run when data length changes
+  // Handle mount state
   React.useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  // Dynamic visibility for "tags" column - only run on client after mount
+  React.useEffect(() => {
+    if (!hasMounted || !initialData.length) return
+
     const hasTags = initialData.some((item) => {
       return (item.tags || []).length > 0
     })
-    setColumnVisibility(prev => ({
-      ...prev,
-      tags: hasTags
-    }))
-  }, [initialData.length]) // Only depend on length, not the array itself
+
+    setColumnVisibility(prev => {
+      if (prev.tags === hasTags) return prev
+      return {
+        ...prev,
+        tags: hasTags
+      }
+    })
+  }, [hasMounted, initialData.length])
 
   const table = useReactTable({
     data: initialData,
@@ -108,7 +120,7 @@ export function PersonasPageClient() {
     getSortedRowModel: getSortedRowModel(),
   })
 
-  if (isLoading) {
+  if (!hasMounted || isLoading) {
     return (
       <PageShell>
         <PageContent>

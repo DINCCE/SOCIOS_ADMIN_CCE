@@ -13,6 +13,7 @@ import {
 
 import { createClient } from '@/lib/supabase/client'
 import { ModeToggle } from '@/components/ui/mode-toggle'
+import { ColorSchemeToggle } from '@/components/ui/color-scheme-toggle'
 import {
   Avatar,
   AvatarFallback,
@@ -125,6 +126,12 @@ export function NavUser({
               <div className="flex items-center justify-between w-full pr-2">
                 <span>Theme</span>
                 <ModeToggle />
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <div className="flex items-center justify-between w-full pr-2">
+                <span>Palette</span>
+                <ColorSchemeToggle />
               </div>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
