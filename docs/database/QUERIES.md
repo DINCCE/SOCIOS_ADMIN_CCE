@@ -876,7 +876,7 @@ WHERE id = '..oportunidad-uuid..';
 
 ### Creating Tasks
 
-#### Create Task
+#### Create Task (Auto-Generates codigo_tarea)
 
 ```sql
 INSERT INTO tareas (
@@ -898,6 +898,7 @@ INSERT INTO tareas (
   '..org-uuid..',
   '..bp-uuid..'
 );
+-- codigo_tarea is auto-generated: TSK-00000001
 ```
 
 **TypeScript:**
@@ -914,36 +915,128 @@ const { data, error } = await supabase
     organizacion_id: orgId,
     relacionado_con_bp: bpId
   })
+  .select()
+  .single()
+
+console.log(data.codigo_tarea) // 'TSK-00000001'
 ```
 
 ### Managing Tasks
 
-#### Get Tasks for a Business Partner
+#### Query Tasks by Code
+
+```sql
+SELECT *
+FROM v_tareas_org
+WHERE codigo_tarea = 'TSK-00000001';
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('v_tareas_org')
+  .select('*')
+  .eq('codigo_tarea', 'TSK-00000001')
+  .single()
+```
+
+#### Query Tasks with Assignee Names
 
 ```sql
 SELECT
-  t.*,
+  codigo_tarea,
+  titulo,
+  estado,
+  asignado_nombre,
+  fecha_vencimiento
+FROM v_tareas_org
+WHERE organizacion_id = 'org-uuid'
+ORDER BY fecha_vencimiento ASC;
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('v_tareas_org')
+  .select('codigo_tarea, titulo, estado, asignado_nombre, fecha_vencimiento')
+  .eq('organizacion_id', orgId)
+  .order('fecha_vencimiento', { ascending: true })
+```
+
+#### Find Tasks by Organization Member
+
+```sql
+SELECT
+  t.codigo_tarea,
+  t.titulo,
+  om.nombre_completo AS asignado,
+  t.estado
+FROM tareas t
+JOIN organization_members om
+  ON om.user_id = t.asignado_a
+  AND om.organization_id = t.organizacion_id
+WHERE om.user_id = 'user-uuid'
+  AND t.eliminado_en IS NULL;
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('tareas')
+  .select(`
+    codigo_tarea,
+    titulo,
+    estado,
+    organization_members!inner(nombre_completo)
+  `)
+  .eq('asignado_a', userId)
+  .is('eliminado_en', null)
+```
+
+#### Get Tasks for a Business Partner (Using Enhanced View)
+
+```sql
+SELECT
+  t.codigo_tarea,
+  t.titulo,
+  t.estado,
+  t.prioridad,
+  t.asignado_nombre,
   bp_relacionado.codigo_bp AS bp_codigo,
   COALESCE(
     p_relacionado.nombres || ' ' || p_relacionado.apellidos,
     e_relacionado.razon_social
   ) AS bp_nombre
-FROM tareas t
-LEFT JOIN business_partners bp_relacionado ON t.relacionado_con_bp = bp_relacionado.id
-LEFT JOIN personas p_relacionado ON bp_relacionado.id = p_relacionado.id
-LEFT JOIN empresas e_relacionado ON bp_relacionado.id = e_relacionado.id
-WHERE t.eliminado_en IS NULL
-  AND t.organizacion_id = '..org-uuid..'
+FROM v_tareas_org t
+WHERE t.relacionado_con_bp = '..bp-uuid..'
 ORDER BY t.prioridad DESC, t.fecha_vencimiento ASC;
+```
+
+**TypeScript:**
+```typescript
+const { data, error } = await supabase
+  .from('v_tareas_org')
+  .select('*')
+  .eq('relacionado_con_bp', bpId)
+  .order('prioridad', { ascending: false })
+  .order('fecha_vencimiento', { ascending: true })
 ```
 
 #### Update Task Status
 
 ```sql
 UPDATE tareas
-SET estado = 'en_progreso',
-  actualizado_en = NOW()
+SET estado = 'en_progreso'
 WHERE id = '..tarea-uuid..';
+-- actualizado_en is auto-updated by trigger
+```
+
+**TypeScript:**
+```typescript
+const { error } = await supabase
+  .from('tareas')
+  .update({ estado: 'en_progreso' })
+  .eq('id', tareaId)
 ```
 
 ---

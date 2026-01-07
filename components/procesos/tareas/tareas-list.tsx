@@ -19,6 +19,7 @@ import type { Database } from '@/types_db'
 
 type TareaView = {
   id: string
+  codigo_tarea: string | null
   titulo: string
   descripcion: string | null
   estado: string
@@ -28,6 +29,7 @@ type TareaView = {
   organizacion_nombre: string
   asignado_a: string | null
   asignado_email: string | null
+  asignado_nombre: string | null
   oportunidad_id: string | null
   oportunidad_codigo: string | null
   oportunidad_estado: string | null

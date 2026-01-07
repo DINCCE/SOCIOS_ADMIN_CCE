@@ -56,7 +56,7 @@ export function TareasPageClient() {
   const [globalSearch, setGlobalSearch] = React.useState("")
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
     select: true,
-    descripcion: false,
+    codigo_tarea: false,
   })
   const [rowSelection, setRowSelection] = React.useState({})
 

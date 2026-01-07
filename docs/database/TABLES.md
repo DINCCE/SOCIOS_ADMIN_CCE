@@ -819,6 +819,11 @@ ORDER BY city_name;
 | `user_id` | uuid | NOT NULL | - | FK to auth.users - User ID |
 | `organization_id` | uuid | NOT NULL | - | FK to organizations - Organization ID |
 | `role` | text | NOT NULL | - | User role: owner, admin, analyst, auditor |
+| `nombres` | text | NULL | - | First names of organization member |
+| `apellidos` | text | NULL | - | Last names of organization member |
+| `nombre_completo` | text | NULL | - | Full name (can be computed from nombres + apellidos) |
+| `telefono` | text | NULL | - | Contact phone number |
+| `cargo` | text | NULL | - | Job title or position |
 | `created_at` | timestamptz | NOT NULL | `now()` | Timestamp of membership creation |
 | `created_by` | uuid | NULL | - | FK to auth.users - Who created the membership |
 
@@ -1060,6 +1065,7 @@ VALUES ('analyst', 'business_partners', 'select');
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
 | `id` | uuid | NOT NULL | `gen_random_uuid()` | Primary key |
+| `codigo_tarea` | text | NULL | - | **UNIQUE** - Auto-generated task code (TSK-00000001 format, 8 digits) |
 | `titulo` | text | NOT NULL | - | Task title |
 | `descripcion` | text | NULL | - | Task description |
 | `prioridad` | prioridad_tarea_enum | NOT NULL | `'media'::prioridad_tarea_enum` | Priority level |
@@ -1094,6 +1100,7 @@ VALUES ('analyst', 'business_partners', 'select');
 ### Constraints
 
 - **PRIMARY KEY:** `id`
+- **UNIQUE:** `codigo_tarea`
 - **FOREIGN KEYS:**
   - `organizacion_id` → `organizations.id`
   - `oportunidad_id` → `oportunidades.id`
@@ -1104,9 +1111,11 @@ VALUES ('analyst', 'business_partners', 'select');
 ### Indexes
 
 - `tareas_pkey` PRIMARY KEY on `id`
+- `tareas_codigo_tarea_key` UNIQUE on `codigo_tarea`
 
 ### Triggers
 
+- `tr_generar_codigo_tarea` - Auto-generate `codigo_tarea` on INSERT
 - `set_audit_user_columns` - Auto-set audit fields
 - `actualizar_timestamp` - Auto-update `actualizado_en`
 - `set_deleted_by_on_soft_delete` - Auto-set `eliminado_por`
@@ -1114,11 +1123,12 @@ VALUES ('analyst', 'business_partners', 'select');
 ### Business Rules
 
 1. Tasks track activities and to-do items
-2. Can be linked to opportunities or business partners
-3. Priority levels help with task management
-4. Status workflow: pendiente → en_progreso → hecha (or bloqueada/cancelada)
-5. Due dates can be set for time-sensitive tasks
-6. Soft delete pattern applies
+2. **Auto-generated code:** `codigo_tarea` follows TSK-00000001 format (8 digits, supports up to ~100M tasks)
+3. Can be linked to opportunities or business partners
+4. Priority levels help with task management
+5. Status workflow: pendiente → en_progreso → hecha (or bloqueada/cancelada)
+6. Due dates can be set for time-sensitive tasks
+7. Soft delete pattern applies
 
 ### Related Tables
 

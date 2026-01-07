@@ -791,13 +791,14 @@ org_has_other_owner_v2(org_id UUID, excluded_user_id UUID) RETURNS BOOLEAN
 | `set_audit_user_columns` | All tables | `set_audit_user_columns()` | Auto-set `creado_por`, `actualizado_por` |
 | `set_deleted_by_on_soft_delete` | All tables | `set_deleted_by_on_soft_delete()` | Auto-set `eliminado_por` when soft deleting |
 | `generar_codigo_bp` | business_partners | `generar_codigo_bp()` | Auto-generate `codigo_bp` on INSERT |
+| `generar_codigo_tarea` | tareas | `generar_codigo_tarea()` | Auto-generate `codigo_tarea` on INSERT |
 | `generar_codigo_completo_asignacion` | asignaciones_acciones | `generar_codigo_completo_asignacion()` | Build `codigo_completo` from accion + subcodigo |
 
 ### Trigger Execution Order
 
 **INSERT:**
 1. Set `creado_por` (BEFORE INSERT)
-2. Generate codes (`codigo_bp`, `codigo_completo`) (BEFORE INSERT)
+2. Generate codes (`codigo_bp`, `codigo_tarea`, `codigo_completo`) (BEFORE INSERT)
 3. Validate consistency (BEFORE INSERT)
 
 **UPDATE:**
