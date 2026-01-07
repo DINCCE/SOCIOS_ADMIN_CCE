@@ -33,34 +33,34 @@ type PrioridadTarea = Database['public']['Enums']['prioridad_tarea_enum']
 
 const ESTADO_CONFIG: Record<
   EstadoTarea,
-  { label: string; className: string }
+  { label: string; dotClassName: string }
 > = {
-  pendiente: { label: 'Pendiente', className: 'text-slate-700 border-slate-200' },
-  en_progreso: { label: 'En Progreso', className: 'text-blue-700 border-blue-200' },
-  bloqueada: { label: 'Bloqueada', className: 'text-amber-700 border-amber-200' },
-  hecha: { label: 'Hecha', className: 'text-emerald-700 border-emerald-200' },
-  cancelada: { label: 'Cancelada', className: 'text-slate-600 border-slate-200' },
+  pendiente: { label: 'Pendiente', dotClassName: 'bg-status-neutral' },
+  en_progreso: { label: 'En Progreso', dotClassName: 'bg-status-warning' },
+  terminada: { label: 'Terminada', dotClassName: 'bg-status-positive' },
+  pausada: { label: 'Pausada', dotClassName: 'bg-status-negative' },
+  cancelada: { label: 'Cancelada', dotClassName: 'bg-status-negative' },
 }
 
 const PRIORIDAD_CONFIG: Record<
   PrioridadTarea,
-  { label: string; className: string }
+  { label: string; dotClassName: string }
 > = {
   critica: {
     label: 'Crítica',
-    className: 'text-rose-700 border-rose-200',
+    dotClassName: 'bg-status-negative',
   },
   alta: {
     label: 'Alta',
-    className: 'text-orange-700 border-orange-200',
+    dotClassName: 'bg-status-negative',
   },
   media: {
     label: 'Media',
-    className: 'text-blue-700 border-blue-200',
+    dotClassName: 'bg-status-warning',
   },
   baja: {
     label: 'Baja',
-    className: 'text-slate-700 border-slate-200',
+    dotClassName: 'bg-status-neutral',
   },
 }
 
@@ -188,9 +188,9 @@ export const columns: ColumnDef<TareaView>[] = [
     header: ({ column }) => <DataTableColumnHeader column={column} title="Prioridad" className="text-left" />,
     cell: ({ row }) => {
       const prioridad = row.getValue('prioridad') as PrioridadTarea
-      const config = PRIORIDAD_CONFIG[prioridad]
+      const config = PRIORIDAD_CONFIG[prioridad] || { label: prioridad, dotClassName: 'bg-status-neutral' }
       return (
-        <Badge variant="metadata-outline" className={config.className}>
+        <Badge variant="metadata-outline" dotClassName={config.dotClassName} showDot>
           {config.label}
         </Badge>
       )
@@ -237,9 +237,9 @@ export const columns: ColumnDef<TareaView>[] = [
     header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" className="text-left" />,
     cell: ({ row }) => {
       const estado = row.getValue('estado') as EstadoTarea
-      const config = ESTADO_CONFIG[estado]
+      const config = ESTADO_CONFIG[estado] || { label: estado, dotClassName: 'bg-status-neutral' }
       return (
-        <Badge variant="metadata-outline" className={config.className}>
+        <Badge variant="metadata-outline" dotClassName={config.dotClassName} showDot>
           {config.label}
         </Badge>
       )

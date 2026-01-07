@@ -25,10 +25,10 @@ import { formatShortDate } from "@/lib/format"
 import { formatDocumentId } from "@/lib/utils"
 
 const estadoVariants: Record<string, string> = {
-  activo: "text-emerald-700 border-emerald-200",
-  inactivo: "text-slate-600 border-slate-200",
-  suspendido: "text-rose-700 border-rose-200",
-  mora: "text-amber-700 border-amber-200",
+  activo: "bg-status-positive",
+  inactivo: "bg-status-neutral",
+  suspendido: "bg-status-negative",
+  mora: "bg-status-warning",
 }
 
 const generoIcons: Record<string, string> = {
@@ -132,7 +132,11 @@ export const columns: ColumnDef<Persona>[] = [
     ),
     cell: ({ row }) => {
       const tipo = row.getValue("tipo_documento") as string
-      return tipo ? <Badge variant="metadata-outline">{tipo}</Badge> : <NullCell />
+      return tipo ? (
+        <Badge variant="metadata-outline">
+          {tipo}
+        </Badge>
+      ) : <NullCell />
     },
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id))
@@ -206,12 +210,13 @@ export const columns: ColumnDef<Persona>[] = [
     ),
     cell: ({ row }) => {
       const estado = (row.getValue("estado") as string)?.toLowerCase()
-      const className = estadoVariants[estado] || "text-slate-600 border-slate-200"
+      const dotClassName = estadoVariants[estado] || "bg-status-neutral"
       return (
         <div className="flex justify-start">
           <Badge
             variant="metadata-outline"
-            className={className}
+            dotClassName={dotClassName}
+            showDot
           >
             {estado.charAt(0).toUpperCase() + estado.slice(1)}
           </Badge>

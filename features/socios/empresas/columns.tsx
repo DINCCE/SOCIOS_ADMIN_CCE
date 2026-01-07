@@ -26,10 +26,10 @@ import { Empresa } from "@/features/socios/types/socios-schema"
 import { formatDocumentId } from "@/lib/utils"
 
 const estadoVariants: Record<string, string> = {
-  activo: "text-emerald-700 border-emerald-200",
-  inactivo: "text-slate-600 border-slate-200",
-  suspendido: "text-rose-700 border-rose-200",
-  mora: "text-amber-700 border-amber-200",
+  activo: "bg-status-positive",
+  inactivo: "bg-status-neutral",
+  suspendido: "bg-status-negative",
+  mora: "bg-status-warning",
 }
 
 // Variants for tipo_sociedad are now handled by metadata-outline directly
@@ -218,12 +218,13 @@ export const columns: ColumnDef<Empresa>[] = [
     ),
     cell: ({ row }) => {
       const estado = (row.getValue("estado") as string)?.toLowerCase()
-      const className = estadoVariants[estado] || "text-slate-600 border-slate-200"
+      const dotClassName = estadoVariants[estado] || "bg-status-neutral"
       return (
         <div className="flex justify-start">
           <Badge
             variant="metadata-outline"
-            className={className}
+            dotClassName={dotClassName}
+            showDot
           >
             {estado.charAt(0).toUpperCase() + estado.slice(1)}
           </Badge>

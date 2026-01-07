@@ -64,7 +64,7 @@ export async function actualizarTarea(
     titulo?: string
     descripcion?: string
     prioridad?: 'baja' | 'media' | 'alta' | 'critica'
-    estado?: 'pendiente' | 'en_progreso' | 'bloqueada' | 'hecha' | 'cancelada'
+    estado?: 'pendiente' | 'en_progreso' | 'terminada' | 'pausada' | 'cancelada'
     oportunidad_id?: string
     asignado_a?: string
     fecha_vencimiento?: string
@@ -142,7 +142,7 @@ export async function softDeleteTarea(tarea_id: string) {
 export async function listTareas(
   organizacion_id: string,
   filters?: {
-    estado?: 'pendiente' | 'en_progreso' | 'bloqueada' | 'hecha' | 'cancelada'
+    estado?: 'pendiente' | 'en_progreso' | 'terminada' | 'pausada' | 'cancelada'
     prioridad?: 'baja' | 'media' | 'alta' | 'critica'
     asignado_a?: string
     oportunidad_id?: string

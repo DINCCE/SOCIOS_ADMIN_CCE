@@ -20,17 +20,17 @@ import {
 import { DataTableColumnHeader } from "@/features/socios/components/data-table-column-header"
 import { formatCurrency, formatDocumentId } from "@/lib/utils"
 
-type EstadoOportunidad = 'abierta' | 'en_proceso' | 'ganada' | 'perdida' | 'cancelada'
+type EstadoOportunidad = 'nueva' | 'en_progreso' | 'ganada' | 'perdida' | 'descartada'
 
 const ESTADO_CONFIG: Record<
   EstadoOportunidad,
-  { label: string; className: string }
+  { label: string; dotClassName: string }
 > = {
-  abierta: { label: 'Abierta', className: 'text-blue-700 border-blue-200' },
-  en_proceso: { label: 'En Proceso', className: 'text-amber-700 border-amber-200' },
-  ganada: { label: 'Ganada', className: 'text-emerald-700 border-emerald-200' },
-  perdida: { label: 'Perdida', className: 'text-rose-700 border-rose-200' },
-  cancelada: { label: 'Cancelada', className: 'text-slate-600 border-slate-200' },
+  nueva: { label: 'Nueva', dotClassName: 'bg-status-neutral' },
+  en_progreso: { label: 'En Progreso', dotClassName: 'bg-status-warning' },
+  ganada: { label: 'Ganada', dotClassName: 'bg-status-positive' },
+  perdida: { label: 'Pérdida', dotClassName: 'bg-status-negative' },
+  descartada: { label: 'Descartada', dotClassName: 'bg-status-negative' },
 }
 
 export type OportunidadView = {
@@ -108,7 +108,7 @@ export const columns: ColumnDef<OportunidadView>[] = [
     cell: ({ row }) => {
       const tipo = row.getValue('tipo') as string
       return (
-        <Badge variant="metadata-outline" className="border px-2 py-0.5 text-foreground">
+        <Badge variant="metadata-outline">
           {tipo}
         </Badge>
       )
@@ -123,10 +123,12 @@ export const columns: ColumnDef<OportunidadView>[] = [
     header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" className="text-left" />,
     cell: ({ row }) => {
       const estado = row.getValue('estado') as EstadoOportunidad
-      const config = ESTADO_CONFIG[estado]
+      const config = ESTADO_CONFIG[estado] || { label: estado, dotClassName: 'bg-status-neutral' }
       return (
         <div className="flex justify-start">
-          <Badge variant="metadata-outline" className={config.className}>{config.label}</Badge>
+          <Badge variant="metadata-outline" dotClassName={config.dotClassName} showDot>
+            {config.label}
+          </Badge>
         </div>
       )
     },

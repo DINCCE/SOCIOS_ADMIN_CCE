@@ -61,6 +61,12 @@
   /* Sidebar width variables */
   --sidebar-width: 16rem;
   --sidebar-width-icon: 3rem;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.65 0.15 145);  /* verde - éxito/activo */
+  --status-neutral: oklch(0.55 0 0);       /* gris - neutral/inactivo */
+  --status-warning: oklch(0.70 0.12 85);   /* amarillo - advertencia */
+  --status-negative: oklch(0.60 0.20 25);  /* rojo - error/crítico */
 }
 
 .dark {
@@ -114,6 +120,12 @@
   --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10);
   --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10);
   --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.70 0.15 145);  /* verde - éxito/activo */
+  --status-neutral: oklch(0.65 0 0);       /* gris - neutral/inactivo */
+  --status-warning: oklch(0.75 0.12 85);   /* amarillo - advertencia */
+  --status-negative: oklch(0.70 0.18 25);  /* rojo - error/crítico */
 }
 
 @theme inline {
@@ -242,6 +254,12 @@
   --sidebar-border: oklch(0.9401 0 0);
   --sidebar-ring: oklch(0.7731 0 0);
   --radius: 0.5rem;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.50 0.08 150);  /* verde café - éxito/activo */
+  --status-neutral: oklch(0.45 0.02 70);   /* gris café - neutral/inactivo */
+  --status-warning: oklch(0.55 0.10 75);   /* amarillo café - advertencia */
+  --status-negative: oklch(0.50 0.15 35);   /* rojo café - error/crítico */
 }
 
 [data-theme="capuccino"].dark {
@@ -277,6 +295,12 @@
   --sidebar-accent-foreground: oklch(0.9674 0.0013 286.3752);
   --sidebar-border: oklch(0.2739 0.0055 286.0326);
   --sidebar-ring: oklch(0.8711 0.0055 286.2860);
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.70 0.12 155);  /* verde café claro - éxito/activo */
+  --status-neutral: oklch(0.65 0.03 75);   /* gris café claro - neutral/inactivo */
+  --status-warning: oklch(0.75 0.14 80);   /* amarillo café claro - advertencia */
+  --status-negative: oklch(0.70 0.18 40);   /* rojo café claro - error/crítico */
 }
 
 /* --- Materia Oscura Theme --- */
@@ -318,6 +342,12 @@
   /* Theme-specific font overrides */
   --font-sans: var(--font-geist-mono);
   --font-mono: var(--font-jetbrains-mono);
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.70 0.14 260);  /* verde azulado - éxito/activo */
+  --status-neutral: oklch(0.55 0.03 250);   /* gris azulado - neutral/inactivo */
+  --status-warning: oklch(0.75 0.13 85);    /* amarillo azulado - advertencia */
+  --status-negative: oklch(0.65 0.19 30);   /* rojo azulado - error/crítico */
 }
 
 [data-theme="materia-oscura"].dark {
@@ -353,6 +383,12 @@
   --sidebar-accent-foreground: oklch(0.8109 0 0);
   --sidebar-border: oklch(0.2520 0 0);
   --sidebar-ring: oklch(0.7214 0.1337 49.9802);
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.75 0.15 260);  /* verde azulado - éxito/activo */
+  --status-neutral: oklch(0.60 0.04 250);   /* gris azulado - neutral/inactivo */
+  --status-warning: oklch(0.80 0.14 85);    /* amarillo azulado - advertencia */
+  --status-negative: oklch(0.70 0.20 30);   /* rojo azulado - error/crítico */
 }
 
 /* --- Claude Theme --- */
@@ -390,6 +426,12 @@
   --sidebar-border: oklch(0.9401 0 0);
   --sidebar-ring: oklch(0.7731 0 0);
   --radius: 0.5rem;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.60 0.12 150);  /* verde suave - éxito/activo */
+  --status-neutral: oklch(0.55 0.04 95);    /* gris cálido - neutral/inactivo */
+  --status-warning: oklch(0.65 0.11 85);    /* amarillo cálido - advertencia */
+  --status-negative: oklch(0.60 0.16 35);   /* rojo suave - error/crítico */
 }
 
 [data-theme="claude"].dark {
@@ -425,6 +467,12 @@
   --sidebar-accent-foreground: oklch(0.8074 0.0142 93.0137);
   --sidebar-border: oklch(0.9401 0 0);
   --sidebar-ring: oklch(0.7731 0 0);
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.70 0.14 155);  /* verde suave claro - éxito/activo */
+  --status-neutral: oklch(0.65 0.05 100);   /* gris cálido claro - neutral/inactivo */
+  --status-warning: oklch(0.75 0.13 90);    /* amarillo cálido claro - advertencia */
+  --status-negative: oklch(0.70 0.18 40);   /* rojo suave claro - error/crítico */
 }
 
 /* --- Doom 64 Theme --- */
@@ -464,6 +512,12 @@
   --radius: 0px;
   --font-sans: "Oxanium", sans-serif;
   --font-mono: "Source Code Pro", monospace;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.55 0.22 145);  /* verde vibrante - éxito/activo */
+  --status-neutral: oklch(0.50 0.02 0);     /* gris oscuro - neutral/inactivo */
+  --status-warning: oklch(0.65 0.20 85);    /* amarillo vibrante - advertencia */
+  --status-negative: oklch(0.60 0.24 25);   /* rojo vibrante - error/crítico */
 }
 
 [data-theme="doom-64"].dark {
@@ -501,6 +555,12 @@
   --sidebar-ring: oklch(0.6083 0.2090 27.0276);
   --font-sans: "Oxanium", sans-serif;
   --font-mono: "Source Code Pro", monospace;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.65 0.23 145);  /* verde vibrante claro - éxito/activo */
+  --status-neutral: oklch(0.60 0.03 0);     /* gris claro - neutral/inactivo */
+  --status-warning: oklch(0.75 0.21 85);    /* amarillo vibrante claro - advertencia */
+  --status-negative: oklch(0.70 0.25 25);   /* rojo vibrante claro - error/crítico */
 }
 
 /* --- Grafito Theme --- */
@@ -541,6 +601,12 @@
   --font-serif: Georgia, serif;
   --font-mono: Fira Code, monospace;
   --radius: 0.35rem;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.55 0.02 145);  /* verde grisáceo - éxito/activo */
+  --status-neutral: oklch(0.50 0 0);       /* gris puro - neutral/inactivo */
+  --status-warning: oklch(0.60 0.02 85);    /* amarillo grisáceo - advertencia */
+  --status-negative: oklch(0.55 0.04 25);   /* rojo grisáceo - error/crítico */
 }
 
 [data-theme="grafito"].dark {
@@ -579,6 +645,12 @@
   --font-sans: Inter, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Fira Code, monospace;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.70 0.03 145);  /* verde grisáceo claro - éxito/activo */
+  --status-neutral: oklch(0.65 0 0);       /* gris puro claro - neutral/inactivo */
+  --status-warning: oklch(0.75 0.03 85);    /* amarillo grisáceo claro - advertencia */
+  --status-negative: oklch(0.70 0.05 25);   /* rojo grisáceo claro - error/crítico */
 }
 
 /* --- Minimal Theme --- */
@@ -619,6 +691,12 @@
   --font-serif: Source Serif 4, serif;
   --font-mono: JetBrains Mono, monospace;
   --radius: 0.375rem;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.65 0.15 145);  /* verde moderado - éxito/activo */
+  --status-neutral: oklch(0.55 0.02 0);     /* gris neutro - neutral/inactivo */
+  --status-warning: oklch(0.70 0.13 85);    /* amarillo moderado - advertencia */
+  --status-negative: oklch(0.65 0.18 25);   /* rojo moderado - error/crítico */
 }
 
 [data-theme="minimal"].dark {
@@ -657,6 +735,12 @@
   --font-sans: Inter, sans-serif;
   --font-serif: Source Serif 4, serif;
   --font-mono: JetBrains Mono, monospace;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.70 0.16 145);  /* verde moderado claro - éxito/activo */
+  --status-neutral: oklch(0.60 0.03 0);     /* gris neutro claro - neutral/inactivo */
+  --status-warning: oklch(0.75 0.14 85);    /* amarillo moderado claro - advertencia */
+  --status-negative: oklch(0.70 0.19 25);   /* rojo moderado claro - error/crítico */
 }
 
 /* --- Neo Brutal Theme --- */
@@ -696,6 +780,12 @@
   --font-sans: DM Sans, sans-serif;
   --font-mono: Space Mono, monospace;
   --radius: 0px;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.60 0.24 145);  /* verde muy vibrante - éxito/activo */
+  --status-neutral: oklch(0.55 0.01 0);     /* gris neutro - neutral/inactivo */
+  --status-warning: oklch(0.70 0.22 85);    /* amarillo muy vibrante - advertencia */
+  --status-negative: oklch(0.65 0.25 25);   /* rojo muy vibrante - error/crítico */
 }
 
 [data-theme="neo-brutal"].dark {
@@ -733,6 +823,12 @@
   --sidebar-ring: oklch(0.7044 0.1872 23.1858);
   --font-sans: DM Sans, sans-serif;
   --font-mono: Space Mono, monospace;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.70 0.25 145);  /* verde muy vibrante claro - éxito/activo */
+  --status-neutral: oklch(0.65 0.02 0);     /* gris neutro claro - neutral/inactivo */
+  --status-warning: oklch(0.80 0.23 85);    /* amarillo muy vibrante claro - advertencia */
+  --status-negative: oklch(0.75 0.26 25);   /* rojo muy vibrante claro - error/crítico */
 }
 
 /* --- Jardín Theme --- */
@@ -772,6 +868,12 @@
   --font-sans: Outfit, sans-serif;
   --radius: 0.5rem;
   --tracking-normal: 0.025em;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.65 0.14 160);  /* verde natural - éxito/activo */
+  --status-neutral: oklch(0.55 0.04 165);   /* gris verdoso - neutral/inactivo */
+  --status-warning: oklch(0.70 0.12 85);    /* amarillo natural - advertencia */
+  --status-negative: oklch(0.65 0.17 35);   /* rojo natural - error/crítico */
 }
 
 [data-theme="jardin"].dark {
@@ -810,6 +912,12 @@
   --font-sans: Outfit, sans-serif;
   --radius: 0.5rem;
   --tracking-normal: 0.025em;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.75 0.16 160);  /* verde natural claro - éxito/activo */
+  --status-neutral: oklch(0.65 0.05 165);   /* gris verdoso claro - neutral/inactivo */
+  --status-warning: oklch(0.80 0.14 85);    /* amarillo natural claro - advertencia */
+  --status-negative: oklch(0.75 0.19 35);   /* rojo natural claro - error/crítico */
 }
 
 [data-theme="jardin"] {
@@ -856,6 +964,12 @@
   --font-serif: Source Serif 4, serif;
   --font-mono: JetBrains Mono, monospace;
   --radius: 0.75rem;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.65 0.15 145);  /* verde mandarina - éxito/activo */
+  --status-neutral: oklch(0.55 0.03 50);    /* gris cálido - neutral/inactivo */
+  --status-warning: oklch(0.70 0.14 75);    /* amarillo cálido - advertencia */
+  --status-negative: oklch(0.65 0.19 30);   /* rojo cálido - error/crítico */
 }
 
 [data-theme="mandarina"].dark {
@@ -894,6 +1008,12 @@
   --font-sans: Inter, sans-serif;
   --font-serif: Source Serif 4, serif;
   --font-mono: JetBrains Mono, monospace;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.70 0.16 145);  /* verde mandarina claro - éxito/activo */
+  --status-neutral: oklch(0.60 0.04 50);    /* gris cálido claro - neutral/inactivo */
+  --status-warning: oklch(0.75 0.15 75);    /* amarillo cálido claro - advertencia */
+  --status-negative: oklch(0.70 0.20 30);   /* rojo cálido claro - error/crítico */
 }
 
 /* --- Twitter Theme --- */
@@ -931,6 +1051,12 @@
   --sidebar-border: oklch(0.9130 0.0051 197.4109);
   --sidebar-ring: oklch(0.5585 0.2232 278.9015);
   --radius: 1rem;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.65 0.14 260);  /* verde azulado - éxito/activo */
+  --status-neutral: oklch(0.55 0.03 250);   /* gris azulado - neutral/inactivo */
+  --status-warning: oklch(0.70 0.13 85);    /* amarillo azulado - advertencia */
+  --status-negative: oklch(0.65 0.18 30);   /* rojo azulado - error/crítico */
 }
 
 [data-theme="twitter"].dark {
@@ -966,6 +1092,12 @@
   --sidebar-accent-foreground: oklch(0.9851 0 0);
   --sidebar-border: oklch(0.2810 0.0122 248.4845);
   --sidebar-ring: oklch(0.5585 0.2232 278.9015);
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.70 0.15 260);  /* verde azulado claro - éxito/activo */
+  --status-neutral: oklch(0.60 0.04 250);   /* gris azulado claro - neutral/inactivo */
+  --status-warning: oklch(0.75 0.14 85);    /* amarillo azulado claro - advertencia */
+  --status-negative: oklch(0.70 0.19 30);   /* rojo azulado claro - error/crítico */
 }
 
 /* --- Country Theme --- */
@@ -1006,6 +1138,12 @@
   --font-serif: Georgia, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --radius: 0rem;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.65 0.13 165);  /* verde campo - éxito/activo */
+  --status-neutral: oklch(0.55 0.02 0);     /* gris neutro - neutral/inactivo */
+  --status-warning: oklch(0.70 0.12 85);    /* amarillo campo - advertencia */
+  --status-negative: oklch(0.65 0.18 30);   /* rojo campo - error/crítico */
 }
 
 [data-theme="country"].dark {
@@ -1044,6 +1182,12 @@
   --font-sans: Georgia, serif;
   --font-serif: Georgia, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.75 0.15 170);  /* verde campo claro - éxito/activo */
+  --status-neutral: oklch(0.65 0.03 0);     /* gris neutro claro - neutral/inactivo */
+  --status-warning: oklch(0.80 0.13 85);    /* amarillo campo claro - advertencia */
+  --status-negative: oklch(0.75 0.19 30);   /* rojo campo claro - error/crítico */
 }
 
 /* --- YingYang Theme --- */
@@ -1081,6 +1225,12 @@
   --sidebar-border: oklch(0.9220 0 0);
   --sidebar-ring: oklch(0.7080 0 0);
   --radius: 0rem;
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.55 0.01 145);  /* verde monocromo - éxito/activo */
+  --status-neutral: oklch(0.50 0 0);       /* gris puro - neutral/inactivo */
+  --status-warning: oklch(0.60 0.01 85);    /* amarillo monocromo - advertencia */
+  --status-negative: oklch(0.55 0.02 25);   /* rojo monocromo - error/crítico */
 }
 
 [data-theme="yingyang"].dark {
@@ -1116,6 +1266,12 @@
   --sidebar-accent-foreground: oklch(1.0000 0 0);
   --sidebar-border: oklch(0.2750 0 0);
   --sidebar-ring: oklch(1.0000 0 0);
+
+  /* Status colors - semánticos para badges */
+  --status-positive: oklch(0.70 0.02 145);  /* verde monocromo claro - éxito/activo */
+  --status-neutral: oklch(0.65 0 0);       /* gris puro claro - neutral/inactivo */
+  --status-warning: oklch(0.75 0.02 85);    /* amarillo monocromo claro - advertencia */
+  --status-negative: oklch(0.70 0.03 25);   /* rojo monocromo claro - error/crítico */
 }
 
 @layer base {
@@ -1150,6 +1306,40 @@
 }
 
 @layer utilities {
+
+  /* Status colors - clases semánticas para badges */
+  .text-status-positive {
+    color: var(--status-positive) !important;
+  }
+
+  .text-status-neutral {
+    color: var(--status-neutral) !important;
+  }
+
+  .text-status-warning {
+    color: var(--status-warning) !important;
+  }
+
+  .text-status-negative {
+    color: var(--status-negative) !important;
+  }
+
+  /* Status colors - clases para el punto del badge (bg-status-*) */
+  .bg-status-positive {
+    background-color: var(--status-positive);
+  }
+
+  .bg-status-neutral {
+    background-color: var(--status-neutral);
+  }
+
+  .bg-status-warning {
+    background-color: var(--status-warning);
+  }
+
+  .bg-status-negative {
+    background-color: var(--status-negative);
+  }
 
   /* Toasts: Texto seleccionable para errores técnicos */
   .select-text {

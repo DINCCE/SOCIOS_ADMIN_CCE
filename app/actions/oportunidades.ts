@@ -101,7 +101,7 @@ export async function crearOportunidad(data: {
 export async function actualizarOportunidad(
   oportunidad_id: string,
   data: {
-    estado?: 'abierta' | 'en_proceso' | 'ganada' | 'perdida' | 'cancelada'
+    estado?: 'nueva' | 'en_progreso' | 'ganada' | 'perdida' | 'descartada'
     responsable_id?: string
     monto_estimado?: number
     notas?: string
@@ -176,7 +176,7 @@ export async function softDeleteOportunidad(oportunidad_id: string) {
 export async function listOportunidades(
   organizacion_id: string,
   filters?: {
-    estado?: 'abierta' | 'en_proceso' | 'ganada' | 'perdida' | 'cancelada'
+    estado?: 'nueva' | 'en_progreso' | 'ganada' | 'perdida' | 'descartada'
     tipo?: 'Solicitud Retiro' | 'Solicitud Ingreso'
   }
 ) {
