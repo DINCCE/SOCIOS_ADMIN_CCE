@@ -151,7 +151,7 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
                                         <span className="text-sm font-medium text-green-700">
                                             {formatPhone(persona.whatsapp)}
                                         </span>
-                                        <Badge variant="outline" className="text-[9px] h-3.5 px-1 bg-green-50 text-green-700 border-green-200">WA</Badge>
+                                        <Badge variant="outline" className="text-[9px] h-3.5 px-1 bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 dark:border-green-400/20">WA</Badge>
                                     </div>
                                 </div>
                             )}
@@ -240,19 +240,19 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
                         {/* Member 1 */}
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2 min-w-0">
-                                <div className="h-6 w-6 shrink-0 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-600">ML</div>
+                                <div className="h-6 w-6 shrink-0 rounded-full bg-muted border border-border flex items-center justify-center text-[8px] font-bold text-muted-foreground">ML</div>
                                 <span className="text-xs font-medium text-foreground truncate max-w-[140px]">María López</span>
                             </div>
-                            <Badge className="text-[9px] px-1.5 py-0 h-4 font-normal bg-slate-100 text-slate-500 rounded-sm border-none shadow-none">CÓNYUGE</Badge>
+                            <Badge className="text-[9px] px-1.5 py-0 h-4 font-normal bg-muted text-muted-foreground rounded-sm border-none shadow-none">CÓNYUGE</Badge>
                         </div>
 
                         {/* Member 2 */}
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2 min-w-0">
-                                <div className="h-6 w-6 shrink-0 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-600">CP</div>
+                                <div className="h-6 w-6 shrink-0 rounded-full bg-muted border border-border flex items-center justify-center text-[8px] font-bold text-muted-foreground">CP</div>
                                 <span className="text-xs font-medium text-foreground truncate max-w-[140px]">Camilo Pérez</span>
                             </div>
-                            <Badge className="text-[9px] px-1.5 py-0 h-4 font-normal bg-slate-100 text-slate-500 rounded-sm border-none shadow-none">HIJO</Badge>
+                            <Badge className="text-[9px] px-1.5 py-0 h-4 font-normal bg-muted text-muted-foreground rounded-sm border-none shadow-none">HIJO</Badge>
                         </div>
 
                         {/* gestion / ver mas */}
@@ -269,28 +269,28 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Presencia Digital</p>
                     <div className="flex flex-wrap gap-1.5">
                         {persona.linkedin_url && (
-                            <Button variant="outline" size="icon" className="h-8 w-8 text-[#0077b5] border-slate-200 bg-white" asChild>
+                            <Button variant="outline" size="icon" className="h-8 w-8 text-[#0077b5] hover:bg-[#0077b5]/10 border-border bg-card" asChild>
                                 <a href={persona.linkedin_url} target="_blank" rel="noopener noreferrer">
                                     <Linkedin className="h-3.5 w-3.5" />
                                 </a>
                             </Button>
                         )}
                         {persona.instagram_handle && (
-                            <Button variant="outline" size="icon" className="h-8 w-8 text-[#e4405f] border-slate-200 bg-white" asChild>
+                            <Button variant="outline" size="icon" className="h-8 w-8 text-[#e4405f] hover:bg-[#e4405f]/10 border-border bg-card" asChild>
                                 <a href={`https://instagram.com/${persona.instagram_handle}`} target="_blank" rel="noopener noreferrer">
                                     <Instagram className="h-3.5 w-3.5" />
                                 </a>
                             </Button>
                         )}
                         {persona.facebook_url && (
-                            <Button variant="outline" size="icon" className="h-8 w-8 text-[#1877f2] border-slate-200 bg-white" asChild>
+                            <Button variant="outline" size="icon" className="h-8 w-8 text-[#1877f2] hover:bg-[#1877f2]/10 border-border bg-card" asChild>
                                 <a href={persona.facebook_url} target="_blank" rel="noopener noreferrer">
                                     <Facebook className="h-3.5 w-3.5" />
                                 </a>
                             </Button>
                         )}
                         {persona.twitter_handle && (
-                            <Button variant="outline" size="icon" className="h-8 w-8 text-slate-900 border-slate-200 bg-white" asChild>
+                            <Button variant="outline" size="icon" className="h-8 w-8 text-slate-900 dark:text-slate-100 hover:bg-slate-900/10 dark:hover:bg-slate-100/10 border-border bg-card" asChild>
                                 <a href={`https://twitter.com/${persona.twitter_handle}`} target="_blank" rel="noopener noreferrer">
                                     <Twitter className="h-3.5 w-3.5" />
                                 </a>

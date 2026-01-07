@@ -37,22 +37,27 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { DataTablePagination } from '@/features/socios/components/data-table-pagination'
 import { DataTableViewOptions } from '@/features/socios/components/data-table-view-options'
+import { DataTableFacetedFilter } from '@/features/socios/components/data-table-faceted-filter'
+import { DataTableResetFilters } from '@/features/socios/components/data-table-reset-filters'
 import { Skeleton } from '@/components/ui/skeleton'
 import { columns, type OportunidadView } from '@/features/procesos/oportunidades/columns'
+import { oportunidadesEstadoOptions, oportunidadesTipoOptions, getOportunidadTagsOptions } from '@/lib/table-filters'
 
 export function OportunidadesPageClient() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const view = (searchParams.get('view') as 'list' | 'board') || 'list'
 
+  const [hasMounted, setHasMounted] = React.useState(false)
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'fecha_solicitud', desc: true }
   ])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [globalSearch, setGlobalSearch] = React.useState("")
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
 
-  const { data: oportunidades = [], isLoading } = useQuery({
+  const { data: initialData = [], isLoading } = useQuery({
     queryKey: ['oportunidades'],
     queryFn: async () => {
       const supabase = createClient()
@@ -66,8 +71,35 @@ export function OportunidadesPageClient() {
     },
   })
 
+  // Global search filter
+  const filteredData = React.useMemo(() => {
+    if (!globalSearch) return initialData
+
+    const searchLower = globalSearch.toLowerCase()
+    return initialData.filter((oportunidad) => {
+      // Buscar en nombre del solicitante
+      if (oportunidad.solicitante_nombre?.toLowerCase().includes(searchLower)) {
+        return true
+      }
+      // Buscar en código
+      if (oportunidad.codigo?.toLowerCase().includes(searchLower)) {
+        return true
+      }
+      // Buscar en notas
+      if (oportunidad.notas?.toLowerCase().includes(searchLower)) {
+        return true
+      }
+      return false
+    })
+  }, [initialData, globalSearch])
+
+  // Handle mount state
+  React.useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
   const table = useReactTable({
-    data: oportunidades,
+    data: filteredData,
     columns,
     state: {
       sorting,
@@ -93,7 +125,7 @@ export function OportunidadesPageClient() {
       <PageHeader
         title="Oportunidades"
         description="Gestiona las oportunidades de negocio y solicitudes"
-        metadata={`${oportunidades.length} total`}
+        metadata={`${filteredData.length} de ${initialData.length}`}
         actions={<NewOportunidadSheet />}
       />
 
@@ -104,29 +136,34 @@ export function OportunidadesPageClient() {
             <div className="relative w-64 lg:w-80">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar oportunidades..."
-                value={(table.getColumn('solicitante_nombre')?.getFilterValue() as string) ?? ''}
-                onChange={(e) => table.getColumn('solicitante_nombre')?.setFilterValue(e.target.value)}
+                placeholder="Buscar por solicitante, código o notas..."
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
                 className="pl-8 h-8 text-sm bg-background/50 focus:bg-background transition-colors"
               />
             </div>
             <Separator orientation="vertical" className="h-6" />
-            <Select
-              value={(table.getColumn('estado')?.getFilterValue() as string) ?? 'all'}
-              onValueChange={(value) => table.getColumn('estado')?.setFilterValue(value === 'all' ? '' : value)}
-            >
-              <SelectTrigger className="h-8 w-[140px]">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="abierta">Abierta</SelectItem>
-                <SelectItem value="en_proceso">En Proceso</SelectItem>
-                <SelectItem value="ganada">Ganada</SelectItem>
-                <SelectItem value="perdida">Perdida</SelectItem>
-                <SelectItem value="cancelada">Cancelada</SelectItem>
-              </SelectContent>
-            </Select>
+            <DataTableFacetedFilter
+              column={table.getColumn("estado")}
+              title="Estado"
+              options={oportunidadesEstadoOptions}
+            />
+            <DataTableFacetedFilter
+              column={table.getColumn("tipo")}
+              title="Tipo"
+              options={oportunidadesTipoOptions}
+            />
+            <DataTableFacetedFilter
+              column={table.getColumn("tags")}
+              title="Etiquetas"
+              options={getOportunidadTagsOptions(initialData)}
+            />
+            {table.getState().columnFilters.length > 0 && (
+              <>
+                <Separator orientation="vertical" className="h-6" />
+                <DataTableResetFilters table={table} />
+              </>
+            )}
           </>
         }
         right={

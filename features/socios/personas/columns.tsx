@@ -126,6 +126,23 @@ export const columns: ColumnDef<Persona>[] = [
     },
   },
   {
+    accessorKey: "tipo_documento",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Tipo Doc." />
+    ),
+    cell: ({ row }) => {
+      const tipo = row.getValue("tipo_documento") as string
+      return tipo ? <Badge variant="metadata-outline">{tipo}</Badge> : <NullCell />
+    },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
+    },
+    enableHiding: true,
+    meta: {
+      size: 100,
+    },
+  },
+  {
     accessorKey: "numero_documento",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Documento" className="text-left" />

@@ -25,27 +25,25 @@ import { PersonasDataTable } from '@/features/socios/personas/data-table'
 import { NewPersonSheet } from '@/components/socios/personas/new-person-sheet'
 import { Input } from '@/components/ui/input'
 import { Search } from 'lucide-react'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { DataTableViewOptions } from '@/features/socios/components/data-table-view-options'
 import { DataTablePagination } from '@/features/socios/components/data-table-pagination'
+import { DataTableFacetedFilter } from '@/features/socios/components/data-table-faceted-filter'
+import { DataTableResetFilters } from '@/features/socios/components/data-table-reset-filters'
 import { FloatingActionBar } from '@/components/ui/floating-action-bar'
 import { Separator } from '@/components/ui/separator'
 import type { Persona } from '@/features/socios/types/socios-schema'
 import { columns } from '@/features/socios/personas/columns'
+import { personasEstadoOptions, personasTipoDocOptions, getPersonaTagsOptions } from '@/lib/table-filters'
 
 export function PersonasPageClient() {
   const router = useRouter()
   const [hasMounted, setHasMounted] = React.useState(false)
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [globalSearch, setGlobalSearch] = React.useState("")
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
     codigo: false,
+    tipo_documento: false,
     genero: false,
     fecha_nacimiento: false,
     nacionalidad: false,
@@ -77,6 +75,32 @@ export function PersonasPageClient() {
     },
   })
 
+  // Global search filter
+  const filteredData = React.useMemo(() => {
+    if (!globalSearch) return initialData
+
+    const searchLower = globalSearch.toLowerCase()
+    return initialData.filter((persona) => {
+      // Buscar en nombre completo
+      if (persona.nombre_completo?.toLowerCase().includes(searchLower)) {
+        return true
+      }
+      // Buscar en número de documento
+      if (persona.numero_documento?.toLowerCase().includes(searchLower)) {
+        return true
+      }
+      // Buscar en email principal
+      if (persona.email_principal?.toLowerCase().includes(searchLower)) {
+        return true
+      }
+      // Buscar en teléfono principal
+      if (persona.telefono_principal?.toLowerCase().includes(searchLower)) {
+        return true
+      }
+      return false
+    })
+  }, [initialData, globalSearch])
+
   // Handle mount state
   React.useEffect(() => {
     setHasMounted(true)
@@ -100,7 +124,7 @@ export function PersonasPageClient() {
   }, [hasMounted, initialData.length])
 
   const table = useReactTable({
-    data: initialData,
+    data: filteredData,
     columns,
     state: {
       sorting,
@@ -153,7 +177,7 @@ export function PersonasPageClient() {
       <PageHeader
         title="Personas"
         description="Gestiona las personas registradas como socios de negocio"
-        metadata={`${initialData.length} total`}
+        metadata={`${filteredData.length} de ${initialData.length}`}
         actions={<NewPersonSheet />}
       />
 
@@ -164,29 +188,34 @@ export function PersonasPageClient() {
             <div className="relative w-64 lg:w-80">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nombre, documento o email..."
-                value={(table.getColumn("nombre_completo")?.getFilterValue() as string) ?? ""}
-                onChange={(e) => table.getColumn("nombre_completo")?.setFilterValue(e.target.value)}
+                placeholder="Buscar por nombre, documento, email o teléfono..."
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
                 className="pl-8 h-8 text-sm bg-background/50 focus:bg-background transition-colors"
               />
             </div>
             <Separator orientation="vertical" className="h-6" />
-            <Select
-              value={(table.getColumn("estado")?.getFilterValue() as string) ?? "all"}
-              onValueChange={(value) =>
-                table.getColumn("estado")?.setFilterValue(value === "all" ? "" : value)
-              }
-            >
-              <SelectTrigger className="h-8 w-[130px]">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="activo">Activo</SelectItem>
-                <SelectItem value="inactivo">Inactivo</SelectItem>
-                <SelectItem value="suspendido">Suspendido</SelectItem>
-              </SelectContent>
-            </Select>
+            <DataTableFacetedFilter
+              column={table.getColumn("estado")}
+              title="Estado"
+              options={personasEstadoOptions}
+            />
+            <DataTableFacetedFilter
+              column={table.getColumn("tipo_documento")}
+              title="Tipo Doc."
+              options={personasTipoDocOptions}
+            />
+            <DataTableFacetedFilter
+              column={table.getColumn("tags")}
+              title="Etiquetas"
+              options={getPersonaTagsOptions(initialData)}
+            />
+            {table.getState().columnFilters.length > 0 && (
+              <>
+                <Separator orientation="vertical" className="h-6" />
+                <DataTableResetFilters table={table} />
+              </>
+            )}
           </>
         }
         right={<DataTableViewOptions table={table} />}

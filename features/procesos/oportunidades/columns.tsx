@@ -113,6 +113,9 @@ export const columns: ColumnDef<OportunidadView>[] = [
         </Badge>
       )
     },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
+    },
     meta: { size: 120 },
   },
   {
@@ -126,6 +129,9 @@ export const columns: ColumnDef<OportunidadView>[] = [
           <Badge variant="metadata-outline" className={config.className}>{config.label}</Badge>
         </div>
       )
+    },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
     },
     meta: { size: 110 },
   },

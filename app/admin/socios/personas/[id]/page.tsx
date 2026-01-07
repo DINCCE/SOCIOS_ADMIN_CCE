@@ -34,7 +34,7 @@ export default async function PersonDetailPage({ params }: PersonPageProps) {
             {/* 2. Main Layout: Flex Container */}
             <div className="flex flex-1 overflow-hidden">
                 {/* Left Sidebar: Identity (Fixed width) */}
-                <aside className="w-[300px] shrink-0 border-r border-border bg-white overflow-y-auto hidden md:block">
+                <aside className="w-[300px] shrink-0 border-r border-border bg-background overflow-y-auto hidden md:block">
                     <div className="p-4">
                         <PersonIdentityPanel persona={persona as Persona} />
                     </div>

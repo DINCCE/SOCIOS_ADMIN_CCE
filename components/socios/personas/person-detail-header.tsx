@@ -24,7 +24,7 @@ export function PersonDetailHeader({ persona }: PersonDetailHeaderProps) {
             {/* Main Identity Area */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
-                    <Avatar className="h-16 w-16 border border-slate-200/60 shadow-sm">
+                    <Avatar className="h-16 w-16 border border-border/60 shadow-sm">
                         <AvatarImage src={persona.foto_url || undefined} alt={persona.nombre_completo} />
                         <AvatarFallback className="text-xl">
                             {initials}

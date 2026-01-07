@@ -181,6 +181,9 @@ export const columns: ColumnDef<Empresa>[] = [
       const val = row.getValue("sector_industria") as string
       return val ? <span>{val}</span> : <NullCell />
     },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
+    },
     enableHiding: true,
     meta: {
       size: 120,
@@ -250,6 +253,13 @@ export const columns: ColumnDef<Empresa>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Tamaño" />
     ),
+    cell: ({ row }) => {
+      const val = row.getValue("tamano_empresa") as string
+      return val ? <span className="capitalize">{val}</span> : <NullCell />
+    },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
+    },
     enableHiding: true,
     meta: {
       size: 100,
@@ -294,6 +304,19 @@ export const columns: ColumnDef<Empresa>[] = [
       const val = row.getValue("ingresos_anuales") as number
       return <span>{val ? `$${val.toLocaleString()}` : '$0'}</span>
     },
+    filterFn: (row, id, value) => {
+      const ingresos = row.getValue(id) as number | null
+      if (ingresos === null || ingresos === undefined) return false
+
+      // value es un array de strings como "0-500", "500-1000", "10000+"
+      return value.some((range: string) => {
+        if (range === "10000+") {
+          return ingresos >= 10000
+        }
+        const [min, max] = range.split("-").map(Number)
+        return ingresos >= min && ingresos < max
+      })
+    },
     enableHiding: true,
     meta: {
       size: 120,
@@ -307,6 +330,19 @@ export const columns: ColumnDef<Empresa>[] = [
     cell: ({ row }) => {
       const val = row.getValue("numero_empleados")
       return val ? <span>{val as string}</span> : <NullCell />
+    },
+    filterFn: (row, id, value) => {
+      const empleados = row.getValue(id) as number | null
+      if (empleados === null || empleados === undefined) return false
+
+      // value es un array de strings como "0-10", "11-50", "500+"
+      return value.some((range: string) => {
+        if (range === "500+") {
+          return empleados >= 500
+        }
+        const [min, max] = range.split("-").map(Number)
+        return empleados >= min && empleados <= max
+      })
     },
     enableHiding: true,
     meta: {

@@ -147,6 +147,9 @@ export const columns: ColumnDef<TareaView>[] = [
         </div>
       )
     },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
+    },
     meta: { size: 110 },
   },
   {
@@ -164,6 +167,9 @@ export const columns: ColumnDef<TareaView>[] = [
           </Badge>
         </div>
       )
+    },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
     },
     meta: { size: 110 },
   },
@@ -184,7 +190,7 @@ export const columns: ColumnDef<TareaView>[] = [
               <CopyableCell value={email} />
             </div>
           ) : (
-            <span className="text-foreground text-xs">-</span>
+            <span>-</span>
           )}
         </>
       )
@@ -209,22 +215,22 @@ export const columns: ColumnDef<TareaView>[] = [
     meta: { size: 120 },
   },
   {
-    accessorKey: 'relacionado',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Relacionado" />,
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        {row.original.relacionado_codigo_bp && (
-          <CopyableCell value={row.original.relacionado_codigo_bp} />
-        )}
-        {row.original.oportunidad_codigo && (
-          <CopyableCell value={row.original.oportunidad_codigo} />
-        )}
-        {!row.original.relacionado_codigo_bp && !row.original.oportunidad_codigo && (
-          <span>-</span>
-        )}
-      </div>
-    ),
-    meta: { size: 160 },
+    accessorKey: 'oportunidad_codigo',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Oportunidad" />,
+    cell: ({ row }) => {
+      const codigo = row.original.oportunidad_codigo
+      return codigo ? <CopyableCell value={codigo} /> : <span>-</span>
+    },
+    meta: { size: 130 },
+  },
+  {
+    accessorKey: 'relacionado_codigo_bp',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Solicitante" />,
+    cell: ({ row }) => {
+      const codigo = row.original.relacionado_codigo_bp
+      return codigo ? <CopyableCell value={codigo} /> : <span>-</span>
+    },
+    meta: { size: 130 },
   },
   {
     id: 'actions',
