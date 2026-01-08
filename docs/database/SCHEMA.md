@@ -1,939 +1,511 @@
-# Database Schema Reference
+# Database Schema - ERD and Relationships
 
-> **Complete schema documentation with ERD diagrams**
->
-> Last updated: 2026-01-03 | Auto-generated from live database schema
+> **Last Updated:** 2026-01-08
+> **Total Tables:** 11
+> **Total Relationships:** 25+
 
 ---
 
 ## Table of Contents
 
-- [Schema Overview](#schema-overview)
-- [ERD Diagrams](#erd-diagrams)
-  - [1. Complete Database ERD](#1-complete-database-erd)
-  - [2. Business Partners Domain](#2-business-partners-domain)
-  - [3. Acciones Domain](#3-acciones-domain)
-  - [4. Relationships Domain](#4-relationships-domain)
-  - [5. Access Control Domain](#5-access-control-domain)
-  - [6. Operations Management Domain](#6-operations-management-domain)
-  - [7. Simplified High-Level View](#7-simplified-high-level-view)
-- [Tables Summary](#tables-summary)
-- [Custom Types](#custom-types)
-- [Database Functions](#database-functions)
-- [Triggers](#triggers)
-- [Views](#views)
-- [Indexes](#indexes)
-- [Naming Conventions](#naming-conventions)
-- [Related Documentation](#related-documentation)
+1. [Entity Relationship Diagram](#entity-relationship-diagram)
+2. [Relationship Details](#relationship-details)
+3. [Foreign Key References](#foreign-key-references)
+4. [Table Hierarchies](#table-hierarchies)
+5. [Index Summary](#index-summary)
+6. [Function Dependencies](#function-dependencies)
 
 ---
 
-## Schema Overview
+## Entity Relationship Diagram
 
-The database implements a comprehensive business partner management system using PostgreSQL on Supabase. The schema is organized into 5 main domains:
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                          AUTHENTICATION & AUTHORIZATION                        │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  ┌──────────────┐         ┌──────────────────────┐         ┌──────────────┐   │
+│  │ auth.users   │         │ config_organizacion_ │         │config_roles  │   │
+│  │              │         │     miembros         │         │              │   │
+│  │- id (PK)     │◄────────│- user_id (FK)       │         │- role (PK)   │   │
+│  │- email       │         │- organization_id(FK)│─────────►│- metadata    │   │
+│  │- ...         │         │- role               │         │              │   │
+│  └──────────────┘         └──────────────────────┘         └──────┬───────┘   │
+│          │                          │                            │            │
+│          │                          │                            │            │
+│          │             ┌─────────────┴───────────┐            │            │
+│          │             │    config_roles_       │            │            │
+│          │             │     permisos          │◄───────────┘            │
+│          │             │- role (FK)            │                         │
+│          │             │- resource             │                         │
+│          │             │- action               │                         │
+│          │             └───────────────────────┘                         │
+│          ▼                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                           ┌──────────────────┐
+                           │config_organiza- │
+                           │    ciones        │◄────────────────────────────┐
+                           │                  │                             │
+                           │- id (PK)         │                             │
+                           │- nombre          │                             │
+                           │- slug            │                             │
+                           │- metadata        │                             │
+                           └────────┬─────────┘                             │
+                                    │                                       │
+                                    │ organi-                               │
+                                    │ zacion_id                            │
+                                    │ (FK)                                  │
+                                    ▼                                       │
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              MASTER DATA                                       │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  ┌───────────────────────────────────────────────────────────────────────┐    │
+│  │                          dm_actores                                   │    │
+│  │                        (Business Partners)                             │    │
+│  │                                                                      │    │
+│  │- id (PK) ◄─────────────────────┬─────────────────────────────┐      │    │
+│  │- codigo_bp                     │                             │      │    │
+│  │- tipo_actor                    │                             │      │    │
+│  │- organizacion_id (FK) ─────────┘                             │      │    │
+│  │- ciudad_id (FK) ────────┐                                    │      │    │
+│  │- email                   │                                    │      │    │
+│  │- nombre_completo         │                                    │      │    │
+│  │- razon_social            │                                    │      │    │
+│  │- ...                     │                                    │      │    │
+│  └──────────────────────────┼────────────────────────────────────┘      │    │
+│                             │                                           │    │
+│  ┌──────────────────────────┴───────────┐      ┌────────────────────┐    │    │
+│  │              config_ciudades          │      │     dm_acciones    │    │    │
+│  │                                     │      │   (Stock Cert.)    │    │    │
+│  │- id (PK)                            │      │                     │    │    │
+│  │- country_code                       │      │- id (PK)            │    │    │
+│  │- city_name                          │      │- organizacion_id(FK)│────┼────┘
+│  └─────────────────────────────────────┘      │- codigo_accion      │    │       │
+│                                             │- estado             │    │       │
+│                                             └─────────────────────┘    │       │
+│                                                                         │       │
+└─────────────────────────────────────────────────────────────────────────┘       │
+                                                                          │       │
+┌─────────────────────────────────────────────────────────────────────────────────┤
+│                           TRANSACTIONS                                         │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  ┌────────────────────────────────────────────────────────────────────┐       │
+│  │                        tr_doc_comercial                             │       │
+│  │                     (Business Opportunities)                       │       │
+│  │                                                                     │       │
+│  │- id (PK)                                                            │       │
+│  │- organizacion_id (FK)                                              │       │
+│  │- asociado_id (FK) ────────────┐                                    │       │
+│  │- solicitante_id (FK) ─────────┼──────────┐                         │       │
+│  │- responsable_id (FK) ─────────┼──────────┼─────────┐               │       │
+│  │- pagador_id (FK) ──────────────┼──────────┼─────────┼───────┐       │       │
+│  │- oportunidad_id (FK) ◄──────────┘          │         │       │       │       │
+│  │- estado                                          │         │       │       │       │
+│  │- valor_total                                     │         │       │       │       │
+│  └─────────────────────────────────────────────────┼─────────┴───────┴───────┘       │
+│                                                    │                            │
+│  ┌───────────────────────────────────────────────┴─────┐    ┌─────────────────┐   │
+│  │                       tr_tr_tareas                  │    │   vn_asociados   │   │
+│  │                 (Task Management)              │    │  (Share Assign.) │   │
+│  │                                                 │    │                 │   │
+│  │- id (PK)                                        │    │- id (PK)       │   │
+│  │- organizacion_id (FK)                           │    │- accion_id(FK) ├─┘   │
+│  │- oportunidad_id (FK) ───────────────────────────┘    │- business_     │     │
+│  │- asignado_a (FK) ────────────────────────────────┐    │  partner_id(FK)│     │
+│  │- relacionado_con_bp (FK) ───────────────────────┼───►│- tipo_asign    │     │
+│  │- estado                                          │    │- fecha_inicio  │     │
+│  │- prioridad                                      │    │- fecha_fin     │     │
+│  └─────────────────────────────────────────────────┘    └─────────────────┘     │
+│                                                           ▲                      │
+│                                                           │                      │
+│  ┌───────────────────────────────────────────────────────┴──────────┐          │
+│  │                    vn_relaciones_actores                     │          │
+│  │               (Business Partner Relationships)                │          │
+│  │                                                                │          │
+│  │- id (PK)                                                       │          │
+│  │- organizacion_id (FK)                                         │          │
+│  │- bp_origen_id (FK) ─────────────────────────────┐            │          │
+│  │- bp_destino_id (FK) ────────────────────────────┼───────────►│          │
+│  │- tipo_relacion                                    │           │          │
+│  │- fecha_inicio                                    │           │          │
+│  │- fecha_fin                                       │           │          │
+│  │- es_actual                                       │           │          │
+│  └──────────────────────────────────────────────────┴───────────┴──────────┘  │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
 
-1. **Business Partners** - Organizations, personas (natural persons), empresas (companies)
-2. **Acciones** - Club shares with temporal ownership tracking
-3. **Relationships** - Connections between business partners
-4. **Access Control** - Multi-tenancy, roles, and permissions
-5. **Operations Management** - Opportunities and tasks
-
-### Key Statistics
-
-- **Tables:** 13 (all with RLS enabled)
-- **Functions:** 36+ total (11 user-facing RPC)
-- **Views:** 7 (with SECURITY INVOKER)
-- **Triggers:** 5+ trigger functions
-- **Enums:** 5 custom types (tipo_relacion_bp, tipo_oportunidad_enum, estado_oportunidad_enum, prioridad_tarea_enum, estado_tarea_enum)
-- **Policies:** 38+ RLS policies
-- **Indexes:** 26+ indexes (performance optimization)
-
-### Architecture Patterns
-
-- ✅ **Class Table Inheritance (CTI)** - `business_partners` → `personas` / `empresas`
-- ✅ **Multi-Tenancy** - Organization-based data isolation
-- ✅ **Soft Delete** - `eliminado_en` timestamp pattern
-- ✅ **Temporal Tracking** - Historical data with `fecha_inicio` / `fecha_fin`
-- ✅ **Audit Trail** - Automatic tracking of `creado_por`, `actualizado_por`, `eliminado_por`
-- ✅ **JSONB Flexibility** - Extensible metadata in `atributos` fields
-
----
-
-## ERD Diagrams
-
-### 1. Complete Database ERD
-
-**All 13 tables with foreign key relationships**
-
-```mermaid
-erDiagram
-    organizations ||--o{ business_partners : "organizacion_id"
-    organizations ||--o{ organization_members : "organization_id"
-    organizations ||--o{ acciones : "organizacion_id"
-    organizations ||--o{ bp_relaciones : "organizacion_id"
-    organizations ||--o{ oportunidades : "organizacion_id"
-    organizations ||--o{ tareas : "organizacion_id"
-
-    business_partners ||--|| personas : "id (1:1)"
-    business_partners ||--|| empresas : "id (1:1)"
-    business_partners ||--o{ bp_relaciones : "bp_origen_id"
-    business_partners ||--o{ bp_relaciones : "bp_destino_id"
-    business_partners ||--o{ asignaciones_acciones : "business_partner_id"
-    business_partners ||--o{ empresas : "representante_legal_id"
-    business_partners ||--o{ oportunidades : "solicitante_id"
-    business_partners ||--o{ tareas : "relacionado_con_bp"
-
-    acciones ||--o{ asignaciones_acciones : "accion_id"
-
-    organization_members }o--|| roles : "role_id"
-    roles ||--o{ role_permissions : "role_id"
-
-    tareas }o--|| oportunidades : "oportunidad_id"
-
-    organizations {
-        uuid id PK
-        text nombre
-        text slug UK
-        text tipo
-        uuid organizacion_padre_id FK
-        timestamptz creado_en
-    }
-
-    business_partners {
-        uuid id PK
-        text codigo_bp UK "BP-0000001"
-        text tipo_actor "persona|empresa"
-        uuid organizacion_id FK
-        text email_principal
-        text celular_principal
-        jsonb atributos
-        timestamptz eliminado_en
-    }
-
-    personas {
-        uuid id PK_FK
-        text nombres
-        text apellidos
-        text tipo_documento
-        text numero_documento
-        uuid lugar_nacimiento_id FK
-        jsonb perfil_persona
-        text direccion_residencia
-        text barrio_residencia
-        text ciudad_residencia
-    }
-
-    empresas {
-        uuid id PK_FK
-        text razon_social
-        text nombre_comercial
-        text nit UK
-        text digito_verificacion
-        uuid representante_legal_id FK
-        jsonb perfil_empresa
-    }
-
-    bp_relaciones {
-        uuid id PK
-        uuid bp_origen_id FK
-        uuid bp_destino_id FK
-        tipo_relacion_bp tipo_relacion
-        text descripcion
-        date fecha_inicio
-        date fecha_fin
-        boolean es_vigente "GENERATED"
-        jsonb atributos
-        timestamptz eliminado_en
-    }
-
-    acciones {
-        uuid id PK
-        text codigo UK "4398"
-        text nombre
-        uuid organizacion_id FK
-        text estado
-        jsonb metadatos
-        timestamptz eliminado_en
-    }
-
-    asignaciones_acciones {
-        uuid id PK
-        uuid accion_id FK
-        uuid business_partner_id FK
-        text tipo_asignacion "dueño|titular|beneficiario"
-        text subcodigo "00-99"
-        text codigo_completo UK "GENERATED 439800"
-        date fecha_inicio
-        date fecha_fin
-        boolean es_vigente "GENERATED"
-        jsonb atributos
-        timestamptz eliminado_en
-    }
-
-    organization_members {
-        uuid user_id PK FK1
-        uuid organization_id PK FK2
-        uuid role_id FK
-        timestamptz created_at
-    }
-
-    roles {
-        uuid role PK "owner|admin|analyst|auditor"
-        text description
-    }
-
-    role_permissions {
-        uuid id PK
-        uuid role_id FK
-        text resource "table_name"
-        text action "select|insert|update|delete"
-        boolean allow
-    }
-
-    oportunidades {
-        uuid id PK
-        text codigo UK
-        tipo_oportunidad_enum tipo
-        estado_oportunidad_enum estado
-        uuid solicitante_id FK
-        uuid responsable_id FK
-        uuid organizacion_id FK
-        numeric monto_estimado
-        jsonb atributos
-        timestamptz eliminado_en
-    }
-
-    tareas {
-        uuid id PK
-        text titulo
-        text descripcion
-        prioridad_tarea_enum prioridad
-        estado_tarea_enum estado
-        uuid oportunidad_id FK
-        uuid asignado_a FK
-        uuid organizacion_id FK
-        uuid relacionado_con_bp FK
-        date fecha_vencimiento
-        timestamptz eliminado_en
-    }
-
-    geographic_locations {
-        uuid id PK
-        text country_code
-        text country_name
-        text state_name
-        text city_name
-        text city_code
-        text search_text
-    }
+Legend:
+  ──►  Foreign Key (One-to-Many)
+  ◄──►  Bidirectional Foreign Key
+  │    Relationship
+  ▼    Reference direction
 ```
 
 ---
 
-### 2. Business Partners Domain
+## Relationship Details
 
-**Class Table Inheritance pattern with organizations and specializations**
+### 1. Organization (Multi-Tenancy Core)
 
-```mermaid
-erDiagram
-    organizations ||--o{ business_partners : "organizacion_id"
+**config_organizaciones** is the heart of multi-tenancy.
 
-    business_partners ||--|| personas : "id (PK=PK)"
-    business_partners ||--|| empresas : "id (PK=PK)"
+#### Relationships:
+- **TO → config_organizacion_miembros** (One-to-Many)
+  - One organization has many members
+  - CASCADE delete: Deleting organization deletes all members
 
-    empresas }o--o| business_partners : "representante_legal_id"
+- **TO → dm_actores** (One-to-Many)
+  - One organization has many business partners
+  - CASCADE delete: Deleting organization deletes all actors
 
-    organizations {
-        uuid id PK
-        text nombre "Organization name"
-        text slug UK "URL-friendly ID"
-        uuid organizacion_padre_id FK "Parent organization"
-        jsonb metadata
-        timestamptz creado_en
-    }
+- **TO → dm_acciones** (One-to-Many)
+  - One organization has many stock certificates
+  - CASCADE delete: Deleting organization deletes all certificates
 
-    business_partners {
-        uuid id PK
-        text codigo_bp UK "Auto-generated BP-0000001"
-        text tipo_actor CHK "persona OR empresa"
-        uuid organizacion_id FK "Multi-tenancy"
-        text email_principal "RFC 5322 format"
-        text celular_principal
-        jsonb atributos "Custom metadata"
-        timestamptz creado_en
-        timestamptz actualizado_en
-        timestamptz eliminado_en "Soft delete"
-        uuid creado_por FK
-        uuid actualizado_por FK
-        uuid eliminado_por FK
-    }
+- **TO → tr_doc_comercial** (One-to-Many)
+  - One organization has many opportunities
+  - CASCADE delete: Deleting organization deletes all opportunities
 
-    personas {
-        uuid id PK_FK "FK to business_partners.id"
-        text nombres "First names"
-        text apellidos "Last names"
-        text tipo_documento "CC|CE|PA|etc"
-        text numero_documento
-        date fecha_nacimiento
-        uuid lugar_nacimiento_id FK "Structured birth place"
-        text direccion_residencia "Residence address"
-        text barrio_residencia "Neighborhood"
-        text ciudad_residencia "City of residence"
-        jsonb perfil_persona "Demographics, preferences"
-        text notas
-    }
+- **TO → tr_tr_tareas** (One-to-Many)
+  - One organization has many tasks
+  - CASCADE delete: Deleting organization deletes all tasks
 
-    empresas {
-        uuid id PK_FK "FK to business_partners.id"
-        text razon_social "Legal name"
-        text nombre_comercial "Trade name"
-        text nit UK "9 digits"
-        text digito_verificacion "Auto-calculated"
-        uuid representante_legal_id FK "FK to business_partners"
-        jsonb perfil_empresa "Industry, size, etc"
-        text notas
-    }
-```
+- **TO → vn_asociados** (One-to-Many)
+  - One organization has many share assignments
+  - CASCADE delete: Deleting organization deletes all assignments
 
-**Key Concepts:**
-
-- **CTI Pattern**: Each persona/empresa has exactly one corresponding business_partners record
-- **Discriminator**: `tipo_actor` field identifies the specialization ('persona' or 'empresa')
-- **Shared Fields**: Common fields (email, phone, organizacion_id) in base table
-- **Specialized Fields**: Unique fields (nombres/apellidos for personas, nit/razon_social for empresas)
-- **Relationship**: Empresas can reference a business_partner as `representante_legal_id`
-- **Structured Data**: `lugar_nacimiento_id` provides FK to [`geographic_locations`](docs/database/TABLES.md:888)
-- **Residence Fields**: New structured residence fields (`direccion_residencia`, `barrio_residencia`, `ciudad_residencia`)
+- **TO → vn_relaciones_actores** (One-to-Many)
+  - One organization has many relationships
+  - CASCADE delete: Deleting organization deletes all relationships
 
 ---
 
-### 3. Acciones Domain
+### 2. Authentication & Authorization
 
-**Club shares with temporal ownership tracking**
+#### auth.users → config_organizacion_miembros
+- **Relationship:** One-to-Many
+- **Description:** One user can belong to multiple config_organizaciones
+- **On Delete:** CASCADE
+- **Constraint:** UNIQUE(user_id, organization_id) per organization
 
-```mermaid
-erDiagram
-    organizations ||--o{ acciones : "organizacion_id"
-    acciones ||--o{ asignaciones_acciones : "accion_id"
-    business_partners ||--o{ asignaciones_acciones : "business_partner_id"
+#### config_organizacion_miembros → config_roles
+- **Relationship:** Many-to-One
+- **Description:** Each member has one role (owner/admin/member/viewer)
+- **Roles:** Predefined in config_roles table
 
-    organizations {
-        uuid id PK
-        text nombre
-    }
-
-    acciones {
-        uuid id PK
-        text codigo UK "4398 (4-digit)"
-        text nombre "Action name/description"
-        uuid organizacion_id FK
-        text estado "activa|suspendida|cancelada"
-        jsonb metadatos "Custom properties"
-        timestamptz creado_en
-        timestamptz eliminado_en
-    }
-
-    asignaciones_acciones {
-        uuid id PK
-        uuid accion_id FK
-        uuid business_partner_id FK "FK to business_partners"
-        text tipo_asignacion CHK "dueño|titular|beneficiario"
-        text subcodigo "00-09 dueño, 10-19 titular, 20-99 beneficiario"
-        text codigo_completo UK "GENERATED: codigo+subcodigo (439800)"
-        date fecha_inicio "Assignment start date"
-        date fecha_fin "Assignment end date (NULL if active)"
-        boolean es_vigente "GENERATED: fecha_fin IS NULL"
-        jsonb atributos "Custom assignment metadata"
-        timestamptz creado_en
-        timestamptz eliminado_en
-        uuid creado_por FK
-        uuid eliminado_por FK
-    }
-
-    business_partners {
-        uuid id PK
-        text codigo_bp UK
-        text tipo_actor
-    }
-```
-
-**Key Concepts:**
-
-- **Temporal Tracking**: `fecha_inicio` / `fecha_fin` track assignment validity periods
-- **Generated Fields**: `codigo_completo` auto-generated, `es_vigente` computed
-- **Subcode Ranges**:
-  - `00-09`: Owner (dueño) - only ONE active per action
-  - `10-19`: Holder (titular)
-  - `20-99`: Beneficiaries (beneficiario)
-- **Business Rules**:
-  - Each action can have only one active owner (dueño) at a time
-  - Transferring ownership auto-finalizes all beneficiaries
-  - `codigo_completo` must be unique across all assignments
+#### config_roles → config_roles_permisos
+- **Relationship:** One-to-Many
+- **Description:** Each role has multiple permissions
+- **Permission Format:** `resource:action` (e.g., `tr_tareas:update`)
 
 ---
 
-### 4. Relationships Domain
+### 3. Business Partners (dm_actores)
 
-**Connections between business partners**
+#### dm_actores → config_organizaciones
+- **Relationship:** Many-to-One
+- **Description:** Each actor belongs to one organization
+- **On Delete:** CASCADE
 
-```mermaid
-erDiagram
-    business_partners ||--o{ bp_relaciones : "bp_origen_id"
-    business_partners ||--o{ bp_relaciones : "bp_destino_id"
+#### dm_actores → config_ciudades
+- **Relationship:** Many-to-One (Optional)
+- **Description:** Actor's city/location
+- **On Delete:** SET NULL (city is optional)
 
-    business_partners {
-        uuid id PK
-        text codigo_bp UK
-        text tipo_actor "persona|empresa"
-        uuid organizacion_id FK
-    }
+#### dm_actores → tr_doc_comercial (as multiple roles)
+- **solicitante_id:** Many-to-One - Who requested the opportunity
+- **responsable_id:** Many-to-One - Who is responsible
+- **pagador_id:** Many-to-One - Who will pay
+- **On Delete:** SET NULL for all
 
-    bp_relaciones {
-        uuid id PK
-        uuid bp_origen_id FK "Relationship source"
-        uuid bp_destino_id FK "Relationship target"
-        tipo_relacion_bp tipo_relacion "ENUM type"
-        text descripcion "Relationship description"
-        date fecha_inicio "Relationship start"
-        date fecha_fin "Relationship end (NULL if active)"
-        boolean es_actual "GENERATED: fecha_fin IS NULL"
-        jsonb atributos "Relationship metadata"
-        timestamptz creado_en
-        timestamptz actualizado_en
-        timestamptz eliminado_en
-        uuid creado_por FK
-        uuid actualizado_por FK
-        uuid eliminado_por FK
-    }
-```
+#### dm_actores → tr_tr_tareas (as multiple roles)
+- **asignado_a:** Many-to-One - Task assigned to this actor
+- **relacionado_con_bp:** Many-to-One - Task related to this actor
+- **On Delete:** SET NULL for both
 
-**Relationship Types (Enum):**
+#### dm_actores → vn_asociados
+- **business_partner_id:** Many-to-One - Actor assigned to shares
+- **On Delete:** CASCADE (assignment removed if actor deleted)
 
-1. `familiar` - Family relationship
-2. `laboral` - Employment relationship
-3. `referencia` - Reference/referral
-4. `membresia` - Membership relationship
-5. `comercial` - Commercial/business relationship
-6. `otra` - Other relationship type
-
-**Key Concepts:**
-
-- **Bidirectional**: Relationship from `bp_origen_id` to `bp_destino_id`
-- **Temporal**: Active relationships have `fecha_fin IS NULL`
-- **Flexible**: `atributos` JSONB field for relationship-specific data
-- **Examples**:
-  - Persona → Empresa (laboral): Employee works for company
-  - Persona → Persona (familiar): Family member relationship
-  - Empresa → Persona (referencia): Company referred by person
+#### dm_actores → vn_relaciones_actores (as two roles)
+- **bp_origen_id:** Many-to-One - Source actor in relationship
+- **bp_destino_id:** Many-to-One - Target actor in relationship
+- **On Delete:** CASCADE for both
 
 ---
 
-### 5. Access Control Domain
+### 4. Stock Certificates (dm_acciones)
 
-**Multi-tenancy and role-based permissions**
+#### dm_acciones → config_organizaciones
+- **Relationship:** Many-to-One
+- **Description:** Each certificate belongs to one organization
+- **On Delete:** CASCADE
 
-```mermaid
-erDiagram
-    organizations ||--o{ organization_members : "organization_id"
-    organization_members }o--|| roles : "role_id"
-    roles ||--o{ role_permissions : "role_id"
-
-    organizations {
-        uuid id PK
-        text nombre
-        uuid parent_id FK "Hierarchical orgs"
-        jsonb metadata
-        timestamptz creado_en
-    }
-
-    organization_members {
-        uuid user_id PK FK1
-        uuid organization_id PK FK2
-        uuid role_id FK
-        timestamptz created_at
-    }
-
-    roles {
-        uuid role PK "owner|admin|analyst|auditor"
-        text description
-        int level "Permission hierarchy"
-        timestamptz creado_en
-    }
-
-    role_permissions {
-        uuid id PK
-        uuid role_id FK
-        text resource "Table name (business_partners, acciones, etc)"
-        text action "select|insert|update|delete"
-        boolean allow
-        timestamptz creado_en
-    }
-```
-
-**Available Roles:**
-
-| Role | Level | Capabilities |
-|------|-------|--------------|
-| `owner` | 100 | Full access, manage members, delete organization |
-| `admin` | 75 | Manage data, assign roles (except owner) |
-| `analyst` | 50 | Read all data, limited write access |
-| `auditor` | 25 | Read-only access to all data |
-
-**Permission Model:**
-
-- **Resource-Action Pattern**: Permissions defined per table + action
-  - Example: `{ role: 'admin', resource: 'business_partners', action: 'insert' }`
-- **RLS Integration**: `can_user_v2(resource, action, organizacion_id)` checks permissions
-- **Hierarchy**: Higher-level roles inherit lower-level permissions
-
-**See [RLS.md](./RLS.md) for complete security documentation.**
+#### dm_acciones → vn_asociados
+- **accion_id:** One-to-Many
+- **Description:** One certificate has multiple assignments (dueño, titular, beneficiarios)
+- **On Delete:** CASCADE
 
 ---
 
-### 6. Operations Management Domain
+### 5. Business Opportunities (tr_doc_comercial)
 
-**Business opportunities and task management**
+#### tr_doc_comercial → config_organizaciones
+- **Relationship:** Many-to-One
+- **Description:** Each opportunity belongs to one organization
+- **On Delete:** CASCADE
 
-```mermaid
-erDiagram
-    organizations ||--o{ oportunidades : "organizacion_id"
-    organizations ||--o{ tareas : "organizacion_id"
-    business_partners ||--o{ oportunidades : "solicitante_id"
-    business_partners ||--o{ tareas : "relacionado_con_bp"
-    tareas }o--|| oportunidades : "oportunidad_id"
+#### tr_doc_comercial → dm_actores
+- **asociado_id:** Many-to-One - Main associated actor
+- **solicitante_id:** Many-to-One - Requester
+- **responsable_id:** Many-to-One - Responsible person
+- **pagador_id:** Many-to-One - Payer
+- **On Delete:** SET NULL for all
 
-    organizations {
-        uuid id PK
-        text nombre
-    }
-
-    oportunidades {
-        uuid id PK
-        text codigo UK
-        tipo_oportunidad_enum tipo "Solicitud Retiro|Solicitud Ingreso"
-        estado_oportunidad_enum estado "abierta|en_proceso|ganada|perdida|cancelada"
-        uuid solicitante_id FK
-        uuid responsable_id FK
-        uuid organizacion_id FK
-        numeric monto_estimado
-        jsonb atributos
-        timestamptz creado_en
-        timestamptz eliminado_en
-    }
-
-    tareas {
-        uuid id PK
-        text titulo
-        text descripcion
-        prioridad_tarea_enum prioridad "baja|media|alta|critica"
-        estado_tarea_enum estado "pendiente|en_progreso|bloqueada|hecha|cancelada"
-        uuid oportunidad_id FK
-        uuid asignado_a FK
-        uuid organizacion_id FK
-        uuid relacionado_con_bp FK
-        date fecha_vencimiento
-        timestamptz creado_en
-        timestamptz eliminado_en
-    }
-
-    business_partners {
-        uuid id PK
-        text codigo_bp UK
-    }
-```
-
-**Enum Types:**
-
-**tipo_oportunidad_enum:**
-- `Solicitud Retiro` - Member withdrawal request
-- `Solicitud Ingreso` - New member application
-
-**estado_oportunidad_enum:**
-- `abierta` - New/open request
-- `en_proceso` - Being processed
-- `ganada` - Approved/completed
-- `perdida` - Rejected
-- `cancelada` - Cancelled by requester
-
-**prioridad_tarea_enum:**
-- `baja` - Low priority
-- `media` - Medium priority
-- `alta` - High priority
-- `critica` - Critical priority
-
-**estado_tarea_enum:**
-- `pendiente` - Pending
-- `en_progreso` - In progress
-- `bloqueada` - Blocked
-- `hecha` - Completed
-- `cancelada` - Cancelled
-
-**Key Concepts:**
-
-- **Opportunities**: Track business requests (withdrawals, new memberships)
-- **Tasks**: Activities linked to opportunities or business partners
-- **Workflow**: Status-based process management
-- **Assignment**: Tasks can be assigned to staff members
-- **Priority**: Priority levels for task management
-- **Due Dates**: Time-sensitive task tracking
+#### tr_doc_comercial → tr_tr_tareas
+- **Relationship:** One-to-Many
+- **Description:** One opportunity can have multiple tasks
+- **On Delete:** SET NULL (orphaned tasks keep opportunity_id NULL)
 
 ---
 
-### 7. Simplified High-Level View
+### 6. Tasks (tr_tr_tareas)
 
-**Main entities only (no field details)**
+#### tr_tr_tareas → config_organizaciones
+- **Relationship:** Many-to-One
+- **Description:** Each task belongs to one organization
+- **On Delete:** CASCADE
 
-```mermaid
-erDiagram
-    ORGANIZATIONS ||--o{ BUSINESS_PARTNERS : contains
-    ORGANIZATIONS ||--o{ ACCIONES : owns
-    ORGANIZATIONS ||--o{ MEMBERS : has
-    ORGANIZATIONS ||--o{ OPPORTUNITIES : manages
-    ORGANIZATIONS ||--o{ TAREAS : tracks
+#### tr_tr_tareas → tr_doc_comercial
+- **oportunidad_id:** Many-to-One - Task related to opportunity
+- **On Delete:** SET NULL
 
-    BUSINESS_PARTNERS ||--o{ PERSONAS : specializes
-    BUSINESS_PARTNERS ||--o{ EMPRESAS : specializes
-    BUSINESS_PARTNERS ||--o{ RELATIONSHIPS : participates
-    BUSINESS_PARTNERS ||--o{ ASSIGNMENTS : receives
-    BUSINESS_PARTNERS ||--o{ OPPORTUNITIES : requests
-    BUSINESS_PARTNERS ||--o{ TAREAS : related
-
-    ACCIONES ||--o{ ASSIGNMENTS : assigned_to
-
-    MEMBERS }o--|| ROLES : has
-    ROLES ||--o{ PERMISSIONS : grants
-
-    TAREAS }o--|| OPPORTUNITIES : linked
-
-    ORGANIZATIONS["🏢 ORGANIZATIONS<br/>Multi-tenancy foundation"]
-    BUSINESS_PARTNERS["👥 BUSINESS PARTNERS<br/>CTI base table"]
-    PERSONAS["🧑 PERSONAS<br/>Natural persons"]
-    EMPRESAS["🏭 EMPRESAS<br/>Companies"]
-    RELATIONSHIPS["🔗 RELATIONSHIPS<br/>BP connections"]
-    ACCIONES["🎫 ACCIONES<br/>Club shares"]
-    ASSIGNMENTS["📋 ASSIGNMENTS<br/>Share ownership"]
-    MEMBERS["👤 MEMBERS<br/>Organization users"]
-    ROLES["🔑 ROLES<br/>Access levels"]
-    PERMISSIONS["✅ PERMISSIONS<br/>Resource actions"]
-    OPPORTUNITIES["💼 OPPORTUNITIES<br/>Business requests"]
-    TAREAS["✅ TAREAS<br/>Task management"]
-```
-
-**Use this diagram for:**
-- High-level architecture discussions
-- Onboarding new developers
-- System overview presentations
-- Quick reference
+#### tr_tr_tareas → dm_actores
+- **asignado_a:** Many-to-One - Task assigned to actor
+- **relacionado_con_bp:** Many-to-One - Task about this actor
+- **On Delete:** SET NULL for both
 
 ---
 
-## Tables Summary
+### 7. Share Assignments (vn_asociados)
 
-### Core Tables (13 total)
+#### vn_asociados → config_organizaciones
+- **Relationship:** Many-to-One
+- **Description:** Assignment belongs to organization
+- **On Delete:** CASCADE
 
-| Table | Rows | RLS | Purpose | Domain |
-|-------|------|-----|---------|--------|
-| **organizations** | 1 | ✅ | Multi-tenancy foundation | Access Control |
-| **business_partners** | 17 | ✅ | CTI base table for all partners | Business Partners |
-| **personas** | 13 | ✅ | Natural persons specialization | Business Partners |
-| **empresas** | 4 | ✅ | Companies specialization | Business Partners |
-| **bp_relaciones** | 3 | ✅ | Relationships between BPs | Relationships |
-| **acciones** | 25 | ✅ | Club shares/actions | Acciones |
-| **asignaciones_acciones** | 2 | ✅ | Share ownership assignments | Acciones |
-| **organization_members** | 1 | ✅ | User membership | Access Control |
-| **roles** | 4 | ✅ | Access levels | Access Control |
-| **role_permissions** | 102 | ✅ | Fine-grained permissions | Access Control |
-| **oportunidades** | 0 | ✅ | Business opportunities | Operations |
-| **tareas** | 0 | ✅ | Task management | Operations |
-| **geographic_locations** | 1367 | ✅ | Reference data | Reference |
+#### vn_asociados → dm_acciones
+- **accion_id:** Many-to-One - Assignment to this certificate
+- **On Delete:** CASCADE
 
-**Total Columns:** 215+ across all tables
+#### vn_asociados → dm_actores
+- **business_partner_id:** Many-to-One - Assigned to this actor
+- **On Delete:** CASCADE
 
 ---
 
-## Custom Types
+### 8. Business Partner Relationships (vn_relaciones_actores)
 
-### Enums
+#### vn_relaciones_actores → config_organizaciones
+- **Relationship:** Many-to-One
+- **Description:** Relationship within organization
+- **On Delete:** CASCADE
 
-```sql
--- Relationship types between business partners
-CREATE TYPE tipo_relacion_bp AS ENUM (
-  'familiar',    -- Family relationship
-  'laboral',     -- Employment relationship
-  'referencia',  -- Reference/referral
-  'membresia',   -- Membership relationship
-  'comercial',   -- Commercial relationship
-  'otra'         -- Other relationship type
-);
+#### vn_relaciones_actores → dm_actores (two references)
+- **bp_origen_id:** Many-to-One - Source actor
+- **bp_destino_id:** Many-to-One - Target actor
+- **On Delete:** CASCADE for both
 
--- Opportunity types
-CREATE TYPE tipo_oportunidad_enum AS ENUM (
-  'Solicitud Retiro',  -- Member withdrawal request
-  'Solicitud Ingreso'  -- New member application
-);
+---
 
--- Opportunity states
-CREATE TYPE estado_oportunidad_enum AS ENUM (
-  'abierta',     -- New/open request
-  'en_proceso',   -- Being processed
-  'ganada',       -- Approved/completed
-  'perdida',      -- Rejected
-  'cancelada'      -- Cancelled by requester
-);
+## Foreign Key References
 
--- Task priorities
-CREATE TYPE prioridad_tarea_enum AS ENUM (
-  'baja',      -- Low priority
-  'media',      -- Medium priority
-  'alta',       -- High priority
-  'critica'     -- Critical priority
-);
+### Summary Table
 
--- Task states
-CREATE TYPE estado_tarea_enum AS ENUM (
-  'pendiente',   -- Pending
-  'en_progreso', -- In progress
-  'bloqueada',   -- Blocked
-  'hecha',       -- Completed
-  'cancelada'    -- Cancelled
-);
+| Child Table | FK Column | Parent Table | PK Column | On Delete |
+|-------------|-----------|--------------|-----------|-----------|
+| config_organizacion_miembros | organization_id | config_organizaciones | id | CASCADE |
+| config_organizacion_miembros | user_id | auth.users | id | CASCADE |
+| config_organizacion_miembros | eliminado_por | auth.users | id | SET NULL |
+| config_roles_permisos | role | config_roles | role | CASCADE |
+| dm_actores | organizacion_id | config_organizaciones | id | CASCADE |
+| dm_actores | ciudad_id | config_ciudades | id | SET NULL |
+| dm_actores | eliminado_por | auth.users | id | SET NULL |
+| dm_acciones | organizacion_id | config_organizaciones | id | CASCADE |
+| tr_doc_comercial | organizacion_id | config_organizaciones | id | CASCADE |
+| tr_doc_comercial | asociado_id | dm_actores | id | SET NULL |
+| tr_doc_comercial | solicitante_id | dm_actores | id | SET NULL |
+| tr_doc_comercial | responsable_id | dm_actores | id | SET NULL |
+| tr_doc_comercial | pagador_id | dm_actores | id | SET NULL |
+| tr_tr_tareas | organizacion_id | config_organizaciones | id | CASCADE |
+| tr_tr_tareas | oportunidad_id | tr_doc_comercial | id | SET NULL |
+| tr_tr_tareas | asignado_a | dm_actores | id | SET NULL |
+| tr_tr_tareas | relacionado_con_bp | dm_actores | id | SET NULL |
+| vn_asociados | organizacion_id | config_organizaciones | id | CASCADE |
+| vn_asociados | accion_id | dm_acciones | id | CASCADE |
+| vn_asociados | business_partner_id | dm_actores | id | CASCADE |
+| vn_relaciones_actores | organizacion_id | config_organizaciones | id | CASCADE |
+| vn_relaciones_actores | bp_origen_id | dm_actores | id | CASCADE |
+| vn_relaciones_actores | bp_destino_id | dm_actores | id | CASCADE |
+
+---
+
+## Table Hierarchies
+
+### Organization Hierarchy
+
+```
+config_organizaciones (root)
+│
+├─── config_organizacion_miembros (members)
+│    │
+│    └─── config_roles (role definitions)
+│         │
+│         └─── config_roles_permisos (permissions)
+│
+├─── dm_actores (business partners)
+│
+├─── dm_acciones (stock certificates)
+│
+├─── tr_doc_comercial (opportunities)
+│
+├─── tr_tr_tareas (tasks)
+│
+├─── vn_asociados (share assignments)
+│
+└─── vn_relaciones_actores (relationships)
 ```
 
-**Usage:**
-```sql
--- In bp_relaciones table
-tipo_relacion tipo_relacion_bp NOT NULL
+### Business Partner Hierarchy
 
--- In oportunidades table
-tipo tipo_oportunidad_enum NOT NULL
-estado estado_oportunidad_enum NOT NULL
-
--- In tareas table
-prioridad prioridad_tarea_enum NOT NULL
-estado estado_tarea_enum NOT NULL
+```
+dm_actores (base table)
+│
+├─── (Referenced by) tr_doc_comercial
+│    ├─── solicitante_id
+│    ├─── responsable_id
+│    └─── pagador_id
+│
+├─── (Referenced by) tr_tr_tareas
+│    ├─── asignado_a
+│    └─── relacionado_con_bp
+│
+├─── (Referenced by) vn_asociados
+│    └─── business_partner_id
+│
+└─── (Referenced by) vn_relaciones_actores
+     ├─── bp_origen_id
+     └─── bp_destino_id
 ```
 
 ---
 
-## Database Functions
+## Index Summary
 
-### Function Categories
+### Partial Indexes (Soft Delete Pattern)
 
-| Category | Count | Purpose |
-|----------|-------|---------|
-| **User-Facing RPC** | 11 | Frontend-callable business logic |
-| **Helper Functions** | 9 | Internal utilities and validation |
-| **Trigger Functions** | 5 | Automatic data management |
-| **Permission Functions** | 11 | RLS policy helpers |
+**36 partial indexes** with `WHERE eliminado_en IS NULL`:
 
-**Total:** 36+ functions
+| Table | Index | Columns | Purpose |
+|-------|-------|---------|---------|
+| config_organizaciones | idx_config_organizaciones_activas | (id, creado_en) | Filter active orgs |
+| config_organizaciones | idx_config_organizaciones_nombre_activas | (nombre) | Search by name |
+| dm_actores | idx_dm_actores_activos | (organizacion_id, eliminado_en, creado_en) | Filter active actors |
+| dm_actores | idx_dm_actores_tipo_actor_activos | (tipo_actor, organizacion_id) | Filter by type |
+| dm_actores | idx_dm_actores_documento_activos | (tipo_documento, num_documento) | Search by document |
+| tr_doc_comercial | idx_tr_doc_comercial_activos | (organizacion_id, estado, creado_en) | Filter active opportunities |
+| tr_doc_comercial | idx_tr_doc_comercial_solicitante_activos | (solicitante_id, estado) | By requester |
+| tr_doc_comercial | idx_tr_doc_comercial_responsable_activos | (responsable_id, estado) | By responsible |
+| tr_doc_comercial | idx_tr_doc_comercial_estado_fecha | (estado, fecha_venc_doc) | Pipeline queries |
+| tr_tr_tareas | idx_tr_tr_tareas_activas | (organizacion_id, asignado_a, estado, fecha_vencimiento) | User task list |
+| tr_tr_tareas | idx_tr_tr_tareas_oportunidad_activas | (oportunidad_id, estado) | Tasks by opportunity |
+| tr_tr_tareas | idx_tr_tr_tareas_relacionado_bp_activas | (relacionado_con_bp, estado) | Tasks by BP |
+| tr_tr_tareas | idx_tr_tr_tareas_estado_prioridad | (estado, prioridad, fecha_vencimiento) | Priority sorting |
+| vn_asociados | idx_vn_asociados_activas | (organizacion_id, accion_id, tipo_asignacion) | Active assignments |
+| vn_asociados | idx_vn_asociados_bp_activas | (business_partner_id, fecha_fin) | By partner |
+| vn_relaciones_actores | idx_vn_relaciones_actores_activas | (organizacion_id, bp_origen_id, bp_destino_id) | Active relationships |
+| vn_relaciones_actores | idx_vn_relaciones_actores_tipo_activas | (tipo_relacion, es_actual) | By type |
+| dm_acciones | idx_dm_acciones_activas | (organizacion_id, codigo_accion, estado) | Active shares |
+| config_ciudades | idx_config_ciudades_activas | (country_code, state_name, city_name) | Location search |
+| config_ciudades | idx_config_ciudades_search | (search_text) | Full-text search |
+| config_roles | idx_config_roles_activos | (role) | Role lookup |
+| config_roles_permisos | idx_config_roles_permisos_activos | (role, resource, action) | Permission check |
+| config_organizacion_miembros | idx_config_organizacion_miembros_activos | (user_id, organization_id, role) | Membership check |
 
-### User-Facing RPC Functions
+### Foreign Key Indexes
 
-**Business Partner Management:**
-- `crear_persona(...)` - Create natural person
-- `crear_empresa(...)` - Create company
+**10+ indexes** for foreign key performance:
 
-**Relationship Management:**
-- `crear_relacion_bp(...)` - Create BP relationship
-- `actualizar_relacion_bp(...)` - Update BP relationship
-- `finalizar_relacion_bp(...)` - End BP relationship
-- `eliminar_relacion_bp(...)` - Soft delete relationship
-- `obtener_relaciones_bp(...)` - Get all relationships for BP
+| Table | Index | Columns | Purpose |
+|-------|-------|---------|---------|
+| tr_doc_comercial | idx_tr_doc_comercial_creado_por | (creado_por) | Audit queries |
+| tr_doc_comercial | idx_tr_doc_comercial_actualizado_por | (actualizado_por) | Audit queries |
+| tr_doc_comercial | idx_tr_doc_comercial_eliminado_por | (eliminado_por) | Soft delete queries |
+| tr_tr_tareas | idx_tr_tr_tareas_creado_por | (creado_por) | Audit queries |
+| tr_tr_tareas | idx_tr_tr_tareas_actualizado_por | (actualizado_por) | Audit queries |
+| tr_tr_tareas | idx_tr_tr_tareas_eliminado_por | (eliminado_por) | Soft delete queries |
+| tr_tr_tareas | idx_tr_tr_tareas_asignado_a | (asignado_a) | JOIN dm_actores |
+| tr_tr_tareas | idx_tr_tr_tareas_relacionado_con_bp | (relacionado_con_bp) | JOIN dm_actores |
+| tr_doc_comercial | idx_tr_doc_comercial_solicitante_id | (solicitante_id) | JOIN dm_actores |
+| tr_doc_comercial | idx_tr_doc_comercial_responsable_id | (responsable_id) | JOIN dm_actores |
+| dm_actores | idx_dm_actores_ciudad_id | (ciudad_id) | JOIN config_ciudades |
 
-**Acciones Management:**
-- `crear_asignacion_accion(...)` - Create action assignment
-- `transferir_accion(...)` - Transfer action ownership
-- `finalizar_asignacion_accion(...)` - End assignment
-- `generar_siguiente_subcodigo(...)` - Generate next subcode
+### Unique Indexes
 
-**See [../api/README.md](../api/README.md) for complete API reference.**
-
-### Helper Functions
-
-```sql
--- NIT verification digit calculation (Colombian tax ID)
-calcular_digito_verificacion_nit(nit TEXT) RETURNS TEXT
-
--- Validate business partner has exactly one specialization
-validar_consistencia_tipo_actor() RETURNS TRIGGER
-
--- Validate assignment type and subcode correspondence
-validar_asignacion_accion() RETURNS TRIGGER
-```
-
-### Permission Helper Functions
-
-```sql
--- Primary permission check
-can_user_v2(resource TEXT, action TEXT, org_id UUID) RETURNS BOOLEAN
-
--- Organization role checks
-is_org_admin_v2(org_id UUID) RETURNS BOOLEAN
-is_org_owner_v2(org_id UUID) RETURNS BOOLEAN
-can_view_org_membership_v2(org_id UUID) RETURNS BOOLEAN
-
--- Safety check for last owner
-org_has_other_owner_v2(org_id UUID, excluded_user_id UUID) RETURNS BOOLEAN
-```
-
-**See [FUNCTIONS.md](./FUNCTIONS.md) for detailed documentation of all 36+ functions.**
+| Table | Index | Columns | Condition |
+|-------|-------|---------|-----------|
+| dm_actores | idx_dm_actores_codigo_unique | (codigo_bp) | Always unique |
+| dm_actores | idx_dm_actores_documento_org | (organizacion_id, num_documento) | WHERE eliminado_en IS NULL |
+| config_organizacion_miembros | idx_om_org_user_unique | (organization_id, user_id) | Always unique |
+| vn_asociados | idx_asignaciones_unico_vigente | (accion_id, tipo_asignacion) | WHERE eliminado_en IS NULL AND fecha_fin IS NULL |
+| vn_relaciones_actores | idx_bp_relaciones_unique_activa | (bp_origen_id, bp_destino_id, tipo_relacion) | WHERE eliminado_en IS NULL AND es_actual = true |
 
 ---
 
-## Triggers
+## Function Dependencies
 
-### Automatic Data Management
+### Triggers
 
-| Trigger | Table(s) | Function | Purpose |
-|---------|----------|----------|---------|
-| `actualizar_timestamp` | All tables | `actualizar_timestamp()` | Auto-update `actualizado_en` on UPDATE |
-| `set_audit_user_columns` | All tables | `set_audit_user_columns()` | Auto-set `creado_por`, `actualizado_por` |
-| `set_deleted_by_on_soft_delete` | All tables | `set_deleted_by_on_soft_delete()` | Auto-set `eliminado_por` when soft deleting |
-| `generar_codigo_bp` | business_partners | `generar_codigo_bp()` | Auto-generate `codigo_bp` on INSERT |
-| `generar_codigo_tarea` | tareas | `generar_codigo_tarea()` | Auto-generate `codigo_tarea` on INSERT |
-| `generar_codigo_completo_asignacion` | asignaciones_acciones | `generar_codigo_completo_asignacion()` | Build `codigo_completo` from accion + subcodigo |
+| Trigger | Table | Event | Function | Purpose |
+|---------|-------|-------|----------|---------|
+| trg_generar_codigo_dm_actores | dm_actores | INSERT | generar_codigo_dm_actores() | Auto-generate codigo_bp |
+| trg_actualizar_timestamp_config | config_* tables | UPDATE | actualizar_timestamp_config() | Auto-update audit fields |
+| trg_gen_codigo_oportunidad | tr_doc_comercial | INSERT | gen_codigo_oportunidad() | Auto-generate codigo |
+| trg_calcular_valor_total_oportunidad | tr_doc_comercial | INSERT/UPDATE | calcular_valor_total_oportunidad() | Compute total |
+| trg_generar_codigo_tarea | tr_tr_tareas | INSERT | generar_codigo_tarea() | Auto-generate codigo_tarea |
+| trg_generar_codigo_completo_asignacion | vn_asociados | INSERT | generar_codigo_completo_asignacion() | Build full code |
+| trg_validar_asignacion_accion | vn_asociados | INSERT/UPDATE | validar_asignacion_accion() | Validate rules |
 
-### Trigger Execution Order
+### Security Functions (SECURITY DEFINER)
 
-**INSERT:**
-1. Set `creado_por` (BEFORE INSERT)
-2. Generate codes (`codigo_bp`, `codigo_tarea`, `codigo_completo`) (BEFORE INSERT)
-3. Validate consistency (BEFORE INSERT)
+| Function | Purpose | Used By |
+|----------|---------|---------|
+| is_org_member() | Check org membership | RLS policies |
+| is_org_admin_v2() | Check admin role | RLS policies |
+| has_org_permission() | Check specific permission | Application code |
+| can_user_v2() | Legacy permission check | Application code |
+| soft_delete_bp() | Soft delete actor | Application code |
+| soft_delete_tr_doc_comercial() | Soft delete opportunity | Application code |
+| soft_delete_tr_tareas() | Soft delete task | Application code |
 
-**UPDATE:**
-1. Update `actualizado_en` (BEFORE UPDATE)
-2. Set `actualizado_por` (BEFORE UPDATE)
-3. If soft deleting, set `eliminado_por` (BEFORE UPDATE)
+### Utility Functions
 
----
-
-## Views
-
-### Pre-Built Query Views (7 total)
-
-All views use `SECURITY INVOKER` to respect Row Level Security policies.
-
-#### Business Partners Views
-
-**`v_actores_unificados`** - Combined personas + empresas
-```sql
--- Returns unified view with normalized field names
-SELECT
-  bp.id,
-  bp.codigo_bp,
-  bp.tipo_actor,
-  COALESCE(p.nombres || ' ' || p.apellidos, e.razon_social) as nombre_completo,
-  bp.email_principal,
-  -- ... more fields
-FROM business_partners bp
-LEFT JOIN personas p ON bp.id = p.id
-LEFT JOIN empresas e ON bp.id = e.id
-WHERE bp.eliminado_en IS NULL
-```
-
-**`v_personas_org`** - Filtered view of active personas per organization
-**`v_empresas_org`** - Filtered view of active empresas per organization
-**`v_empresas_completa`** - Complete empresa data with joins to organizations and rep legal
-
-#### Acciones Views
-
-**`v_asignaciones_vigentes`** - Current active assignments with BP details
-**`v_asignaciones_historial`** - Complete assignment history with status tracking
-**`v_acciones_asignadas`** - Summary view showing dueño, titular, and beneficiarios per action
-
-**See [VIEWS.md](./VIEWS.md) for complete view definitions and usage examples.**
+| Function | Purpose |
+|----------|---------|
+| calcular_digito_verificacion_nit() | NIT check digit (Colombia) |
+| search_locations() | Full-text city search |
+| unaccent_lower() | Remove accents for search |
+| actualizar_timestamp() | Generic timestamp update |
+| set_audit_fields() | Set audit columns |
 
 ---
 
-## Indexes
+## See Also
 
-### Performance Optimization (26+ indexes)
-
-#### Primary Keys (13 indexes)
-- Automatically created for all `id` columns
-- UUID type with `gen_random_uuid()` default
-
-#### Unique Constraints (9 indexes)
-```sql
--- Business Partners
-CREATE UNIQUE INDEX business_partners_codigo_bp_key ON business_partners(codigo_bp);
-
--- Empresas
-CREATE UNIQUE INDEX empresas_nit_key ON empresas(nit);
-
--- Acciones
-CREATE UNIQUE INDEX acciones_codigo_accion_key ON acciones(codigo_accion);
-
--- Opportunities
-CREATE UNIQUE INDEX oportunidades_codigo_key ON oportunidades(codigo);
-
--- Roles
-CREATE UNIQUE INDEX roles_role_key ON roles(role);
-```
-
-#### Foreign Key Indexes (8+ indexes)
-```sql
--- For JOIN performance
-CREATE INDEX idx_bp_organizacion_id ON business_partners(organizacion_id);
-CREATE INDEX idx_empresas_rep_legal ON empresas(representante_legal_id);
-CREATE INDEX idx_bp_relaciones_origen ON bp_relaciones(bp_origen_id);
-CREATE INDEX idx_bp_relaciones_destino ON bp_relaciones(bp_destino_id);
-CREATE INDEX idx_asignaciones_accion ON asignaciones_acciones(accion_id);
-CREATE INDEX idx_asignaciones_persona ON asignaciones_acciones(business_partner_id);
-```
-
----
-
-## Naming Conventions
-
-### Tables
-- **Lowercase** with **underscores** (`business_partners`, `bp_relaciones`)
-- **Plural** for entity collections (`personas`, `empresas`, `acciones`)
-- **Descriptive** prefixes for join tables (`asignaciones_acciones`)
-
-### Columns
-- **Lowercase** with **underscores** (`codigo_bp`, `organizacion_id`)
-- **`_id` suffix** for foreign keys (`bp_origen_id`, `persona_id`)
-- **`_en` suffix** for timestamps (`creado_en`, `actualizado_en`, `eliminado_en`)
-- **`_por` suffix** for user references (`creado_por`, `actualizado_por`, `eliminado_por`)
-
-### Functions
-- **Lowercase** with **underscores** (`crear_persona`, `calcular_digito_verificacion_nit`)
-- **Verb prefixes**: `crear_`, `actualizar_`, `eliminar_`, `finalizar_`, `obtener_`, `generar_`
-- **`_v2` suffix** for versioned functions (`can_user_v2`, `is_org_admin_v2`)
-
-### Constraints
-- **Primary keys**: `{table}_pkey` (auto-generated)
-- **Foreign keys**: `{table}_{column}_fkey`
-- **Check constraints**: `{table}_{description}_check`
-- **Unique constraints**: `{table}_{column}_key`
-
-### Indexes
-- **`idx_` prefix**: `idx_bp_organizacion_id`, `idx_asignaciones_accion`
-- **Descriptive names** indicating indexed columns
-
----
-
-## Related Documentation
-
-### Database Documentation
-- **[OVERVIEW.md](./OVERVIEW.md)** - Architecture patterns and quick reference
-- **[TABLES.md](./TABLES.md)** - Complete data dictionary (215+ columns)
-- **[FUNCTIONS.md](./FUNCTIONS.md)** - All 36+ database functions
-- **[VIEWS.md](./VIEWS.md)** - 7 pre-built views with examples
-- **[RLS.md](./RLS.md)** - 38+ Row Level Security policies
-- **[QUERIES.md](./QUERIES.md)** - SQL cookbook and patterns
-
-### API Documentation
-- **[../api/README.md](../api/README.md)** - API overview and RPC index
-- **[../api/CREAR_PERSONA.md](../api/CREAR_PERSONA.md)** - Create natural person
-- **[../api/CREAR_EMPRESA.md](../api/CREAR_EMPRESA.md)** - Create company
-- **[../api/BP_RELACIONES.md](../api/BP_RELACIONES.md)** - Relationship management
-- **[../api/ACCIONES.md](../api/ACCIONES.md)** - Club shares management
-
----
-
-**Last Generated:** 2026-01-03
-**Database Version:** PostgreSQL 17 (Supabase)
-**Total Tables:** 13 | **Total Functions:** 36+ | **Total Views:** 7
+- [TABLES.md](TABLES.md) - Complete data dictionary
+- [OVERVIEW.md](OVERVIEW.md) - Architecture concepts
+- [VIEWS.md](VIEWS.md) - Database views
+- [QUERIES.md](QUERIES.md) - Query patterns
+- [RLS.md](RLS.md) - Row Level Security policies

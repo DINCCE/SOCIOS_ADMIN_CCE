@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import type { TrTareasEstado, TrTareasPrioridad } from '@/lib/db-types'
 import { useQuery } from '@tanstack/react-query'
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
@@ -35,9 +36,9 @@ export type TareaView = {
   eliminado_en: string | null
 }
 
-export type EstadoTarea = Database['public']['Enums']['estado_tarea_enum']
+export type EstadoTarea = TrTareasEstado
 
-export type PrioridadTarea = Database['public']['Enums']['prioridad_tarea_enum']
+export type PrioridadTarea = TrTareasPrioridad
 
 const COLUMN_CONFIG: Record<
   EstadoTarea,

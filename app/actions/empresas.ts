@@ -189,7 +189,7 @@ export async function softDeleteEmpresa(id: string) {
 
   // 2. Soft delete corresponding business_partners record
   const { error: bpError } = await supabase
-    .from('business_partners')
+    .from('dm_actores')
     .update({ eliminado_en: new Date().toISOString() })
     .eq('id', id)
 

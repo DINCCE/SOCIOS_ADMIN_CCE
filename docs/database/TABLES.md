@@ -1,1164 +1,780 @@
 # Database Tables - Complete Data Dictionary
 
-> **Comprehensive field-level reference for all database tables**
->
-> Last updated: 2026-01-03 | Auto-generated from live Supabase schema
+> **Last Updated:** 2026-01-08
+> **Schema Version:** Post-migration (Soft delete + Security fixes)
+> **Total Tables:** 11
 
 ---
 
 ## Table of Contents
 
-- [organizations](#organizations)
-- [business_partners](#business_partners)
-- [personas](#personas)
-- [empresas](#empresas)
-- [bp_relaciones](#bp_relaciones)
-- [acciones](#acciones)
-- [asignaciones_acciones](#asignaciones_acciones)
-- [geographic_locations](#geographic_locations)
-- [organization_members](#organization_members)
-- [roles](#roles)
-- [role_permissions](#role_permissions)
-- [oportunidades](#oportunidades)
-- [tareas](#tareas)
+1. [Configuration Tables](#configuration-tables)
+   - [config_organizaciones](#config_organizaciones)
+   - [config_organizacion_miembros](#config_organizacion_miembros)
+   - [config_roles](#config_roles)
+   - [config_roles_permisos](#config_roles_permisos)
+   - [config_ciudades](#config_ciudades)
+2. [Master Data Tables](#master-data-tables)
+   - [dm_actores](#dm_actores)
+   - [dm_acciones](#dm_acciones)
+3. [Transaction Tables](#transaction-tables)
+   - [tr_doc_comercial](#tr_doc_comercial)
+   - [tr_tr_tareas](#tr_tr_tareas)
+4. [Visualization Tables](#visualization-tables)
+   - [vn_asociados](#vn_asociados)
+   - [vn_relaciones_actores](#vn_relaciones_actores)
 
 ---
 
-## organizations
+## Configuration Tables
 
-**Purpose:** Multi-tenancy foundation and organizational hierarchy management.
+### config_organizaciones
 
-**Row Count:** 1 | **RLS:** ✅ Enabled
-
-### Fields
+**Purpose:** Multi-tenancy foundation and organizational hierarchy
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
-| `id` | uuid | NOT NULL | `gen_random_uuid()` | Primary key - Unique organization identifier |
-| `nombre` | text | NOT NULL | - | Legal or descriptive name of the organization |
-| `slug` | text | NOT NULL | - | **UNIQUE** - URL-friendly identifier for quick selection |
-| `tipo` | text | NULL | `'club'::text` | Organization classification: 'club', 'sede', 'division' |
-| `organizacion_padre_id` | uuid | NULL | - | FK to parent organization in hierarchy |
-| `email` | text | NULL | - | Institutional email of the organization |
-| `telefono` | text | NULL | - | Main contact phone number |
-| `website` | text | NULL | - | Official website URL |
-| `direccion` | jsonb | NULL | `'{}'::jsonb` | Address object (país, ciudad, dirección_linea1, etc.) |
-| `configuracion` | jsonb | NULL | `'{}'::jsonb` | Technical and functional configuration (JSONB) |
-| `creado_en` | timestamptz | NOT NULL | `now()` | Timestamp of record creation |
-| `actualizado_en` | timestamptz | NOT NULL | `now()` | Timestamp of last modification |
-| `creado_por` | uuid | NULL | - | FK to auth.users - User who created the record |
-| `actualizado_por` | uuid | NULL | - | FK to auth.users - User who last updated |
-| `eliminado_por` | uuid | NULL | - | FK to auth.users - User who soft deleted |
-| `eliminado_en` | timestamptz | NULL | - | Soft delete timestamp |
+| id | uuid | NO | gen_random_uuid() | Primary key |
+| nombre | text | NO | | Organization name |
+| slug | text | YES | | URL-friendly identifier |
+| tipo | text | YES | | Organization type |
+| logo_url | text | YES | | Company logo URL |
+| metadata | jsonb | YES | '{}'::jsonb | Flexible metadata storage |
+| **Soft Delete** ||||||
+| eliminado_en | timestamptz | YES | | Soft delete timestamp |
+| eliminado_por | uuid | YES | | User who deleted (FK: auth.users) |
+| **Audit Fields** ||||||
+| creado_en | timestamptz | NO | NOW() | Creation timestamp |
+| actualizado_en | timestamptz | NO | NOW() | Last update timestamp |
+| creado_por | uuid | YES | | Creator (FK: auth.users) |
+| actualizado_por | uuid | YES | | Updater (FK: auth.users) |
 
-### Constraints
+**Indexes:**
+- `idx_config_organizaciones_activas` (partial: WHERE eliminado_en IS NULL)
+- `idx_config_organizaciones_nombre_activas` (partial: WHERE eliminado_en IS NULL)
+- `idx_org_slug` (unique)
+- `idx_org_padre`
 
-- **PRIMARY KEY:** `id`
-- **UNIQUE:** `slug`
-- **CHECK:** `tipo IN ('club', 'sede', 'division')`
-- **FOREIGN KEYS:**
-  - `organizacion_padre_id` → `organizations.id`
-  - `creado_por` → `auth.users.id`
-  - `actualizado_por` → `auth.users.id`
-  - `eliminado_por` → `auth.users.id`
-
-### Indexes
-
-- `organizations_pkey` PRIMARY KEY on `id`
-- `organizations_slug_key` UNIQUE on `slug`
-
-### Triggers
-
-- `set_audit_user_columns` - Auto-set audit fields on INSERT/UPDATE
-- `actualizar_timestamp` - Auto-update `actualizado_en` on UPDATE
-- `set_deleted_by_on_soft_delete` - Auto-set `eliminado_por` when soft deleting
-- `assign_owner_on_org_create` - Auto-assign creator as owner in organization_members
-
-### Business Rules
-
-1. Every organization must have a unique `slug` for URL routing
-2. Organizations support hierarchical structure via `organizacion_padre_id`
-3. Soft delete pattern - use `eliminado_en` instead of DELETE
-4. Creator is automatically assigned as 'owner' role via trigger
-
-### JSONB Schemas
-
-**direccion:**
-```json
-{
-  "pais": "CO",
-  "departamento": "Antioquia",
-  "ciudad": "Medellín",
-  "direccion_linea1": "Calle 10 #20-30",
-  "codigo_postal": "050001"
-}
-```
-
-**configuracion:**
-```json
-{
-  "idioma": "es",
-  "zona_horaria": "America/Bogota",
-  "moneda": "COP",
-  "features_habilitadas": ["acciones", "socios", "eventos"]
-}
-```
+**RLS Policies:**
+- `config_organizaciones_select_filtered` - Members can view their org
+- `config_organizaciones_insert_authenticated` - Authenticated users can create
+- `config_organizaciones_update_members` - Members can update
+- `config_organizaciones_delete_owners` - Only owners can delete
 
 ---
 
-## business_partners
+### config_organizacion_miembros
 
-**Purpose:** Base table for Class Table Inheritance pattern - contains common fields for all business partners.
-
-**Row Count:** 17 | **RLS:** ✅ Enabled
-
-### Fields
+**Purpose:** Organization membership with role-based access control
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
-| `id` | uuid | NOT NULL | `gen_random_uuid()` | Primary key - Shared with specializations |
-| `codigo_bp` | text | NOT NULL | Auto-generated | **UNIQUE** - Auto-generated code (BP-0000001 format) |
-| `tipo_actor` | text | NOT NULL | - | Discriminator: 'persona' or 'empresa' |
-| `organizacion_id` | uuid | NOT NULL | - | FK to organizations - Multi-tenancy key |
-| `estado` | text | NOT NULL | `'activo'::text` | Current status: 'activo', 'inactivo', 'suspendido' |
-| `email_principal` | text | NULL | - | Primary contact email (validated) |
-| `telefono_principal` | text | NULL | - | Primary contact phone (10 digits in Colombia) |
-| `creado_en` | timestamptz | NOT NULL | `now()` | Timestamp of record creation |
-| `creado_por` | uuid | NULL | - | FK to auth.users - Creator |
-| `actualizado_en` | timestamptz | NOT NULL | `now()` | Timestamp of last update |
-| `actualizado_por` | uuid | NULL | - | FK to auth.users - Last updater |
-| `eliminado_en` | timestamptz | NULL | - | Soft delete timestamp |
-| `eliminado_por` | uuid | NULL | - | FK to auth.users - Deleter |
+| user_id | uuid | NO | | Member (FK: auth.users) |
+| organization_id | uuid | NO | | Organization (FK: config_organizaciones) |
+| role | text | NO | | Role: owner/admin/member/viewer |
+| nombres | text | YES | | Member's first names |
+| apellidos | text | YES | | Member's last names |
+| telefono | text | YES | | Contact phone |
+| cargo | text | YES | | Job title |
+| nombre_completo | text | YES | | Full name (computed) |
+| atributos | jsonb | YES | | Custom attributes |
+| **Soft Delete** ||||||
+| eliminado_en | timestamptz | YES | | Soft delete timestamp |
+| eliminado_por | uuid | YES | | User who deleted |
+| **Audit Fields** ||||||
+| creado_en | timestamptz | NO | NOW() | Creation timestamp |
+| actualizado_en | timestamptz | NO | NOW() | Last update timestamp |
+| creado_por | uuid | YES | | Creator |
+| actualizado_por | uuid | YES | | Updater |
+| created_at | timestamptz | YES | | Legacy timestamp |
+| created_by | uuid | YES | | Legacy creator |
 
-### Constraints
+**Constraints:**
+- PRIMARY KEY: (organization_id, user_id)
+- UNIQUE: (organization_id, user_id) WHERE eliminado_en IS NULL
 
-- **PRIMARY KEY:** `id`
-- **UNIQUE:** `codigo_bp`
-- **CHECK:** `tipo_actor IN ('persona', 'empresa')`
-- **CHECK:** `estado IN ('activo', 'inactivo', 'suspendido')`
-- **CHECK:** `email_principal ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'` (email validation)
-- **CHECK:** `telefono_principal ~ '^[0-9]{10}$'` (10-digit phone)
-- **FOREIGN KEYS:**
-  - `organizacion_id` → `organizations.id`
-  - `creado_por`, `actualizado_por`, `eliminado_por` → `auth.users.id`
+**Indexes:**
+- `idx_config_organizacion_miembros_activos` (partial: WHERE eliminado_en IS NULL)
+- `idx_om_org_user_unique`
+- `idx_org_members_role`
 
-### Indexes
-
-- `business_partners_pkey` PRIMARY KEY on `id`
-- `business_partners_codigo_bp_key` UNIQUE on `codigo_bp`
-- `business_partners_organizacion_id_idx` on `organizacion_id`
-
-### Triggers
-
-- `generar_codigo_bp` - Auto-generate `codigo_bp` on INSERT (BP-0000001 format)
-- `set_audit_user_columns` - Auto-set audit fields
-- `actualizar_timestamp` - Auto-update `actualizado_en`
-- `set_deleted_by_on_soft_delete` - Auto-set `eliminado_por`
-
-### Business Rules
-
-1. Each business_partner MUST have exactly one specialization (persona OR empresa)
-2. `codigo_bp` is auto-generated sequentially (BP-0000001, BP-0000002, ...)
-3. `tipo_actor` determines which specialization table to JOIN
-4. Email and phone validation enforced at database level
-5. Soft delete pattern - never hard DELETE
-
-### Related Tables
-
-- **Specializations:** `personas`, `empresas` (1:1 relationship via `id`)
-- **Relationships:** `bp_relaciones` (origen_id, destino_id)
-- **Assignments:** `asignaciones_acciones` (business_partner_id)
+**RLS Policies:**
+- `om_select_visible` - Members can view org members
+- `om_insert_admins` - Only admins can insert
+- `om_update_roles` - Only admins can update roles
+- `om_delete_members` - Members can delete themselves
+- `om_update_own_preferences` - Users can update their own info
 
 ---
 
-## personas
+### config_roles
 
-**Purpose:** Natural persons specialization - extends business_partners with person-specific fields.
-
-**Row Count:** 13 | **RLS:** ✅ Enabled
-
-### Fields
+**Purpose:** System roles for RBAC (predefined only)
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
-| `id` | uuid | NOT NULL | - | **PK & FK** to business_partners.id (1:1) |
-| `tipo_documento` | text | NOT NULL | - | Document type: CC, CE, TI, PA, RC, NIT, PEP, PPT, DNI, NUIP |
-| `numero_documento` | text | NOT NULL | - | Identification number (alphanumeric, 5-20 chars) |
-| `fecha_expedicion` | date | NULL | - | Document issue date |
-| `lugar_expedicion` | text | NULL | - | Document issue location |
-| `primer_nombre` | text | NOT NULL | - | **Required** - First name |
-| `segundo_nombre` | text | NULL | - | Middle name(s) |
-| `primer_apellido` | text | NOT NULL | - | **Required** - First surname |
-| `segundo_apellido` | text | NULL | - | Second surname |
-| `genero` | text | NOT NULL | - | Gender: masculino, femenino, otro, no_especifica |
-| `fecha_nacimiento` | date | NOT NULL | - | Birth date (validated for 18+ years) |
-| `lugar_nacimiento` | text | NULL | - | Place of birth (legacy text field - deprecated) |
-| `lugar_nacimiento_id` | uuid | NULL | - | FK to geographic_locations - Structured birth place reference |
-| `nacionalidad` | text | NULL | `'CO'::text` | ISO nationality code (default: Colombia) |
-| `estado_civil` | text | NULL | - | Marital status: soltero, casado, union_libre, divorciado, viudo, separado |
-| `ocupacion` | text | NULL | - | Current occupation |
-| `profesion` | text | NULL | - | Professional title/degree |
-| `nivel_educacion` | text | NULL | - | Education level: primaria, bachillerato, tecnico, tecnologo, pregrado, posgrado, maestria, doctorado |
-| `tipo_sangre` | text | NULL | - | Blood type: A+, A-, B+, B-, AB+, AB-, O+, O- |
-| `eps` | text | NULL | - | Health insurance provider (EPS) |
-| `fecha_socio` | date | NULL | - | Date of first membership to the club |
-| `fecha_aniversario` | date | NULL | - | Wedding/union anniversary date |
-| `estado_vital` | text | NULL | `'vivo'::text` | Vital status: vivo, fallecido, desconocido |
-| `email_secundario` | text | NULL | - | Additional contact email (validated) |
-| `telefono_secundario` | text | NULL | - | Additional phone (10 digits) |
-| `whatsapp` | text | NULL | - | WhatsApp number (10 digits) |
-| `linkedin_url` | text | NULL | - | LinkedIn profile URL |
-| `facebook_url` | text | NULL | - | Facebook profile URL |
-| `instagram_handle` | text | NULL | - | Instagram handle |
-| `twitter_handle` | text | NULL | - | Twitter/X handle |
-| `foto_url` | text | NULL | - | Profile photo URL |
-| `contacto_emergencia_id` | uuid | NULL | - | FK to personas.id - Emergency contact person |
-| `relacion_emergencia` | text | NULL | - | Relationship with emergency contact |
-| `tags` | text[] | NULL | `'{}'::text[]` | Multi-select tags for quick segmentation |
-| `perfil_intereses` | jsonb | NULL | `'{}'::jsonb` | Interests and hobbies (WHAT they like) |
-| `perfil_preferencias` | jsonb | NULL | `'{}'::jsonb` | Operational preferences (HOW to be served) |
-| `perfil_metricas` | jsonb | NULL | `'{}'::jsonb` | Value metrics and AI scores (LTV, Engagement) |
-| `perfil_compliance` | jsonb | NULL | `'{}'::jsonb` | Legal history, habeas data, contracts |
-| `direccion_residencia` | text | NULL | - | Residence address |
-| `barrio_residencia` | text | NULL | - | Neighborhood of residence |
-| `ciudad_residencia` | text | NULL | - | City of residence |
-| `creado_en` | timestamptz | NOT NULL | `now()` | Timestamp of record creation |
-| `actualizado_en` | timestamptz | NOT NULL | `now()` | Timestamp of last update |
-| `creado_por` | uuid | NULL | - | FK to auth.users - Creator |
-| `actualizado_por` | uuid | NULL | - | FK to auth.users - Updater |
-| `eliminado_en` | timestamptz | NULL | - | **Synced with business_partners** |
-| `eliminado_por` | uuid | NULL | - | FK to auth.users - Deleter |
+| role | text | NO | | Role name: owner/admin/member/viewer |
+| metadata | jsonb | YES | '{}'::jsonb | Role metadata |
+| **Soft Delete** ||||||
+| eliminado_en | timestamptz | YES | | Soft delete timestamp |
+| eliminado_por | uuid | YES | | User who deleted |
+| **Audit Fields** ||||||
+| creado_en | timestamptz | NO | NOW() | Creation timestamp |
+| actualizado_en | timestamptz | NO | NOW() | Last update timestamp |
+| creado_por | uuid | YES | | Creator |
+| actualizado_por | uuid | YES | | Updater |
 
-### Constraints
+**Constraints:**
+- PRIMARY KEY: (role)
+- CHECK: role IN ('owner', 'admin', 'member', 'viewer')
 
-- **PRIMARY KEY:** `id`
-- **FOREIGN KEY:** `id` → `business_partners.id` (1:1 relationship)
-- **FOREIGN KEY:** `contacto_emergencia_id` → `personas.id`
-- **FOREIGN KEY:** `lugar_nacimiento_id` → `geographic_locations.id`
-- **CHECK:** `tipo_documento IN ('CC', 'CE', 'TI', 'PA', 'RC', 'NIT', 'PEP', 'PPT', 'DNI', 'NUIP')`
-- **CHECK:** `numero_documento ~ '^[A-Za-z0-9-]{5,20}$'` (5-20 alphanumeric chars)
-- **CHECK:** `genero IN ('masculino', 'femenino', 'otro', 'no_especifica')`
-- **CHECK:** `estado_civil IN ('soltero', 'casado', 'union_libre', 'divorciado', 'viudo', 'separado')`
-- **CHECK:** `nivel_educacion IN ('primaria', 'bachillerato', 'tecnico', 'tecnologo', 'pregrado', 'posgrado', 'maestria', 'doctorado')`
-- **CHECK:** `tipo_sangre IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')`
-- **CHECK:** `estado_vital IN ('vivo', 'fallecido', 'desconocido')`
-- **CHECK:** `email_secundario ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'`
-- **CHECK:** `telefono_secundario ~ '^[0-9]{10}$'`
-- **CHECK:** `whatsapp ~ '^[0-9]{10}$'`
+**Indexes:**
+- `idx_config_roles_activos` (partial: WHERE eliminado_en IS NULL)
 
-### Indexes
-
-- `personas_pkey` PRIMARY KEY on `id`
-- `personas_numero_documento_idx` on `numero_documento`
-
-### Triggers
-
-- `set_audit_user_columns` - Auto-set audit fields
-- `actualizar_timestamp` - Auto-update `actualizado_en`
-- `set_deleted_by_on_soft_delete` - Auto-set `eliminado_por`
-
-### Business Rules
-
-1. All personas MUST have corresponding record in `business_partners` with `tipo_actor = 'persona'`
-2. Document number must be unique within organization
-3. Age validation: `fecha_nacimiento` must be at least 18 years ago
-4. Emergency contact must reference another persona (cannot be empresa)
-5. `eliminado_en` synced with business_partners for consistency
-6. Residence fields (`direccion_residencia`, `barrio_residencia`, `ciudad_residencia`) provide structured address data
-7. `lugar_nacimiento_id` provides FK to `geographic_locations` for structured birth place
-
-### JSONB Schemas
-
-**perfil_intereses** (WHAT they like):
-```json
-{
-  "deportes": ["golf", "tenis", "natación"],
-  "hobbies": ["lectura", "viajes", "fotografía"],
-  "musica": ["rock", "jazz"],
-  "gastronomia": ["italiana", "japonesa"]
-}
-```
-
-**perfil_preferencias** (HOW to be served):
-```json
-{
-  "idioma_preferido": "es",
-  "canal_comunicacion": "email",
-  "horario_contacto": "mañana",
-  "restricciones_alimentarias": ["vegetariano"],
-  "alergias": ["maní"]
-}
-```
-
-**perfil_metricas** (Scores and analytics):
-```json
-{
-  "ltv_score": 8500,
-  "engagement_score": 0.85,
-  "frecuencia_visitas": "semanal",
-  "ultima_visita": "2025-12-20",
-  "segmento": "platinum"
-}
-```
-
-**perfil_compliance** (Legal and contracts):
-```json
-{
-  "habeas_data_aceptado": true,
-  "fecha_aceptacion": "2025-01-15",
-  "contratos_activos": ["membresia_2025"],
-  "pep": false,
-  "lista_restrictiva": false
-}
-```
-
-### Related Tables
-
-- **Base:** `business_partners` (via `id`)
-- **Emergency Contact:** Self-reference via `contacto_emergencia_id`
-- **Birth Place:** `geographic_locations` (via `lugar_nacimiento_id`)
-- **Empresa Representation:** `empresas.representante_legal_id` can reference personas
+**RLS Policies:**
+- `roles_read_org_filtered` - Authenticated users can read system roles only
+- `roles_insert` - Only owners can insert
+- `roles_update` - Only owners can update
+- `roles_delete` - Only owners can delete
 
 ---
 
-## empresas
+### config_roles_permisos
 
-**Purpose:** Companies/legal entities specialization - extends business_partners with company-specific fields.
-
-**Row Count:** 4 | **RLS:** ✅ Enabled
-
-### Fields
+**Purpose:** Fine-grained permissions for each role
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
-| `id` | uuid | NOT NULL | - | **PK & FK** to business_partners.id (1:1) |
-| `nit` | text | NOT NULL | - | **UNIQUE** - Tax ID number (7-12 digits, numbers only) |
-| `razon_social` | text | NOT NULL | - | Legal company name |
-| `nombre_comercial` | text | NULL | - | Trade name / brand name |
-| `tipo_sociedad` | text | NOT NULL | - | Legal entity type: SA, SAS, LTDA, EU, COOP, FUNDACION, CORP, ONG, SUCURSAL, OTRO |
-| `fecha_constitucion` | date | NULL | - | Incorporation date |
-| `ciudad_constitucion` | text | NULL | - | City of incorporation |
-| `pais_constitucion` | text | NULL | `'CO'::text` | Country of incorporation (default: Colombia) |
-| `numero_registro` | text | NULL | - | Commercial registry number |
-| `codigo_ciiu` | text | NULL | - | CIIU economic activity code |
-| `sector_industria` | text | NULL | - | Industry sector |
-| `actividad_economica` | text | NULL | - | Main economic activity description |
-| `tamano_empresa` | text | NULL | - | Company size: micro, pequena, mediana, grande |
-| `representante_legal_id` | uuid | NULL | - | FK to personas.id - Legal representative |
-| `cargo_representante` | text | NULL | - | Position/title of legal representative |
-| `email_secundario` | text | NULL | - | Additional corporate email (validated) |
-| `telefono_secundario` | text | NULL | - | Additional phone (10 digits) |
-| `whatsapp` | text | NULL | - | Corporate WhatsApp (10 digits) |
-| `website` | text | NULL | - | Corporate website URL |
-| `linkedin_url` | text | NULL | - | Company LinkedIn page |
-| `facebook_url` | text | NULL | - | Company Facebook page |
-| `instagram_handle` | text | NULL | - | Company Instagram handle |
-| `twitter_handle` | text | NULL | - | Company Twitter/X handle |
-| `logo_url` | text | NULL | - | Public URL of company logo |
-| `ingresos_anuales` | numeric | NULL | - | Annual revenue/income |
-| `numero_empleados` | integer | NULL | - | Number of employees |
-| `atributos` | jsonb | NULL | `'{}'::jsonb` | Custom attributes (address, certifications, branches) |
-| `digito_verificacion` | text | NULL | - | NIT verification digit (auto-calculated) |
-| `creado_en` | timestamptz | NOT NULL | `now()` | Timestamp of record creation |
-| `actualizado_en` | timestamptz | NOT NULL | `now()` | Timestamp of last update |
-| `creado_por` | uuid | NULL | - | FK to auth.users - Creator |
-| `actualizado_por` | uuid | NULL | - | FK to auth.users - Updater |
-| `eliminado_en` | timestamptz | NULL | - | **Synced with business_partners** |
-| `eliminado_por` | uuid | NULL | - | FK to auth.users - Deleter |
+| role | text | NO | | Role name (FK reference) |
+| resource | text | NO | | Resource: dm_acciones, tr_tareas, etc. |
+| action | text | NO | | Action: select, insert, update, delete |
+| allow | boolean | NO | true | Permission granted/denied |
+| metadata | jsonb | YES | | Permission metadata |
+| **Soft Delete** ||||||
+| eliminado_en | timestamptz | YES | | Soft delete timestamp |
+| eliminado_por | uuid | YES | | User who deleted |
+| **Audit Fields** ||||||
+| creado_en | timestamptz | NO | NOW() | Creation timestamp |
+| actualizado_en | timestamptz | NO | NOW() | Last update timestamp |
+| creado_por | uuid | YES | | Creator |
+| actualizado_por | uuid | YES | | Updater |
 
-### Constraints
+**Constraints:**
+- PRIMARY KEY: (role, resource, action)
+- FOREIGN KEY: role references config_roles(role)
 
-- **PRIMARY KEY:** `id`
-- **UNIQUE:** `nit`
-- **FOREIGN KEY:** `id` → `business_partners.id` (1:1)
-- **FOREIGN KEY:** `representante_legal_id` → `personas.id`
-- **CHECK:** `nit ~ '^[0-9]{7,12}$'` (7-12 digits)
-- **CHECK:** `tipo_sociedad IN ('SA', 'SAS', 'LTDA', 'EU', 'COOP', 'FUNDACION', 'CORP', 'ONG', 'SUCURSAL', 'OTRO')`
-- **CHECK:** `tamano_empresa IN ('micro', 'pequena', 'mediana', 'grande')`
-- **CHECK:** `email_secundario ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'`
-- **CHECK:** `telefono_secundario ~ '^[0-9]{10}$'`
-- **CHECK:** `whatsapp ~ '^[0-9]{10}$'`
+**Indexes:**
+- `idx_config_roles_permisos_activos` (partial: WHERE eliminado_en IS NULL)
+- `idx_role_permissions_resource_action`
 
-### Indexes
-
-- `empresas_pkey` PRIMARY KEY on `id`
-- `empresas_nit_key` UNIQUE on `nit`
-
-### Triggers
-
-- `set_audit_user_columns` - Auto-set audit fields
-- `actualizar_timestamp` - Auto-update `actualizado_en`
-- `set_deleted_by_on_soft_delete` - Auto-set `eliminado_por`
-
-### Business Rules
-
-1. All empresas MUST have corresponding record in `business_partners` with `tipo_actor = 'empresa'`
-2. NIT must be unique across all companies
-3. NIT verification digit can be calculated using `calcular_digito_verificacion_nit()` function
-4. Legal representative (`representante_legal_id`) must be a persona, not another empresa
-5. `eliminado_en` synced with business_partners
-
-### JSONB Schemas
-
-**atributos:**
-```json
-{
-  "direccion": {
-    "principal": {
-      "pais": "CO",
-      "ciudad": "Bogotá",
-      "direccion": "Calle 100 #10-20"
-    },
-    "sucursales": [
-      {
-        "nombre": "Medellín",
-        "direccion": "Carrera 43A #1-50"
-      }
-    ]
-  },
-  "certificaciones": ["ISO 9001", "ISO 14001"],
-  "socios": [
-    {"nombre": "Juan Pérez", "participacion": 60},
-    {"nombre": "María García", "participacion": 40}
-  ]
-}
-```
-
-### Related Tables
-
-- **Base:** `business_partners` (via `id`)
-- **Legal Rep:** `personas` (via `representante_legal_id`)
+**RLS Policies:**
+- `role_permissions_read_org_filtered` - Read only for system roles
+- `role_permissions_insert` - Only owners can insert
+- `role_permissions_update` - Only owners can update
+- `role_permissions_delete` - Only owners can delete
 
 ---
 
-## bp_relaciones
+### config_ciudades
 
-**Purpose:** Manages relationships (family, employment, commercial, etc.) between business partners.
-
-**Row Count:** 3 | **RLS:** ✅ Enabled
-
-### Fields
+**Purpose:** Geographic locations catalog (cities, states, countries)
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
-| `id` | uuid | NOT NULL | `gen_random_uuid()` | Primary key |
-| `organizacion_id` | uuid | NOT NULL | - | FK to organizations - Multi-tenancy key |
-| `bp_origen_id` | uuid | NOT NULL | - | FK to business_partners - Origin actor (child, employee, etc.) |
-| `bp_destino_id` | uuid | NOT NULL | - | FK to business_partners - Destination actor (parent, company, etc.) |
-| `tipo_relacion` | tipo_relacion_bp | NOT NULL | - | **ENUM** - Relationship type |
-| `rol_origen` | text | NOT NULL | - | Specific role of origin in relationship context |
-| `rol_destino` | text | NOT NULL | - | Specific role of destination in relationship context |
-| `atributos` | jsonb | NOT NULL | `'{}'::jsonb` | Additional relationship metadata |
-| `fecha_inicio` | date | NULL | - | Relationship start date |
-| `fecha_fin` | date | NULL | - | Relationship end date (NULL if active) |
-| `es_actual` | boolean | NULL (generated) | `(fecha_fin IS NULL)` | **GENERATED** - true if relationship is current |
-| `es_bidireccional` | boolean | NOT NULL | `false` | Auto-query from both directions |
-| `notas` | text | NULL | - | Additional notes |
-| `creado_en` | timestamptz | NOT NULL | `now()` | Timestamp of creation |
-| `actualizado_en` | timestamptz | NOT NULL | `now()` | Timestamp of last update |
-| `eliminado_en` | timestamptz | NULL | - | Soft delete timestamp |
-| `creado_por` | uuid | NULL | - | FK to auth.users - Creator |
-| `actualizado_por` | uuid | NULL | - | FK to auth.users - Updater |
-| `eliminado_por` | uuid | NULL | - | FK to auth.users - Deleter |
+| id | uuid | NO | gen_random_uuid() | Primary key |
+| country_code | text | YES | | ISO country code (e.g., "CO") |
+| country_name | text | YES | | Country name |
+| state_name | text | YES | | State/department name |
+| city_name | text | YES | | City name |
+| city_code | text | YES | | City code |
+| search_text | text | YES | | Searchable text (unaccented) |
+| **Soft Delete** ||||||
+| eliminado_en | timestamptz | YES | | Soft delete timestamp |
+| eliminado_por | uuid | YES | | User who deleted |
+| **Audit Fields** ||||||
+| creado_en | timestamptz | NO | NOW() | Creation timestamp |
+| actualizado_en | timestamptz | NO | NOW() | Last update timestamp |
+| creado_por | uuid | YES | | Creator |
+| actualizado_por | uuid | YES | | Updater |
 
-### Enum Type: tipo_relacion_bp
+**Indexes:**
+- `idx_config_ciudades_activas` (partial: WHERE eliminado_en IS NULL) ON (country_code, state_name, city_name)
+- `idx_config_ciudades_search` (partial: WHERE eliminado_en IS NULL) ON (search_text)
 
-| Value | Description |
-|-------|-------------|
-| `familiar` | Family relationship |
-| `laboral` | Employment relationship |
-| `referencia` | Reference/referral |
-| `membresia` | Membership relationship |
-| `comercial` | Commercial/business relationship |
-| `otra` | Other relationship type |
-
-### Constraints
-
-- **PRIMARY KEY:** `id`
-- **FOREIGN KEYS:**
-  - `organizacion_id` → `organizations.id`
-  - `bp_origen_id` → `business_partners.id`
-  - `bp_destino_id` → `business_partners.id`
-  - `creado_por`, `actualizado_por`, `eliminado_por` → `auth.users.id`
-
-### Indexes
-
-- `bp_relaciones_pkey` PRIMARY KEY on `id`
-- `bp_relaciones_bp_origen_id_idx` on `bp_origen_id`
-- `bp_relaciones_bp_destino_id_idx` on `bp_destino_id`
-
-### Triggers
-
-- `validar_tipo_relacion_compatible` - Validates relationship type rules
-- `set_audit_user_columns` - Auto-set audit fields
-- `actualizar_timestamp` - Auto-update `actualizado_en`
-- `set_deleted_by_on_soft_delete` - Auto-set `eliminado_por`
-
-### Business Rules
-
-1. **Familiar relationships:** Both origen and destino must be personas
-2. **Laboral relationships:** Origen must be persona, destino must be empresa
-3. No self-relationships (bp_origen_id ≠ bp_destino_id)
-4. Only one active relationship of same type between same BPs
-5. `fecha_fin` must be ≥ `fecha_inicio`
-6. `es_actual` is auto-calculated (true when `fecha_fin IS NULL`)
-
-### Relationship Type Rules
-
-```typescript
-// Validation matrix
-const relationshipRules = {
-  familiar: { origen: 'persona', destino: 'persona' },
-  laboral: { origen: 'persona', destino: 'empresa' },
-  referencia: { origen: 'any', destino: 'any' },
-  membresia: { origen: 'any', destino: 'any' },
-  comercial: { origen: 'any', destino: 'any' },
-  otra: { origen: 'any', destino: 'any' }
-};
-```
-
-### Example Roles
-
-| tipo_relacion | rol_origen | rol_destino |
-|---------------|------------|-------------|
-| familiar | hijo | padre |
-| familiar | conyuge | conyuge |
-| laboral | empleado | empleador |
-| laboral | gerente | empresa |
-| referencia | referido | referente |
-| membresia | socio | club |
-| comercial | proveedor | cliente |
-
-### JSONB Schemas
-
-**atributos:**
-```json
-{
-  "departamento": "Ventas",
-  "cargo": "Gerente Regional",
-  "salario": 5000000,
-  "tipo_contrato": "indefinido",
-  "jornada": "tiempo_completo"
-}
-```
-
-### Related Tables
-
-- **Business Partners:** Both `bp_origen_id` and `bp_destino_id`
-- **View:** `obtener_relaciones_bp()` RPC function for bidirectional queries
+**RLS Policies:**
+- `geo_locations_read` - All authenticated users can read (public geographic data)
 
 ---
 
-## acciones
+## Master Data Tables
 
-**Purpose:** Master table of club shares/actions (titles of value). Does not contain ownership directly.
+### dm_actores
 
-**Row Count:** 25 | **RLS:** ✅ Enabled
-
-### Fields
+**Purpose:** Unified table for all Business Partners using Single Table Inheritance (STI)
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
-| `id` | uuid | NOT NULL | `gen_random_uuid()` | Primary key |
-| `organizacion_id` | uuid | NOT NULL | - | FK to organizations - Multi-tenancy key |
-| `codigo_accion` | text | NOT NULL | - | **UNIQUE** - 4-digit numeric code (e.g., "4398") |
-| `estado` | text | NOT NULL | `'disponible'::text` | Current status of the action |
-| `creado_en` | timestamptz | NULL | `now()` | Timestamp of creation |
-| `creado_por` | uuid | NULL | - | FK to auth.users - Creator |
-| `actualizado_en` | timestamptz | NULL | `now()` | Timestamp of last update |
-| `actualizado_por` | uuid | NULL | - | FK to auth.users - Updater |
-| `eliminado_en` | timestamptz | NULL | - | Soft delete timestamp |
-| `eliminado_por` | uuid | NULL | - | FK to auth.users - Deleter |
+| **Primary Key** ||||||
+| id | uuid | NO | gen_random_uuid() | Primary key (shared with specializations) |
+| **Identification** ||||||
+| codigo_bp | text | NO | | Business partner code (e.g., "AC-00000001") |
+| tipo_actor | tipo_actor_enum | NO | | Type: 'persona' or 'empresa' |
+| tipo_documento | text | YES | | Document type (CC, NIT, CE, etc.) |
+| num_documento | text | YES | | Document number |
+| **Organization** ||||||
+| organizacion_id | uuid | NO | | Organization (FK: config_organizaciones) |
+| **Person Fields** (if tipo_actor='persona') ||||||
+| primer_nombre | text | YES | | First name |
+| segundo_nombre | text | YES | | Middle name |
+| primer_apellido | text | YES | | First surname |
+| segundo_apellido | text | YES | | Second surname |
+| nombre_completo | text | YES | | Full name (computed) |
+| fecha_nacimiento | date | YES | | Birth date |
+| estado_civil | text | YES | | Civil status |
+| genero | text | YES | | Gender |
+| **Company Fields** (if tipo_actor='empresa') ||||||
+| razon_social | text | YES | | Legal business name |
+| nit | text | YES | | Tax ID (NIT in Colombia) |
+| digito_verificacion | integer | YES | | NIT verification digit |
+| **Contact** ||||||
+| email | text | YES | | Email address |
+| telefono | text | YES | | Phone number |
+| whatsapp | text | YES | | WhatsApp number |
+| foto_url | text | YES | | Profile photo URL |
+| **Location** ||||||
+| ciudad_id | uuid | YES | | City (FK: config_ciudades) |
+| direccion | text | YES | | Street address |
+| **Status** ||||||
+| activo | boolean | NO | true | Active status |
+| fecha_inactivacion | timestamptz | YES | | Inactivation date |
+| motivo_inactivacion | text | YES | | Inactivation reason |
+| **Soft Delete** ||||||
+| eliminado_en | timestamptz | YES | | Soft delete timestamp |
+| eliminado_por | uuid | YES | | User who deleted |
+| **Audit Fields** ||||||
+| creado_en | timestamptz | NO | NOW() | Creation timestamp |
+| actualizado_en | timestamptz | NO | NOW() | Last update timestamp |
+| creado_por | uuid | YES | | Creator |
+| actualizado_por | uuid | YES | | Updater |
+| **Metadata** ||||||
+| atributos | jsonb | YES | '{}'::jsonb | Flexible custom attributes |
 
-### Estado Values
+**Enums:**
+- `tipo_actor_enum`: 'persona', 'empresa'
 
-| Value | Description |
-|-------|-------------|
-| `disponible` | Available for assignment |
-| `asignada` | Currently assigned to a business partner |
-| `arrendada` | Leased/rented |
-| `bloqueada` | Blocked (cannot be assigned) |
-| `inactiva` | Inactive |
+**Constraints:**
+- PRIMARY KEY: (id)
+- UNIQUE: (codigo_bp)
+- UNIQUE: (organizacion_id, num_documento) WHERE eliminado_en IS NULL
+- CHECK: (tipo_actor = 'persona' AND razon_social IS NULL) OR (tipo_actor = 'empresa' AND primer_nombre IS NULL)
 
-### Constraints
+**Indexes:**
+- `idx_dm_actores_activos` (partial: WHERE eliminado_en IS NULL) ON (organizacion_id, eliminado_en, creado_en)
+- `idx_dm_actores_tipo_actor_activos` (partial: WHERE eliminado_en IS NULL) ON (tipo_actor, organizacion_id)
+- `idx_dm_actores_documento_activos` (partial: WHERE eliminado_en IS NULL) ON (tipo_documento, num_documento)
+- `idx_dm_actores_ciudad_id` (partial: WHERE ciudad_id IS NOT NULL)
+- `idx_bp_org`
+- `idx_dm_actores_vigentes` (partial: WHERE activo = true AND eliminado_en IS NULL)
 
-- **PRIMARY KEY:** `id`
-- **UNIQUE:** `codigo_accion`
-- **CHECK:** `codigo_accion ~ '^[0-9]{4}$'` (exactly 4 digits)
-- **CHECK:** `estado IN ('disponible', 'asignada', 'arrendada', 'bloqueada', 'inactiva')`
-- **FOREIGN KEYS:**
-  - `organizacion_id` → `organizations.id`
-  - `creado_por`, `actualizado_por`, `eliminado_por` → `auth.users.id`
+**RLS Policies:**
+- `bp_select_filtered` - Members can view org's actors
+- `bp_insert_members` - Members can insert
+- `bp_update_members` - Members can update
+- `bp_soft_delete_members` - Members can soft delete
 
-### Indexes
+**Triggers:**
+- `trg_generar_codigo_dm_actores` - Auto-generate codigo_bp on insert
+- `actualizar_timestamp` - Auto-update actualizado_en
 
-- `acciones_pkey` PRIMARY KEY on `id`
-- `acciones_codigo_accion_key` UNIQUE on `codigo_accion`
+**STI Pattern (Single Table Inheritance):**
 
-### Triggers
-
-- `set_audit_user_columns` - Auto-set audit fields
-- `actualizar_timestamp` - Auto-update `actualizado_en`
-- `set_deleted_by_on_soft_delete` - Auto-set `eliminado_por`
-
-### Business Rules
-
-1. `codigo_accion` must be exactly 4 digits (e.g., "0001", "4398")
-2. Ownership is tracked in `asignaciones_acciones` table, not here
-3. Estado automatically updated based on assignments (via application logic)
-4. Soft delete pattern applies
-
-### Related Tables
-
-- **Assignments:** `asignaciones_acciones` (tracks ownership)
-- **Views:** `v_acciones_asignadas` (summary with dueño, titular, beneficiarios)
+- All actor types (personas and empresas) are stored in a single table
+- Discriminator column: `tipo_actor` (enum: 'persona', 'empresa')
+- Type-specific fields are in the same table (NULL when not applicable)
+- Previous CTI pattern with separate `dm_personas` and `dm_empresas` tables was migrated to STI in January 2025
+- Migration `20250105_drop_personas_empresas.sql` dropped the old specialization tables
+- JSONB `perfil_*` columns provide flexible attributes for each type
 
 ---
 
-## asignaciones_acciones
+### dm_acciones
 
-**Purpose:** Tracks ownership and beneficiary assignments for club shares with temporal history.
-
-**Row Count:** 2 | **RLS:** ✅ Enabled
-
-### Fields
+**Purpose:** Master catalog of stock/share certificates (títulos de valor)
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
-| `id` | uuid | NOT NULL | `gen_random_uuid()` | Primary key |
-| `accion_id` | uuid | NOT NULL | - | FK to acciones - The share being assigned |
-| `business_partner_id` | uuid | NOT NULL | - | FK to business_partners - Assignee |
-| `tipo_asignacion` | text | NOT NULL | - | Assignment type: dueño, titular, beneficiario |
-| `subtipo_beneficiario` | text | NULL | - | Required for beneficiarios: conyuge, hijo/a, padre, madre, hermano/a, otro |
-| `subcodigo` | text | NOT NULL | - | 2-digit code: 00=dueño, 01=titular, 02+=beneficiarios |
-| `codigo_completo` | text | NOT NULL | - | **Auto-generated** - accion_codigo + subcodigo (e.g., "439800") |
-| `fecha_inicio` | date | NOT NULL | `CURRENT_DATE` | Start date of assignment validity |
-| `fecha_fin` | date | NULL | - | End date (NULL = currently valid) |
-| `es_vigente` | boolean | NULL (generated) | `(fecha_fin IS NULL)` | **GENERATED** - true if currently valid |
-| `precio_transaccion` | numeric | NULL | - | Transaction price (buy/sell/lease) if applicable |
-| `organizacion_id` | uuid | NOT NULL | - | FK to organizations - Multi-tenancy key |
-| `notas` | text | NULL | - | Additional notes |
-| `atributos` | jsonb | NULL | `'{}'::jsonb` | Custom metadata in JSONB format |
-| `creado_en` | timestamptz | NOT NULL | `now()` | Timestamp of creation |
-| `creado_por` | uuid | NULL | - | FK to auth.users - Creator |
-| `actualizado_en` | timestamptz | NOT NULL | `now()` | Timestamp of last update |
-| `actualizado_por` | uuid | NULL | - | FK to auth.users - Updater |
-| `eliminado_en` | timestamptz | NULL | - | Soft delete timestamp |
-| `eliminado_por` | uuid | NULL | - | FK to auth.users - Deleter |
+| id | uuid | NO | gen_random_uuid() | Primary key |
+| organizacion_id | uuid | NO | | Organization (FK: config_organizaciones) |
+| codigo_accion | text | NO | | Share/stock code (e.g., "ACC-001") |
+| tipo_accion | text | YES | | Share type (common, preferred, etc.) |
+| valor_nominal | numeric | YES | | Nominal value |
+| cantidad_total | integer | YES | | Total quantity issued |
+| estado | text | YES | | Status: active/inactive/cancelled |
+| **Soft Delete** ||||||
+| eliminado_en | timestamptz | YES | | Soft delete timestamp |
+| eliminado_por | uuid | YES | | User who deleted |
+| **Audit Fields** ||||||
+| creado_en | timestamptz | NO | NOW() | Creation timestamp |
+| actualizado_en | timestamptz | NO | NOW() | Last update timestamp |
+| creado_por | uuid | YES | | Creator |
+| actualizado_por | uuid | YES | | Updater |
 
-### Assignment Types
+**Indexes:**
+- `idx_dm_acciones_activas` (partial: WHERE eliminado_en IS NULL) ON (organizacion_id, codigo_accion, estado)
+- `idx_acciones_org`
+- `idx_acciones_organizacion_id`
 
-| tipo_asignacion | subcodigo | Constraint | Description |
-|-----------------|-----------|------------|-------------|
-| `dueño` | `00` | Must be unique per action | Owner of the share |
-| `titular` | `01` | Must be persona, unique per action | Title holder (can be different from owner) |
-| `beneficiario` | `02+` | Must be persona, requires subtipo | Beneficiaries (multiple allowed) |
-
-### Subtipo Beneficiario Values
-
-- `conyuge` - Spouse
-- `hijo/a` - Child
-- `padre` - Father
-- `madre` - Mother
-- `hermano/a` - Sibling
-- `otro` - Other
-
-### Constraints
-
-- **PRIMARY KEY:** `id`
-- **CHECK:** `tipo_asignacion IN ('dueño', 'titular', 'beneficiario')`
-- **CHECK:** `subtipo_beneficiario IN ('conyuge', 'hijo/a', 'padre', 'madre', 'hermano/a', 'otro')`
-- **CHECK:** `subcodigo ~ '^[0-9]{2}$'` (exactly 2 digits)
-- **FOREIGN KEYS:**
-  - `accion_id` → `acciones.id`
-  - `business_partner_id` → `business_partners.id`
-  - `organizacion_id` → `organizations.id`
-  - `creado_por`, `actualizado_por`, `eliminado_por` → `auth.users.id`
-
-### Indexes
-
-- `asignaciones_acciones_pkey` PRIMARY KEY on `id`
-- `asignaciones_acciones_accion_id_idx` on `accion_id`
-- `asignaciones_acciones_business_partner_id_idx` on `business_partner_id`
-
-### Triggers
-
-- `validar_asignacion_accion` - Validates assignment rules
-- `generar_codigo_completo_asignacion` - Auto-generates `codigo_completo`
-- `set_audit_user_columns` - Auto-set audit fields
-- `actualizar_timestamp` - Auto-update `actualizado_en`
-- `set_deleted_by_on_soft_delete` - Auto-set `eliminado_por`
-
-### Business Rules
-
-1. **Subcode correspondence:**
-   - Dueño MUST have subcodigo = '00'
-   - Titular MUST have subcodigo = '01'
-   - Beneficiarios MUST have subcodigo >= '02'
-
-2. **Type restrictions:**
-   - Titulares and beneficiarios MUST be personas (not empresas)
-   - Dueños can be either personas or empresas
-
-3. **Uniqueness:**
-   - Only ONE active dueño per action
-   - Only ONE active titular per action
-   - Multiple beneficiarios allowed
-
-4. **Temporal validity:**
-   - `fecha_fin` must be >= `fecha_inicio`
-   - `es_vigente` auto-calculated
-
-5. **Beneficiary subtype:**
-   - Required when `tipo_asignacion = 'beneficiario'`
-   - NULL otherwise
-
-### Example Codes
-
-```
-Accion 4398:
-- 439800 → Dueño (subcodigo 00)
-- 439801 → Titular (subcodigo 01)
-- 439802 → Beneficiario 1 (subcodigo 02)
-- 439803 → Beneficiario 2 (subcodigo 03)
-```
-
-### Related Tables
-
-- **Acciones:** `acciones` (the share being assigned)
-- **Business Partners:** `business_partners` (assignee)
-- **Views:** `v_asignaciones_vigentes`, `v_asignaciones_historial`
+**RLS Policies:**
+- `acciones_select_filtered` - Members can view org's actions
+- `acciones_insert_members` - Members can insert
+- `acciones_update_members` - Members can update
+- `acciones_soft_delete_members` - Members can soft delete
 
 ---
 
-## geographic_locations
+## Transaction Tables
 
-**Purpose:** Reference table for cities and geographic locations used in location pickers (birth place, residence, etc.).
+### tr_doc_comercial
 
-**Row Count:** 1367 | **RLS:** ✅ Enabled (public read access)
-
-### Fields
+**Purpose:** Business opportunities and commercial documents
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
-| `id` | uuid | NOT NULL | `gen_random_uuid()` | Primary key - Unique location identifier |
-| `country_code` | text | NOT NULL | - | ISO 3166-1 alpha-2 country code (CO, US, MX, etc.) |
-| `country_name` | text | NOT NULL | - | Full country name (Colombia, United States, México) |
-| `state_name` | text | NULL | - | State/department name (Antioquia, Caldas, etc.) |
-| `city_name` | text | NOT NULL | - | City name (Medellín, Bogotá, etc.) |
-| `city_code` | text | NULL | - | City code for reference |
-| `search_text` | text | NOT NULL | - | Combined text for FTS/autocomplete search |
+| **Identity** ||||||
+| id | uuid | NO | gen_random_uuid() | Primary key |
+| codigo | text | NO | | Opportunity code (auto-generated) |
+| tipo | tr_doc_comercial_tipo | NO | | Document type |
+| estado | tr_doc_comercial_estados | NO | | Status |
+| **Dates** ||||||
+| fecha_doc | date | YES | | Document date |
+| fecha_venc_doc | date | YES | | Due date |
+| **Organization** ||||||
+| organizacion_id | uuid | NO | | Organization (FK: config_organizaciones) |
+| asociado_id | uuid | YES | | Associated actor (FK: dm_actores) |
+| **People** ||||||
+| solicitante_id | uuid | YES | | Requester (FK: dm_actores) |
+| responsable_id | uuid | YES | | Responsible person (FK: dm_actores) |
+| pagador_id | uuid | YES | | Payer (FK: dm_actores) |
+| **Financials** ||||||
+| items | jsonb | YES | | Line items |
+| moneda_iso | text | YES | 'COP' | Currency ISO code |
+| valor_neto | numeric | YES | | Net value |
+| valor_descuento | numeric | YES | | Discount amount |
+| valor_impuestos | numeric | YES | | Tax amount |
+| valor_total | numeric | YES | | Total value (computed) |
+| monto_estimado | numeric | YES | | Estimated amount |
+| **Related** ||||||
+| documento_origen_id | uuid | YES | | Source document |
+| **Metadata** ||||||
+| notas | text | YES | | Notes |
+| tags | text[] | YES | | Tags array |
+| atributos | jsonb | YES | '{}'::jsonb | Custom attributes |
+| **Soft Delete** ||||||
+| eliminado_en | timestamptz | YES | | Soft delete timestamp |
+| eliminado_por | uuid | YES | | User who deleted |
+| **Audit Fields** ||||||
+| creado_en | timestamptz | NO | NOW() | Creation timestamp |
+| actualizado_en | timestamptz | NO | NOW() | Last update timestamp |
+| creado_por | uuid | YES | | Creator |
+| actualizado_por | uuid | YES | | Updater |
 
-### Constraints
+**Enums:**
+- `tr_doc_comercial_tipo`: 'cotizacion', 'orden_pedido', 'contrato', 'factura'
+- `tr_doc_comercial_estados`: 'lead', 'calificado', 'propuesta', 'negociacion', 'ganado', 'perdido'
 
-- **PRIMARY KEY:** `id`
-- **NOT NULL:** `country_code`, `country_name`, `city_name`, `search_text`
+**Indexes:**
+- `idx_tr_doc_comercial_activos` (partial: WHERE eliminado_en IS NULL) ON (organizacion_id, estado, creado_en)
+- `idx_tr_doc_comercial_solicitante_activos` (partial: WHERE eliminado_en IS NULL) ON (solicitante_id, estado)
+- `idx_tr_doc_comercial_responsable_activos` (partial: WHERE eliminado_en IS NULL) ON (responsable_id, estado)
+- `idx_tr_doc_comercial_estado_fecha` (partial: WHERE eliminado_en IS NULL) ON (estado, fecha_venc_doc)
 
-### Indexes
+**RLS Policies:**
+- `tr_doc_comercial_select_filtered` - Members can view org's opportunities
+- `tr_doc_comercial_insert_members` - Members can insert
+- `tr_doc_comercial_update_members` - Members can update
+- `tr_doc_comercial_delete_members` - Members can delete
 
-- `geographic_locations_pkey` PRIMARY KEY on `id`
-- `idx_geographic_locations_country` on `country_code`
-- `idx_geographic_locations_city` on `city_name`
+**Triggers:**
+- `trg_gen_codigo_oportunidad` - Auto-generate codigo on insert
+- `trg_calcular_valor_total_oportunidad` - Compute valor_total
 
-### Triggers
+---
 
-- `actualizar_timestamp` - Auto-update `actualizado_en` on UPDATE
+### tr_tr_tareas
 
-### RLS Policies
+**Purpose:** Task and activity management
 
-**Policy:** `"Public read access to locations"`
-- **Operation:** SELECT
-- **Using:** `true` (public read access - locations are reference data)
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | uuid | NO | gen_random_uuid() | Primary key |
+| **Basic Info** ||||||
+| titulo | text | NO | | Task title |
+| descripcion | text | YES | | Task description |
+| **Priorities & Status** ||||||
+| prioridad | tr_tr_tareas_prioridad | NO | 'Media'::tr_tr_tareas_prioridad | Priority level |
+| estado | tr_tr_tareas_estado | NO | 'pendiente'::tr_tr_tareas_estado | Task status |
+| **Relationships** ||||||
+| organizacion_id | uuid | NO | | Organization (FK: config_organizaciones) |
+| oportunidad_id | uuid | YES | | Related opportunity (FK: tr_doc_comercial) |
+| asignado_a | uuid | YES | | Assigned to (FK: dm_actores) |
+| relacionado_con_bp | uuid | YES | | Related business partner (FK: dm_actores) |
+| **Dates** ||||||
+| fecha_vencimiento | date | YES | | Due date |
+| **Metadata** ||||||
+| atributos | jsonb | YES | '{}'::jsonb | Custom attributes |
+| **Soft Delete** ||||||
+| eliminado_en | timestamptz | YES | | Soft delete timestamp |
+| eliminado_por | uuid | YES | | User who deleted |
+| **Audit Fields** ||||||
+| creado_en | timestamptz | NO | NOW() | Creation timestamp |
+| actualizado_en | timestamptz | NO | NOW() | Last update timestamp |
+| creado_por | uuid | YES | | Creator |
+| actualizado_por | uuid | YES | | Updater |
 
-### Business Rules
+**Enums:**
+- `tr_tr_tareas_prioridad`: 'Baja', 'Media', 'Alta', 'Urgente'
+- `tr_tr_tareas_estado`: 'pendiente', 'en_progreso', 'completada', 'cancelada'
 
-1. Reference data table - contains cities and geographic locations
-2. Used by LocationPicker component for structured location selection
-3. Public read access (no sensitive data)
-4. Data seeded with major Colombian cities (expandable to international cities)
-5. Optimized for search with `search_text` field
+**Indexes:**
+- `idx_tr_tr_tareas_activas` (partial: WHERE eliminado_en IS NULL) ON (organizacion_id, asignado_a, estado, fecha_vencimiento)
+- `idx_tr_tr_tareas_oportunidad_activas` (partial: WHERE eliminado_en IS NULL) ON (oportunidad_id, estado)
+- `idx_tr_tr_tareas_relacionado_bp_activas` (partial: WHERE eliminado_en IS NULL) ON (relacionado_con_bp, estado)
+- `idx_tr_tr_tareas_estado_prioridad` (partial: WHERE eliminado_en IS NULL) ON (estado, prioridad, fecha_vencimiento)
 
-### Related Functions
+**RLS Policies:**
+- `tr_tareas_select_filtered` - Members can view org's tasks
+- `tr_tareas_insert_members` - Members can insert
+- `tr_tareas_update_members` - Members can update
+- `tr_tareas_delete_members` - Members can delete
 
-**`search_locations(search_term TEXT)`**
-- Fuzzy search function for location picker
-- Returns max 20 results ordered by relevance
-- Prioritizes exact matches and Colombian cities
-- Requires minimum 2 characters
+**Triggers:**
+- `trg_generar_codigo_tarea` - Auto-generate codigo_tarea on insert
 
-### Usage Example
+---
+
+## Visualization Tables
+
+### vn_asociados
+
+**Purpose:** Share assignments (actors → shares) with temporal history
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | uuid | NO | gen_random_uuid() | Primary key |
+| **Organization** ||||||
+| organizacion_id | uuid | NO | | Organization (FK: config_organizaciones) |
+| **Assignment** ||||||
+| accion_id | uuid | NO | | Share/stock (FK: dm_acciones) |
+| business_partner_id | uuid | NO | | Assigned actor (FK: dm_actores) |
+| tipo_asignacion | text | NO | | Type: dueño/titular/beneficiario |
+| subcodigo | text | NO | | Sub-code: 00/01/02+ |
+| codigo_completo | text | YES | | Full code (accion_code + subcodigo) |
+| **Temporal** ||||||
+| fecha_inicio | date | NO | CURRENT_DATE | Start date |
+| fecha_fin | date | YES | | End date (NULL = active) |
+| es_actual | boolean | NO | true | Currently active? |
+| **Financial** ||||||
+| precio_transaccion | numeric | YES | | Transaction price |
+| **Beneficiary Specific** ||||||
+| subtipo_beneficiario | text | YES | | Beneficiary subtype |
+| porcentaje | numeric | YES | | Percentage |
+| **Metadata** ||||||
+| notas | text | YES | | Notes |
+| atributos | jsonb | YES | | Custom attributes |
+| **Soft Delete** ||||||
+| eliminado_en | timestamptz | YES | | Soft delete timestamp |
+| eliminado_por | uuid | YES | | User who deleted |
+| **Audit Fields** ||||||
+| creado_en | timestamptz | NO | NOW() | Creation timestamp |
+| actualizado_en | timestamptz | NO | NOW() | Last update timestamp |
+| creado_por | uuid | YES | | Creator |
+| actualizado_por | uuid | YES | | Updater |
+
+**Constraints:**
+- UNIQUE: (accion_id, business_partner_id, tipo_asignacion) WHERE eliminado_en IS NULL AND fecha_fin IS NULL
+
+**Validation Rules:**
+- Only ONE active dueño (subcodigo='00') per acción
+- Only ONE active titular (subcodigo='01') per acción
+- Multiple beneficiaries allowed (subcodigo='02'+)
+- Titulares and beneficiarios MUST be personas (not empresas)
+
+**Indexes:**
+- `idx_vn_asociados_activas` (partial: WHERE eliminado_en IS NULL) ON (organizacion_id, accion_id, tipo_asignacion)
+- `idx_vn_asociados_bp_activas` (partial: WHERE eliminado_en IS NULL) ON (business_partner_id, fecha_fin)
+- `idx_vn_asociados_accion_id`
+- `idx_asignaciones_unico_vigente` (unique partial)
+
+**RLS Policies:**
+- `asignaciones_select_filtered` - Members can view org's assignments
+- `asignaciones_insert_members` - Members can insert
+- `asignaciones_update_members` - Members can update
+- `asignaciones_delete_members` - Members can delete
+
+**Triggers:**
+- `trg_generar_codigo_completo_asignacion` - Build codigo_completo from accion code + subcodigo
+- `trg_validar_asignacion_accion` - Validate assignment rules
+
+---
+
+### vn_relaciones_actores
+
+**Purpose:** Relationships between business partners (family, work, commercial, etc.)
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | uuid | NO | gen_random_uuid() | Primary key |
+| **Organization** ||||||
+| organizacion_id | uuid | NO | | Organization (FK: config_organizaciones) |
+| **Relationship** ||||||
+| bp_origen_id | uuid | NO | | Source actor (FK: dm_actores) |
+| bp_destino_id | uuid | NO | | Target actor (FK: dm_actores) |
+| tipo_relacion | dm_actores_tipo_relacion | NO | | Relationship type |
+| **Roles** ||||||
+| rol_origen | text | YES | | Source's role in relationship |
+| rol_destino | text | YES | | Target's role in relationship |
+| es_bidireccional | boolean | NO | false | Bidirectional? |
+| **Temporal** ||||||
+| fecha_inicio | date | NO | CURRENT_DATE | Start date |
+| fecha_fin | date | YES | | End date (NULL = current) |
+| es_actual | boolean | NO | true | Currently active? |
+| **Metadata** ||||||
+| notas | text | YES | | Notes |
+| atributos | jsonb | YES | | Custom attributes |
+| **Soft Delete** ||||||
+| eliminado_en | timestamptz | YES | | Soft delete timestamp |
+| eliminado_por | uuid | YES | | User who deleted |
+| **Audit Fields** ||||||
+| creado_en | timestamptz | NO | NOW() | Creation timestamp |
+| actualizado_en | timestamptz | NO | NOW() | Last update timestamp |
+| creado_por | uuid | YES | | Creator |
+| actualizado_por | uuid | YES | | Updater |
+
+**Enums:**
+- `dm_actores_tipo_relacion`: 'familiar', 'laboral', 'referencia', 'membresia', 'comercial', 'otra'
+
+**Constraints:**
+- CHECK: bp_origen_id != bp_destino_id (no self-relationships)
+- UNIQUE: (bp_origen_id, bp_destino_id, tipo_relacion) WHERE eliminado_en IS NULL AND es_actual = true
+
+**Validation Rules:**
+- `familiar`: Both must be personas
+- `laboral`: origen=persona, destino=empresa
+- No duplicate active relationships of same type between same actors
+
+**Indexes:**
+- `idx_vn_relaciones_actores_activas` (partial: WHERE eliminado_en IS NULL) ON (organizacion_id, bp_origen_id, bp_destino_id)
+- `idx_vn_relaciones_actores_tipo_activas` (partial: WHERE eliminado_en IS NULL) ON (tipo_relacion, es_actual)
+- `idx_bp_relaciones_bidireccional` (partial: WHERE es_bidireccional = true AND eliminado_en IS NULL)
+- `idx_bp_relaciones_unique_activa` (unique partial)
+
+**RLS Policies:**
+- `bp_relaciones_select_filtered` - Members can view org's relationships
+- `bp_relaciones_insert_members` - Members can insert
+- `bp_relaciones_update_members` - Members can update
+- `bp_relaciones_delete_members` - Members can delete
+
+**Functions:**
+- `crear_relacion_bp()` - Create with validation
+- `actualizar_relacion_bp()` - Update relationship
+- `finalizar_relacion_bp()` - End relationship (set fecha_fin)
+- `eliminar_relacion_bp()` - Soft delete
+- `obtener_relaciones_bp()` - Get all relationships for an actor
+
+---
+
+## Common Patterns
+
+### Soft Delete Columns
+All tables use these columns for soft delete:
+- `eliminado_en TIMESTAMPTZ` - Deletion timestamp (NULL = active)
+- `eliminado_por UUID` - User who performed deletion (FK: auth.users)
+
+### Audit Columns
+All tables have these audit fields:
+- `creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()`
+- `actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()`
+- `creado_por UUID` - Creator (FK: auth.users)
+- `actualizado_por UUID` - Last updater (FK: auth.users)
+
+### Partial Indexes
+For performance, indexes are partial on active records:
+- `WHERE eliminado_en IS NULL` - For soft delete pattern
+- `WHERE <column> IS NOT NULL` - For optional foreign keys
+
+### Organization Filtering
+All multi-tenant tables include:
+- `organizacion_id UUID NOT NULL` - Foreign key to config_organizaciones
+- RLS policies filter by this column automatically
+
+---
+
+## Type Definitions
+
+### Enums
 
 ```sql
--- Search for cities matching "mede"
-SELECT * FROM search_locations('mede');
+-- Actor types
+CREATE TYPE tipo_actor_enum AS ENUM ('persona', 'empresa');
 
--- Direct query
-SELECT id, city_name, state_name, country_name
-FROM geographic_locations
-WHERE country_code = 'CO'
-ORDER BY city_name;
+-- Document types for business opportunities
+CREATE TYPE tr_doc_comercial_tipo AS ENUM (
+  'cotizacion', 'orden_pedido', 'contrato', 'factura'
+);
+
+-- Opportunity status
+CREATE TYPE tr_doc_comercial_estados AS ENUM (
+  'lead', 'calificado', 'propuesta', 'negociacion', 'ganado', 'perdido'
+);
+
+-- Task priorities
+CREATE TYPE tr_tr_tareas_prioridad AS ENUM (
+  'Baja', 'Media', 'Alta', 'Urgente'
+);
+
+-- Task status
+CREATE TYPE tr_tr_tareas_estado AS ENUM (
+  'pendiente', 'en_progreso', 'completada', 'cancelada'
+);
+
+-- Relationship types between business partners
+CREATE TYPE dm_actores_tipo_relacion AS ENUM (
+  'familiar', 'laboral', 'referencia', 'membresia', 'comercial', 'otra'
+);
 ```
 
-### Referenced By
+---
 
-- **personas:** `lugar_nacimiento_id` (birth place)
-- **Future:** Can be used for residence, expedition place, etc.
+## Foreign Key References
+
+| Table | Column | References | On Delete |
+|-------|--------|------------|-----------|
+| config_organizacion_miembros | organization_id | config_organizaciones(id) | CASCADE |
+| config_organizacion_miembros | user_id | auth.users(id) | CASCADE |
+| config_organizacion_miembros | eliminado_por | auth.users(id) | SET NULL |
+| config_roles_permisos | role | config_roles(role) | CASCADE |
+| dm_actores | organizacion_id | config_organizaciones(id) | CASCADE |
+| dm_actores | ciudad_id | config_ciudades(id) | SET NULL |
+| dm_actores | eliminado_por | auth.users(id) | SET NULL |
+| dm_acciones | organizacion_id | config_organizaciones(id) | CASCADE |
+| tr_doc_comercial | organizacion_id | config_organizaciones(id) | CASCADE |
+| tr_doc_comercial | solicitante_id | dm_actores(id) | SET NULL |
+| tr_doc_comercial | responsable_id | dm_actores(id) | SET NULL |
+| tr_doc_comercial | pagador_id | dm_actores(id) | SET NULL |
+| tr_tr_tareas | organizacion_id | config_organizaciones(id) | CASCADE |
+| tr_tr_tareas | oportunidad_id | tr_doc_comercial(id) | SET NULL |
+| tr_tr_tareas | asignado_a | dm_actores(id) | SET NULL |
+| tr_tr_tareas | relacionado_con_bp | dm_actores(id) | SET NULL |
+| vn_asociados | organizacion_id | config_organizaciones(id) | CASCADE |
+| vn_asociados | accion_id | dm_acciones(id) | CASCADE |
+| vn_asociados | business_partner_id | dm_actores(id) | CASCADE |
+| vn_relaciones_actores | organizacion_id | config_organizaciones(id) | CASCADE |
+| vn_relaciones_actores | bp_origen_id | dm_actores(id) | CASCADE |
+| vn_relaciones_actores | bp_destino_id | dm_actores(id) | CASCADE |
 
 ---
 
-## organization_members
+## Audit Triggers
 
-**Purpose:** Maps users to organizations with role-based permissions.
-
-**Row Count:** 1 | **RLS:** ✅ Enabled
-
-### Fields
-
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `user_id` | uuid | NOT NULL | - | FK to auth.users - User ID |
-| `organization_id` | uuid | NOT NULL | - | FK to organizations - Organization ID |
-| `role` | text | NOT NULL | - | User role: owner, admin, analyst, auditor |
-| `nombres` | text | NULL | - | First names of organization member |
-| `apellidos` | text | NULL | - | Last names of organization member |
-| `nombre_completo` | text | NULL | - | Full name (can be computed from nombres + apellidos) |
-| `telefono` | text | NULL | - | Contact phone number |
-| `cargo` | text | NULL | - | Job title or position |
-| `created_at` | timestamptz | NOT NULL | `now()` | Timestamp of membership creation |
-| `created_by` | uuid | NULL | - | FK to auth.users - Who created the membership |
-
-### Roles
-
-| Role | Description | Permissions |
-|------|-------------|-------------|
-| `owner` | Organization owner | Full access, can delete org |
-| `admin` | Administrator | Manage members, full data access |
-| `analyst` | Data analyst | Read-only access to most data |
-| `auditor` | Auditor | Read-only access to audit logs |
-
-### Constraints
-
-- **PRIMARY KEY:** `(user_id, organization_id)` (composite)
-- **CHECK:** `role IN ('owner', 'admin', 'analyst', 'auditor')`
-- **FOREIGN KEYS:**
-  - `user_id` → `auth.users.id`
-  - `organization_id` → `organizations.id`
-  - `created_by` → `auth.users.id`
-
-### Indexes
-
-- `organization_members_pkey` PRIMARY KEY on `(user_id, organization_id)`
-
-### Triggers
-
-- `om_prevent_key_change` - Prevents changing user_id or organization_id after creation
-
-### Business Rules
-
-1. Composite primary key ensures one role per user per organization
-2. Users can belong to multiple organizations with different roles
-3. Organization creator is automatically added as 'owner' via trigger
-4. Cannot change user_id or organization_id after creation (immutable)
-5. At least one 'owner' must exist per organization
-
-### Related Tables
-
-- **Users:** `auth.users` (authentication)
-- **Organizations:** `organizations`
-- **Permissions:** Checked via `can_user_v2()` function + `role_permissions`
-
----
-
-## roles
-
-**Purpose:** Defines available roles in the system.
-
-**Row Count:** 4 | **RLS:** ✅ Enabled
-
-### Fields
-
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `role` | text | NOT NULL | - | Role identifier (PK) |
-
-### Available Roles
-
-| role | Description |
-|------|-------------|
-| `owner` | Organization owner |
-| `admin` | Administrator |
-| `analyst` | Data analyst |
-| `auditor` | Auditor |
-
-### Constraints
-
-- **PRIMARY KEY:** `role`
-
-### Indexes
-
-- `roles_pkey` PRIMARY KEY on `role`
-
-### Business Rules
-
-1. Defines the allowed role values for `organization_members.role`
-2. Permissions for each role defined in `role_permissions` table
-3. System roles - should not be deleted
-
-### Related Tables
-
-- **Members:** `organization_members.role` references this
-- **Permissions:** `role_permissions` maps roles to resource permissions
-
----
-
-## role_permissions
-
-**Purpose:** Fine-grained permission mappings for role-based access control.
-
-**Row Count:** 102 | **RLS:** ✅ Enabled
-
-### Fields
-
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `role` | text | NOT NULL | - | FK to roles.role |
-| `resource` | text | NOT NULL | - | Resource name (table/entity) |
-| `action` | text | NOT NULL | - | CRUD action: select, insert, update, delete |
-| `allow` | boolean | NOT NULL | `true` | Whether permission is granted |
-
-### Actions
-
-| action | Description |
-|--------|-------------|
-| `select` | Read/query permission |
-| `insert` | Create permission |
-| `update` | Modify permission |
-| `delete` | Delete permission |
-
-### Constraints
-
-- **PRIMARY KEY:** `(role, resource, action)` (composite)
-- **CHECK:** `action IN ('select', 'insert', 'update', 'delete')`
-- **FOREIGN KEY:** `role` → `roles.role`
-
-### Indexes
-
-- `role_permissions_pkey` PRIMARY KEY on `(role, resource, action)`
-
-### Business Rules
-
-1. Permissions evaluated by `can_user_v2()` function in RLS policies
-2. Default `allow = true` for granted permissions
-3. Absence of permission row = denied by default
-4. Used in combination with organization membership
-
-### Example Permissions
+All tables with audit columns have these triggers:
 
 ```sql
--- Owner has full access
-INSERT INTO role_permissions (role, resource, action)
-VALUES
-  ('owner', 'business_partners', 'select'),
-  ('owner', 'business_partners', 'insert'),
-  ('owner', 'business_partners', 'update'),
-  ('owner', 'business_partners', 'delete');
-
--- Analyst has read-only
-INSERT INTO role_permissions (role, resource, action)
-VALUES ('analyst', 'business_partners', 'select');
+-- Auto-update actualizado_en and actualizado_por on UPDATE
+CREATE TRIGGER trg_<table>_actualizado
+  BEFORE UPDATE ON <table>
+  FOR EACH ROW
+  EXECUTE FUNCTION actualizar_timestamp_config();
 ```
 
-### Related Tables
+---
 
-- **Roles:** `roles` (via `role`)
-- **Used by:** RLS policies via `can_user_v2()` function
+## Full Text Search
+
+### config_ciudades
+The `search_text` column contains unaccented, searchable text:
+```sql
+search_text = unaccent(country_name || ' ' || state_name || ' ' || city_name)
+```
+
+Search function available:
+```sql
+SELECT * FROM search_locations('bogota', 20);
+```
 
 ---
 
-## oportunidades
-
-**Purpose:** Manages business opportunities such as membership withdrawal requests and new member applications.
-
-**Row Count:** 0 | **RLS:** ✅ Enabled
-
-### Fields
-
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | uuid | NOT NULL | `gen_random_uuid()` | Primary key |
-| `codigo` | text | NOT NULL | - | **UNIQUE** - Opportunity code |
-| `tipo` | tipo_oportunidad_enum | NOT NULL | - | Opportunity type: Solicitud Retiro, Solicitud Ingreso |
-| `fecha_solicitud` | date | NOT NULL | `CURRENT_DATE` | Request date |
-| `estado` | estado_oportunidad_enum | NOT NULL | `'abierta'::estado_oportunidad_enum` | Current state |
-| `solicitante_id` | uuid | NOT NULL | - | FK to business_partners - Requester |
-| `responsable_id` | uuid | NULL | - | FK to auth.users - Assigned staff member |
-| `organizacion_id` | uuid | NOT NULL | - | FK to organizations - Organization |
-| `monto_estimado` | numeric | NULL | - | Estimated monetary amount |
-| `notas` | text | NULL | - | Additional notes |
-| `atributos` | jsonb | NULL | `'{}'::jsonb` | Custom metadata |
-| `creado_en` | timestamptz | NOT NULL | `now()` | Timestamp of creation |
-| `creado_por` | uuid | NULL | - | FK to auth.users - Creator |
-| `actualizado_en` | timestamptz | NOT NULL | `now()` | Timestamp of last update |
-| `actualizado_por` | uuid | NULL | - | FK to auth.users - Updater |
-| `eliminado_en` | timestamptz | NULL | - | Soft delete timestamp |
-| `eliminado_por` | uuid | NULL | - | FK to auth.users - Deleter |
-
-### Enum Types
-
-**tipo_oportunidad_enum:**
-- `Solicitud Retiro` - Member withdrawal request
-- `Solicitud Ingreso` - New member application
-
-**estado_oportunidad_enum:**
-- `abierta` - New/open request
-- `en_proceso` - Being processed
-- `ganada` - Approved/completed
-- `perdida` - Rejected
-- `cancelada` - Cancelled by requester
-
-### Constraints
-
-- **PRIMARY KEY:** `id`
-- **UNIQUE:** `codigo`
-- **FOREIGN KEYS:**
-  - `organizacion_id` → `organizations.id`
-  - `solicitante_id` → `business_partners.id`
-  - `responsable_id` → `auth.users.id`
-  - `creado_por`, `actualizado_por`, `eliminado_por` → `auth.users.id`
-
-### Indexes
-
-- `oportunidades_pkey` PRIMARY KEY on `id`
-- `oportunidades_codigo_key` UNIQUE on `codigo`
-
-### Triggers
-
-- `set_audit_user_columns` - Auto-set audit fields
-- `actualizar_timestamp` - Auto-update `actualizado_en`
-- `set_deleted_by_on_soft_delete` - Auto-set `eliminado_por`
+## Data Integrity Constraints
 
 ### Business Rules
 
-1. Opportunities track business requests (withdrawals, new memberships)
-2. Each opportunity has a requester (business partner)
-3. Staff member can be assigned as responsible
-4. Status workflow: abierta → en_proceso → ganada/perdida/cancelada
-5. Soft delete pattern applies
-6. Estimated amount can be tracked for financial opportunities
+1. **Uniqueness of Active Assignments** (vn_asociados):
+   - Only ONE active dueño per acción
+   - Only ONE active titular per acción
+   - Multiple beneficiaries allowed
 
-### Related Tables
+2. **Actor Type Constraints** (vn_asociados):
+   - Titulares must be personas
+   - Beneficiarios must be personas
+   - Dueños can be personas OR empresas
 
-- **Business Partners:** `business_partners` (via `solicitante_id`)
-- **Organizations:** `organizations` (via `organizacion_id`)
-- **Tasks:** `tareas` (via `oportunidad_id`)
+3. **Relationship Type Validation** (vn_relaciones_actores):
+   - familiar: both personas
+   - laboral: origen=persona, destino=empresa
+   - No duplicate active relationships
 
----
-
-## tareas
-
-**Purpose:** Manages tasks and activities related to opportunities and business partners.
-
-**Row Count:** 0 | **RLS:** ✅ Enabled
-
-### Fields
-
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | uuid | NOT NULL | `gen_random_uuid()` | Primary key |
-| `codigo_tarea` | text | NULL | - | **UNIQUE** - Auto-generated task code (TSK-00000001 format, 8 digits) |
-| `titulo` | text | NOT NULL | - | Task title |
-| `descripcion` | text | NULL | - | Task description |
-| `prioridad` | prioridad_tarea_enum | NOT NULL | `'media'::prioridad_tarea_enum` | Priority level |
-| `estado` | estado_tarea_enum | NOT NULL | `'pendiente'::estado_tarea_enum` | Current status |
-| `fecha_vencimiento` | date | NULL | - | Due date |
-| `oportunidad_id` | uuid | NULL | - | FK to oportunidades - Related opportunity |
-| `asignado_a` | uuid | NULL | - | FK to auth.users - Assigned user |
-| `organizacion_id` | uuid | NOT NULL | - | FK to organizations - Organization |
-| `relacionado_con_bp` | uuid | NULL | - | FK to business_partners - Related BP |
-| `creado_en` | timestamptz | NOT NULL | `now()` | Timestamp of creation |
-| `creado_por` | uuid | NULL | - | FK to auth.users - Creator |
-| `actualizado_en` | timestamptz | NOT NULL | `now()` | Timestamp of last update |
-| `actualizado_por` | uuid | NULL | - | FK to auth.users - Updater |
-| `eliminado_en` | timestamptz | NULL | - | Soft delete timestamp |
-| `eliminado_por` | uuid | NULL | - | FK to auth.users - Deleter |
-
-### Enum Types
-
-**prioridad_tarea_enum:**
-- `baja` - Low priority
-- `media` - Medium priority
-- `alta` - High priority
-- `critica` - Critical priority
-
-**estado_tarea_enum:**
-- `pendiente` - Pending
-- `en_progreso` - In progress
-- `bloqueada` - Blocked
-- `hecha` - Completed
-- `cancelada` - Cancelled
-
-### Constraints
-
-- **PRIMARY KEY:** `id`
-- **UNIQUE:** `codigo_tarea`
-- **FOREIGN KEYS:**
-  - `organizacion_id` → `organizations.id`
-  - `oportunidad_id` → `oportunidades.id`
-  - `asignado_a` → `auth.users.id`
-  - `relacionado_con_bp` → `business_partners.id`
-  - `creado_por`, `actualizado_por`, `eliminado_por` → `auth.users.id`
-
-### Indexes
-
-- `tareas_pkey` PRIMARY KEY on `id`
-- `tareas_codigo_tarea_key` UNIQUE on `codigo_tarea`
-
-### Triggers
-
-- `tr_generar_codigo_tarea` - Auto-generate `codigo_tarea` on INSERT
-- `set_audit_user_columns` - Auto-set audit fields
-- `actualizar_timestamp` - Auto-update `actualizado_en`
-- `set_deleted_by_on_soft_delete` - Auto-set `eliminado_por`
-
-### Business Rules
-
-1. Tasks track activities and to-do items
-2. **Auto-generated code:** `codigo_tarea` follows TSK-00000001 format (8 digits, supports up to ~100M tasks)
-3. Can be linked to opportunities or business partners
-4. Priority levels help with task management
-5. Status workflow: pendiente → en_progreso → hecha (or bloqueada/cancelada)
-6. Due dates can be set for time-sensitive tasks
-7. Soft delete pattern applies
-
-### Related Tables
-
-- **Opportunities:** `oportunidades` (via `oportunidad_id`)
-- **Business Partners:** `business_partners` (via `relacionado_con_bp`)
-- **Users:** `auth.users` (via `asignado_a`)
+4. **Organization Isolation**:
+   - All data filtered by organizacion_id
+   - RLS enforces tenant separation
+   - No cross-organization data leakage
 
 ---
 
-## Summary Statistics
+## Performance Considerations
 
-| Table | Rows | Columns | RLS | Triggers | Indexes |
-|-------|------|---------|-----|----------|---------|
-| organizations | 1 | 16 | ✅ | 4 | 2 |
-| business_partners | 17 | 13 | ✅ | 4 | 3 |
-| personas | 13 | 44 | ✅ | 3 | 2 |
-| empresas | 4 | 33 | ✅ | 3 | 2 |
-| bp_relaciones | 3 | 17 | ✅ | 4 | 3 |
-| acciones | 25 | 10 | ✅ | 3 | 2 |
-| asignaciones_acciones | 2 | 20 | ✅ | 5 | 3 |
-| geographic_locations | 1367 | 7 | ✅ | 1 | 3 |
-| organization_members | 1 | 5 | ✅ | 1 | 1 |
-| roles | 4 | 1 | ✅ | 0 | 1 |
-| role_permissions | 102 | 4 | ✅ | 0 | 1 |
-| oportunidades | 0 | 16 | ✅ | 3 | 2 |
-| tareas | 0 | 16 | ✅ | 3 | 1 |
-| **TOTAL** | **1539+** | **215** | **13/13** | **34** | **26** |
+### Index Strategy
+
+1. **Partial indexes for soft delete**:
+   - All indexes on active records only (`WHERE eliminado_en IS NULL`)
+   - Reduces index size by ~50% if soft deletes are common
+
+2. **Composite indexes for common queries**:
+   - (organizacion_id, estado, creado_en) for filtering
+   - (asignado_a, estado) for user task lists
+   - (estado, fecha_vencimiento) for due date queries
+
+3. **Foreign key indexes**:
+   - All FKs indexed for JOIN performance
+   - Especially important for soft delete pattern
+
+### Query Performance
+
+Expected query times with current indexes:
+- Filter by organization + soft delete: ~5-10ms
+- Join actors with relationships: ~10-20ms
+- Full-text search locations: ~20-50ms
 
 ---
 
-**Last Generated:** 2026-01-03 (Updated with live Supabase schema)
-**Source:** Live Supabase database via MCP
-**Validation:** ✅ All constraints verified against live schema
+## Maintenance
+
+### Vacuum Strategy
+- Autovacuum: Default PostgreSQL settings
+- Manual vacuum: Monthly for high-churn tables (tr_tr_tareas, vn_asociados)
+
+### Index Maintenance
+- Reindex: Quarterly or if index bloat > 30%
+- Analyze: Weekly to update statistics
+
+### Archive Strategy (Future)
+- Consider partitioning tr_doc_comercial by year
+- Archive soft-deleted records after 2 years
+- Move to cold storage after 5 years
+
+---
+
+## See Also
+
+- [OVERVIEW.md](OVERVIEW.md) - Architecture concepts
+- [SCHEMA.md](SCHEMA.md) - ERD and relationships
+- [VIEWS.md](VIEWS.md) - Database views
+- [QUERIES.md](QUERIES.md) - Common SQL patterns

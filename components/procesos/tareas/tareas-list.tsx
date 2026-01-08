@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import type { TrTareasEstado, TrTareasPrioridad } from '@/lib/db-types'
 import { useQuery } from '@tanstack/react-query'
 import {
   Table,
@@ -40,8 +41,8 @@ type TareaView = {
   eliminado_en: string | null
 }
 
-type EstadoTarea = Database['public']['Enums']['estado_tarea_enum']
-type PrioridadTarea = Database['public']['Enums']['prioridad_tarea_enum']
+type EstadoTarea = TrTareasEstado
+type PrioridadTarea = TrTareasPrioridad
 
 const ESTADO_CONFIG: Record<
   EstadoTarea,

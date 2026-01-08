@@ -226,27 +226,29 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) runs on PRs:
 
 ### Business Partners System
 
-The project implements a Class Table Inheritance (CTI) pattern for managing different types of business partners:
+The project implements a **Single Table Inheritance (STI)** pattern for managing different types of business partners (migrated from CTI in January 2025):
 
 **Core Tables:**
 
-- `organizations` - Multi-tenancy foundation
-- `business_partners` - Base table for all partners (CTI pattern)
-- `personas` - Natural persons specialization
-- `empresas` - Companies specialization
+- `config_organizaciones` - Multi-tenancy foundation
+- `dm_actores` - **Single unified table** for all partners (replaces previous CTI pattern)
+  - All actor types (personas and empresas) stored in one table
+  - Discriminator column: `tipo_actor` (enum: 'persona', 'empresa')
+  - Type-specific fields in same table (NULL when not applicable)
 
 **Key Patterns:**
 
-- **Class Table Inheritance (CTI):** `business_partners` is the base table, `personas` and `empresas` are specializations with 1:1 PK relationship
+- **Single Table Inheritance (STI):** `dm_actores` contains all actor types with `tipo_actor` as discriminator
+- **Previous CTI Migration:** The old `personas` and `empresas` tables were dropped in migration `20250105_drop_personas_empresas.sql`
 - **Multi-Tenancy:** All data filtered by `organizacion_id` via RLS policies
 - **Soft Delete:** Use `eliminado_en` timestamp instead of DELETE operations
-- **JSONB Metadata:** Flexible `atributos` field for custom data per organization
+- **JSONB Metadata:** Flexible `perfil_*` fields for custom attributes per actor type
 
 **Database Functions:**
 
 - `calcular_digito_verificacion_nit(nit TEXT)` - Calculate NIT verification digit for Colombian tax IDs
 - `actualizar_timestamp()` - Trigger function to auto-update `actualizado_en`
-- `validar_consistencia_tipo_actor()` - Ensures each business_partner has exactly one specialization
+- `generar_codigo_dm_actores()` - Auto-generates `codigo_bp` on insert
 
 **Comprehensive Documentation:**
 

@@ -72,7 +72,7 @@ export async function crearOportunidad(data: {
   const oportunidadId = (rpcResponse as { id: string }).id
   if (data.tags && data.tags.length > 0) {
     const { error: tagsError } = await supabase
-      .from('oportunidades')
+      .from('tr_doc_comercial')
       .update({ tags: data.tags })
       .eq('id', oportunidadId)
 
@@ -82,7 +82,7 @@ export async function crearOportunidad(data: {
     }
   }
 
-  revalidatePath('/admin/oportunidades')
+  revalidatePath('/admin/procesos/oportunidades')
 
   return {
     success: true,
@@ -127,7 +127,7 @@ export async function actualizarOportunidad(
     }
   }
 
-  revalidatePath('/admin/oportunidades')
+  revalidatePath('/admin/procesos/oportunidades')
   revalidatePath(`/admin/oportunidades/${oportunidad_id}`)
 
   return {
@@ -146,7 +146,7 @@ export async function softDeleteOportunidad(oportunidad_id: string) {
   const supabase = await createClient()
 
   const { error } = await supabase
-    .from('oportunidades')
+    .from('tr_doc_comercial')
     .update({ eliminado_en: new Date().toISOString() })
     .eq('id', oportunidad_id)
 
@@ -158,7 +158,7 @@ export async function softDeleteOportunidad(oportunidad_id: string) {
     }
   }
 
-  revalidatePath('/admin/oportunidades')
+  revalidatePath('/admin/procesos/oportunidades')
 
   return {
     success: true,
@@ -183,7 +183,7 @@ export async function listOportunidades(
   const supabase = await createClient()
 
   let query = supabase
-    .from('oportunidades')
+    .from('tr_doc_comercial')
     .select(`
       *,
       solicitante (

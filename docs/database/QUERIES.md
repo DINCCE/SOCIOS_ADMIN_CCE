@@ -1,1353 +1,1009 @@
-# SQL Cookbook & Query Patterns
+# Database Queries - Common Patterns and Examples
 
-> **Common query patterns and frontend integration examples**
->
-> Last updated: 2026-01-03 | Auto-generated from live database schema
+> **Last Updated:** 2026-01-08
+> **Purpose:** Reference guide for common SQL operations
 
 ---
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [Frontend Integration Patterns](#frontend-integration-patterns)
-  - [Server Actions Pattern](#server-actions-pattern)
-  - [TanStack Query Pattern](#tanstack-query-pattern)
-- [Business Partner Queries](#business-partner-queries)
-  - [Creating Business Partners](#creating-business-partners)
-  - [Querying with CTI Pattern](#querying-with-cti-pattern)
-  - [Unified Queries (Personas + Empresas)](#unified-queries-personas--empresas)
-  - [Filtering and Search](#filtering-and-search)
-- [Relationship Queries](#relationship-queries)
-  - [Creating Relationships](#creating-relationships)
-  - [Bidirectional Queries](#bidirectional-queries)
-  - [Relationship History](#relationship-history)
-- [Acciones Queries](#acciones-queries)
-  - [Assignment Operations](#assignment-operations)
-  - [Ownership Tracking](#ownership-tracking)
-  - [Historical Queries](#historical-queries)
-- [Opportunities Queries](#opportunities-queries)
-  - [Creating Opportunities](#creating-opportunities)
-  - [Managing Opportunities](#managing-opportunities)
-- [Tasks Queries](#tasks-queries)
-  - [Creating Tasks](#creating-tasks)
-  - [Managing Tasks](#managing-tasks)
-- [Soft Delete Patterns](#soft-delete-patterns)
-- [JSONB Queries](#jsonb-queries)
-- [Aggregation Queries](#aggregation-queries)
-- [Transaction Patterns](#transaction-patterns)
-- [Performance Tips](#performance-tips)
-- [Related Documentation](#related-documentation)
+1. [Basic Patterns](#basic-patterns)
+2. [Business Partner Queries](#business-partner-queries)
+3. [Opportunity Queries](#opportunity-queries)
+4. [Task Queries](#task-queries)
+5. [Share Assignment Queries](#share-assignment-queries)
+6. [Relationship Queries](#relationship-queries)
+7. [Analytics Queries](#analytics-queries)
+8. [Maintenance Queries](#maintenance-queries)
 
 ---
 
-## Introduction
+## Basic Patterns
 
-This cookbook provides practical SQL examples and TypeScript integration patterns for common operations in business partner management system.
+### Query with Organization Filter
 
-### Key Concepts
+**Always include organization filter and soft delete check:**
 
-- **CTI Pattern** - Class Table Inheritance requires JOINs between base and specialization tables
-- **RLS Enforcement** - All queries automatically filtered by Row Level Security
-- **Soft Delete** - Always filter by `eliminado_en IS NULL` for active records
-- **JSONB Flexibility** - Use JSONB operators for custom metadata queries
-- **Temporal Tracking** - Query historical data with `fecha_inicio` / `fecha_fin`
-- **Operations Management** - Opportunities and tasks for business workflows
-
-### Query Categories
-
-| Category | Examples | Complexity |
-|----------|----------|------------|
-| Business Partners | Create, read, update personas/empresas | Medium (CTI) |
-| Relationships | Bidirectional queries, history | Medium |
-| Acciones | Assignment tracking, ownership transfer | High (temporal) |
-| Opportunities | Business requests, status management | Medium |
-| Tasks | Activities, assignment, priority management | Medium |
-| Soft Delete | Active/archived filtering | Low |
-| JSONB | Metadata search and filtering | Medium |
-| Aggregations | Counts, summaries, analytics | Medium-High |
-| Transactions | Multi-table operations | High |
-
----
-
-## Frontend Integration Patterns
-
-### Server Actions Pattern
-
-**When to use:** Form submissions, authenticated operations, server-side data mutations
-
-**Pattern:**
-```typescript
-// app/actions/personas.ts
-'use server'
-
-import { createClient } from '@/lib/supabase/server'
-import { revalidatePath } from 'next/cache'
-
-export async function createPersona(params: PersonaParams) {
-  const supabase = await createClient()
-
-  const { data, error } = await supabase.rpc('crear_persona', {
-    organizacion_id: params.organizacionId,
-    nombres: params.nombres,
-    apellidos: params.apellidos,
-    email_principal: params.email,
-    celular_principal: params.celular,
-    tipo_documento: params.tipoDocumento,
-    numero_documento: params.numeroDocumento,
-    perfil_persona: params.perfilPersona,
-    atributos: params.atributos
-  })
-
-  if (error) {
-    console.error('Failed to create persona:', error)
-    return { success: false, error: error.message }
-  }
-
-  revalidatePath('/admin/socios/personas')
-  return { success: true, data }
-}
+```sql
+-- Basic pattern
+SELECT *
+FROM dm_actores
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL
+ORDER BY creado_en DESC;
 ```
 
-**Usage in component:**
-```typescript
-'use client'
+### Search with LIKE
 
-import { createPersona } from '@/app/actions/personas'
-import { toast } from 'sonner'
-
-function PersonaForm() {
-  const handleSubmit = async (formData: FormData) => {
-    const result = await createPersona({
-      organizacionId: formData.get('org_id') as string,
-      nombres: formData.get('nombres') as string,
-      apellidos: formData.get('apellidos') as string,
-      email: formData.get('email') as string,
-      celular: formData.get('celular') as string,
-    })
-
-    if (result.success) {
-      toast.success('Persona created successfully')
-    } else {
-      toast.error(result.error)
-    }
-  }
-
-  return <form action={handleSubmit}>...</form>
-}
+```sql
+-- Case-insensitive search
+SELECT *
+FROM dm_actores
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL
+  AND (
+    nombre_completo ILIKE '%Juan%'
+    OR razon_social ILIKE '%Juan%'
+    OR email ILIKE '%juan%'
+  );
 ```
 
----
+### Pagination
 
-### TanStack Query Pattern
+```sql
+-- Get first 20 records
+SELECT *
+FROM tr_doc_comercial
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL
+ORDER BY creado_en DESC
+LIMIT 20 OFFSET 0;
 
-**When to use:** Complex client state, optimistic updates, background refetching
+-- Get next 20 records (page 2)
+LIMIT 20 OFFSET 20;
+```
 
-**Pattern:**
-```typescript
-// hooks/use-personas.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
+### Count Records
 
-const supabase = createClient()
+```sql
+-- Count active records
+SELECT COUNT(*) as total
+FROM dm_actores
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL;
 
-// Query hook
-export function usePersonas(organizacionId: string) {
-  return useQuery({
-    queryKey: ['personas', organizacionId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('v_personas_org')
-        .select('*')
-        .eq('organizacion_id', organizacionId)
-        .order('apellidos', { ascending: true })
-
-      if (error) throw error
-      return data
-    },
-    staleTime: 60 * 1000, // 1 minute
-  })
-}
-
-// Mutation hook
-export function useCreatePersona() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (params: PersonaParams) => {
-      const { data, error } = await supabase.rpc('crear_persona', params)
-      if (error) throw error
-      return data
-    },
-    onSuccess: (data, variables) => {
-      // Invalidate and refetch
-      queryClient.invalidateQueries({
-        queryKey: ['personas', variables.organizacion_id]
-      })
-
-      // Or optimistically update cache
-      queryClient.setQueryData(
-        ['personas', variables.organizacion_id],
-        (old: any[]) => [...(old || []), data]
-      )
-    },
-  })
-}
-
-// Usage in component
-'use client'
-
-import { usePersonas, useCreatePersona } from '@/hooks/use-personas'
-
-function PersonasPage({ organizacionId }: Props) {
-  const { data: personas, isLoading, error } = usePersonas(organizacionId)
-  const createPersona = useCreatePersona()
-
-  const handleCreate = (params: PersonaParams) => {
-    createPersona.mutate(params, {
-      onSuccess: () => toast.success('Persona created'),
-      onError: (error) => toast.error(error.message)
-    })
-  }
-
-  if (isLoading) return <Spinner />
-  if (error) return <Error error={error} />
-
-  return (
-    <div>
-      {personas?.map(p => <PersonaCard key={p.id} persona={p} />)}
-      <PersonaForm onSubmit={handleCreate} isPending={createPersona.isPending} />
-    </div>
-  )
-}
+-- Count by type
+SELECT tipo_actor, COUNT(*) as count
+FROM dm_actores
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL
+GROUP BY tipo_actor;
 ```
 
 ---
 
 ## Business Partner Queries
 
-### Creating Business Partners
+### Get All Active Actors
 
-#### Create Persona via RPC (Recommended)
-
-**SQL:**
-```sql
-SELECT crear_persona(
-  organizacion_id := '..org-uuid..',
-  nombres := 'Juan Carlos',
-  apellidos := 'García López',
-  email_principal := 'juan.garcia@example.com',
-  celular_principal := '+57 300 123 4567',
-  tipo_documento := 'CC',
-  numero_documento := '1234567890',
-  perfil_persona := '{"fecha_nacimiento": "1990-05-15", "ciudad": "Bogotá"}'::jsonb,
-  atributos := '{"categoria_socio": "fundador"}'::jsonb
-);
-```
-
-**TypeScript (Server Action):**
-```typescript
-const { data, error } = await supabase.rpc('crear_persona', {
-  organizacion_id: orgId,
-  nombres: 'Juan Carlos',
-  apellidos: 'García López',
-  email_principal: 'juan.garcia@example.com',
-  celular_principal: '+57 300 123 4567',
-  tipo_documento: 'CC',
-  numero_documento: '1234567890',
-  perfil_persona: {
-    fecha_nacimiento: '1990-05-15',
-    ciudad: 'Bogotá'
-  },
-  atributos: {
-    categoria_socio: 'fundador'
-  }
-})
-```
-
-#### Create Empresa via RPC (Recommended)
-
-**SQL:**
-```sql
-SELECT crear_empresa(
-  organizacion_id := '..org-uuid..',
-  razon_social := 'Tech Solutions SAS',
-  nombre_comercial := 'TechSol',
-  email_principal := 'info@techsol.com',
-  telefono_principal := '+57 1 234 5678',
-  nit := '900123456',
-  digito_verificacion := NULL, -- Auto-calculated
-  representante_legal_id := '..bp-uuid..',
-  perfil_empresa := '{"industria": "tecnologia", "tamano": "mediana"}'::jsonb,
-  atributos := '{"patrocinador": true}'::jsonb
-);
-```
-
-**TypeScript (TanStack Query):**
-```typescript
-const createEmpresa = useMutation({
-  mutationFn: async (params: EmpresaParams) => {
-    const { data, error } = await supabase.rpc('crear_empresa', {
-      organizacion_id: params.orgId,
-      razon_social: params.razonSocial,
-      nombre_comercial: params.nombreComercial,
-      nit: params.nit,
-      // digito_verificacion auto-calculated
-      representante_legal_id: params.repLegalId,
-      perfil_empresa: params.perfil,
-      atributos: params.atributos
-    })
-    if (error) throw error
-    return data
-  }
-})
-```
-
----
-
-### Querying with CTI Pattern
-
-#### Get All Personas (with Base Table Data)
-
-**SQL:**
 ```sql
 SELECT
-  bp.id,
-  bp.codigo_bp,
-  bp.organizacion_id,
-  bp.email_principal,
-  bp.celular_principal,
-  bp.atributos,
-  bp.creado_en,
-  p.nombres,
-  p.apellidos,
-  p.tipo_documento,
-  p.numero_documento,
-  p.perfil_persona,
-  p.direccion_residencia,
-  p.barrio_residencia,
-  p.ciudad_residencia,
-  p.lugar_nacimiento_id,
-  bp.actualizado_en
-FROM business_partners bp
-JOIN personas p ON bp.id = p.id
-WHERE bp.tipo_actor = 'persona'
-  AND bp.eliminado_en IS NULL
-  AND bp.organizacion_id = '..org-uuid..'
-ORDER BY p.apellidos, p.nombres;
+  id,
+  codigo_bp,
+  tipo_actor,
+  CASE
+    WHEN tipo_actor = 'persona' THEN nombre_completo
+    WHEN tipo_actor = 'empresa' THEN razon_social
+  END as nombre,
+  email,
+  telefono,
+  activo
+FROM dm_actores
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL
+ORDER BY
+  tipo_actor,
+  nombre;
 ```
 
-**TypeScript:**
-```typescript
-const { data, error } = await supabase
-  .from('business_partners')
-  .select(`
-    id,
-    codigo_bp,
-    organizacion_id,
-    email_principal,
-    celular_principal,
-    atributos,
-    creado_en,
-    personas (
-      nombres,
-      apellidos,
-      tipo_documento,
-      numero_documento,
-      perfil_persona,
-      direccion_residencia,
-      barrio_residencia,
-      ciudad_residencia,
-      lugar_nacimiento_id
-    )
-  `)
-  .eq('tipo_actor', 'persona')
-  .is('eliminado_en', null)
-  .eq('organizacion_id', orgId)
-  .order('personas.apellidos', { ascending: true })
-```
+### Search by Document
 
-#### Get All Empresas (with Base Table Data)
-
-**SQL:**
-```sql
-SELECT
-  bp.id,
-  bp.codigo_bp,
-  bp.organizacion_id,
-  bp.email_principal,
-  bp.telefono_principal,
-  bp.atributos,
-  bp.creado_en,
-  e.razon_social,
-  e.nombre_comercial,
-  e.nit,
-  e.digito_verificacion,
-  e.representante_legal_id,
-  e.perfil_empresa,
-  bp.actualizado_en
-FROM business_partners bp
-JOIN empresas e ON bp.id = e.id
-WHERE bp.tipo_actor = 'empresa'
-  AND bp.eliminado_en IS NULL
-  AND bp.organizacion_id = '..org-uuid..'
-ORDER BY e.razon_social;
-```
-
-**TypeScript:**
-```typescript
-const { data, error } = await supabase
-  .from('business_partners')
-  .select(`
-    id,
-    codigo_bp,
-    organizacion_id,
-    email_principal,
-    telefono_principal,
-    atributos,
-    creado_en,
-    empresas (
-      razon_social,
-      nombre_comercial,
-      nit,
-      digito_verificacion,
-      representante_legal_id,
-      perfil_empresa
-    )
-  `)
-  .eq('tipo_actor', 'empresa')
-  .is('eliminado_en', null)
-  .eq('organizacion_id', orgId)
-  .order('empresas.razon_social')
-```
-
----
-
-### Unified Queries (Personas + Empresas)
-
-#### Get All Business Partners (Combined)
-
-**Using View (Recommended):**
 ```sql
 SELECT *
-FROM v_actores_unificados
-WHERE organizacion_id = '..org-uuid..'
-ORDER BY nombre_completo;
+FROM dm_actores
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL
+  AND tipo_documento = 'CC'
+  AND num_documento = '12345678';
 ```
 
-**TypeScript:**
-```typescript
-const { data, error } = await supabase
-  .from('v_actores_unificados')
-  .select('*')
-  .eq('organizacion_id', orgId)
-  .order('nombre_completo')
-```
+### Get Persons Only
 
-**Manual UNION (Alternative):**
 ```sql
 SELECT
-  bp.id,
-  bp.codigo_bp,
-  bp.tipo_actor,
-  p.nombres || ' ' || p.apellidos AS nombre_completo,
-  bp.email_principal,
-  COALESCE(bp.celular_principal, bp.telefono_principal) AS telefono,
-  p.numero_documento AS identificacion
-FROM business_partners bp
-JOIN personas p ON bp.id = p.id
-WHERE bp.tipo_actor = 'persona'
-  AND bp.eliminado_en IS NULL
-
-UNION ALL
-
-SELECT
-  bp.id,
-  bp.codigo_bp,
-  bp.tipo_actor,
-  e.razon_social AS nombre_completo,
-  bp.email_principal,
-  COALESCE(bp.celular_principal, bp.telefono_principal) AS telefono,
-  e.nit || '-' || e.digito_verificacion AS identificacion
-FROM business_partners bp
-JOIN empresas e ON bp.id = e.id
-WHERE bp.tipo_actor = 'empresa'
-  AND bp.eliminado_en IS NULL
-
+  id,
+  codigo_bp,
+  primer_nombre,
+  segundo_nombre,
+  primer_apellido,
+  segundo_apellido,
+  nombre_completo,
+  email,
+  telefono
+FROM dm_actores
+WHERE organizacion_id = 'org-uuid'
+  AND tipo_actor = 'persona'
+  AND eliminado_en IS NULL
 ORDER BY nombre_completo;
+```
+
+### Get Companies Only
+
+```sql
+SELECT
+  id,
+  codigo_bp,
+  razon_social,
+  nit,
+  email,
+  telefono
+FROM dm_actores
+WHERE organizacion_id = 'org-uuid'
+  AND tipo_actor = 'empresa'
+  AND eliminado_en IS NULL
+ORDER BY razon_social;
+```
+
+### Get Active Actors (Not Inactive)
+
+```sql
+SELECT *
+FROM dm_actores
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL
+  AND activo = true
+  AND fecha_inactivacion IS NULL;
+```
+
+### Get Recently Created Actors
+
+```sql
+SELECT *
+FROM dm_actores
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL
+  AND creado_en >= NOW() - INTERVAL '30 days'
+ORDER BY creado_en DESC;
+```
+
+### Actors with City Information
+
+```sql
+SELECT
+  a.id,
+  a.codigo_bp,
+  CASE a.tipo_actor
+    WHEN 'persona' THEN a.nombre_completo
+    WHEN 'empresa' THEN a.razon_social
+  END as nombre,
+  c.city_name,
+  c.state_name,
+  c.country_name
+FROM dm_actores a
+LEFT JOIN config_ciudades c ON a.ciudad_id = c.id
+WHERE a.organizacion_id = 'org-uuid'
+  AND a.eliminado_en IS NULL
+ORDER BY nombre;
 ```
 
 ---
 
-### Filtering and Search
+## Opportunity Queries
 
-#### Search by Name/Email
-
-**Personas:**
-```sql
-SELECT bp.*, p.*
-FROM business_partners bp
-JOIN personas p ON bp.id = p.id
-WHERE bp.tipo_actor = 'persona'
-  AND bp.eliminado_en IS NULL
-  AND bp.organizacion_id = '..org-uuid..'
-  AND (
-    p.nombres ILIKE '%juan%'
-    OR p.apellidos ILIKE '%garcia%'
-    OR bp.email_principal ILIKE '%juan%'
-  );
-```
-
-**TypeScript:**
-```typescript
-const searchTerm = 'juan'
-
-const { data, error } = await supabase
-  .from('v_personas_org')
-  .select('*')
-  .eq('organizacion_id', orgId)
-  .or(`nombres.ilike.%${searchTerm}%,apellidos.ilike.%${searchTerm}%,email_principal.ilike.%${searchTerm}%`)
-```
-
-#### Filter by Document Type
+### Get Pipeline Summary
 
 ```sql
-SELECT bp.*, p.*
-FROM business_partners bp
-JOIN personas p ON bp.id = p.id
-WHERE bp.tipo_actor = 'persona'
-  AND bp.eliminado_en IS NULL
-  AND p.tipo_documento = 'CC'
-  AND bp.organizacion_id = '..org-uuid..';
+SELECT
+  estado,
+  COUNT(*) as cantidad,
+  SUM(valor_total) as valor_total,
+  AVG(valor_total) as valor_promedio
+FROM tr_doc_comercial
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL
+GROUP BY estado
+ORDER BY
+  CASE estado
+    WHEN 'lead' THEN 1
+    WHEN 'calificado' THEN 2
+    WHEN 'propuesta' THEN 3
+    WHEN 'negociacion' THEN 4
+    WHEN 'ganado' THEN 5
+    WHEN 'perdido' THEN 6
+  END;
 ```
 
-**TypeScript:**
-```typescript
-const { data, error } = await supabase
-  .from('business_partners')
-  .select('*, personas(*)')
-  .eq('tipo_actor', 'persona')
-  .is('eliminado_en', null)
-  .eq('personas.tipo_documento', 'CC')
-  .eq('organizacion_id', orgId)
+### Get Opportunities by Stage
+
+```sql
+SELECT
+  codigo,
+  tipo,
+  estado,
+  monto_estimado,
+  valor_total,
+  fecha_doc,
+  solicitante.nombre as solicitante,
+  responsable.nombre as responsable
+FROM tr_doc_comercial doc
+LEFT JOIN dm_actores solicitante ON doc.solicitante_id = solicitante.id
+LEFT JOIN dm_actores responsable ON doc.responsable_id = responsable.id
+WHERE doc.organizacion_id = 'org-uuid'
+  AND doc.eliminado_en IS NULL
+  AND doc.estado = 'negociacion'
+ORDER BY doc.fecha_doc DESC;
+```
+
+### Opportunities Closing Soon
+
+```sql
+SELECT
+  codigo,
+  estado,
+  valor_total,
+  fecha_venc_doc,
+  DATEDIFF('day', CURRENT_DATE, fecha_venc_doc) as days_until_due
+FROM tr_doc_comercial
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL
+  AND estado IN ('propuesta', 'negociacion')
+  AND fecha_venc_doc BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '14 days'
+ORDER BY fecha_venc_doc ASC;
+```
+
+### Opportunities by Actor
+
+```sql
+SELECT
+  a.codigo_bp,
+  CASE a.tipo_actor
+    WHEN 'persona' THEN a.nombre_completo
+    WHEN 'empresa' THEN a.razon_social
+  END as nombre,
+  COUNT(*) as total_tr_doc_comercial,
+  SUM(doc.valor_total) as valor_total
+FROM tr_doc_comercial doc
+JOIN dm_actores a ON doc.asociado_id = a.id
+WHERE doc.organizacion_id = 'org-uuid'
+  AND doc.eliminado_en IS NULL
+  AND doc.eliminado_en IS NULL
+GROUP BY a.id, a.codigo_bp, a.tipo_actor, a.nombre_completo, a.razon_social
+ORDER BY valor_total DESC;
+```
+
+### Won Opportunities This Month
+
+```sql
+SELECT
+  codigo,
+  valor_total,
+  fecha_doc,
+  solicitante.nombre as solicitante
+FROM tr_doc_comercial doc
+LEFT JOIN dm_actores solicitante ON doc.solicitante_id = solicitante.id
+WHERE doc.organizacion_id = 'org-uuid'
+  AND doc.eliminado_en IS NULL
+  AND doc.estado = 'ganado'
+  AND DATE_TRUNC('month', doc.creado_en) = DATE_TRUNC('month', CURRENT_DATE)
+ORDER BY doc.valor_total DESC;
+```
+
+### Opportunities Without Responsible
+
+```sql
+SELECT
+  codigo,
+  tipo,
+  estado,
+  monto_estimado,
+  creado_en
+FROM tr_doc_comercial
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL
+  AND responsable_id IS NULL
+  AND estado NOT IN ('ganado', 'perdido')
+ORDER BY creado_en DESC;
+```
+
+---
+
+## Task Queries
+
+### My Tasks
+
+```sql
+SELECT
+  t.codigo_tarea,
+  t.titulo,
+  t.prioridad,
+  t.estado,
+  t.fecha_vencimiento,
+  opp.codigo as oportunidad_codigo,
+  opp.valor_total as oportunidad_valor,
+  CASE a.tipo_actor
+    WHEN 'persona' THEN a.nombre_completo
+    WHEN 'empresa' THEN a.razon_social
+  END as relacionado_nombre
+FROM tr_tr_tareas t
+LEFT JOIN tr_doc_comercial opp ON t.oportunidad_id = opp.id
+LEFT JOIN dm_actores a ON t.relacionado_con_bp = a.id
+WHERE t.organizacion_id = 'org-uuid'
+  AND t.eliminado_en IS NULL
+  AND t.asignado_a = 'user-uuid'
+  AND t.estado != 'completada'
+ORDER BY
+  t.prioridad DESC,
+  t.fecha_vencimiento ASC;
+```
+
+### Overdue Tasks
+
+```sql
+SELECT
+  t.codigo_tarea,
+  t.titulo,
+  t.prioridad,
+  t.fecha_vencimiento,
+  CURRENT_DATE - t.fecha_vencimiento as days_overdue,
+  asignado.nombre as asignado,
+  asignado.whatsapp as asignado_whatsapp
+FROM tr_tr_tareas t
+LEFT JOIN dm_actores asignado ON t.asignado_a = asignado.id
+WHERE t.organizacion_id = 'org-uuid'
+  AND t.eliminado_en IS NULL
+  AND t.estado NOT IN ('completada', 'cancelada')
+  AND t.fecha_vencimiento < CURRENT_DATE
+ORDER BY t.fecha_vencimiento ASC;
+```
+
+### Tasks by Opportunity
+
+```sql
+SELECT
+  opp.codigo as oportunidad_codigo,
+  COUNT(*) as total_tr_tareas,
+  SUM(CASE WHEN t.estado = 'completada' THEN 1 ELSE 0 END) as completadas,
+  SUM(CASE WHEN t.estado = 'pendiente' THEN 1 ELSE 0 END) as pendientes,
+  SUM(CASE WHEN t.estado = 'en_progreso' THEN 1 ELSE 0 END) as en_progreso
+FROM tr_tr_tareas t
+JOIN tr_doc_comercial opp ON t.oportunidad_id = opp.id
+WHERE t.organizacion_id = 'org-uuid'
+  AND t.eliminado_en IS NULL
+GROUP BY opp.id, opp.codigo
+HAVING COUNT(*) > 0
+ORDER BY COUNT(*) DESC;
+```
+
+### High Priority Tasks
+
+```sql
+SELECT
+  t.*,
+  asignado.nombre as asignado_nombre,
+  asignado.whatsapp
+FROM tr_tr_tareas t
+LEFT JOIN dm_actores asignado ON t.asignado_a = asignado.id
+WHERE t.organizacion_id = 'org-uuid'
+  AND t.eliminado_en IS NULL
+  AND t.prioridad IN ('Alta', 'Urgente')
+  AND t.estado NOT IN ('completada', 'cancelada')
+ORDER BY t.fecha_vencimiento ASC;
+```
+
+### Tasks Due This Week
+
+```sql
+SELECT *
+FROM tr_tr_tareas
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL
+  AND fecha_vencimiento BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'
+  AND estado NOT IN ('completada', 'cancelada')
+ORDER BY fecha_vencimiento ASC;
+```
+
+### Task Completion Rate
+
+```sql
+SELECT
+  DATE_TRUNC('week', creado_en) as week,
+  COUNT(*) as created,
+  SUM(CASE WHEN estado = 'completada' THEN 1 ELSE 0 END) as completed,
+  ROUND(
+    100.0 * SUM(CASE WHEN estado = 'completada' THEN 1 ELSE 0 END) / COUNT(*),
+    2
+  ) as completion_rate
+FROM tr_tr_tareas
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL
+  AND creado_en >= CURRENT_DATE - INTERVAL '3 months'
+GROUP BY week
+ORDER BY week DESC;
+```
+
+---
+
+## Share Assignment Queries
+
+### Current Owners (Dueños)
+
+```sql
+SELECT
+  accion.codigo_accion,
+  a.codigo_bp,
+  a.nombre_completo,
+  asig.fecha_inicio,
+  asig.precio_transaccion
+FROM vn_asociados asig
+JOIN dm_acciones accion ON asig.accion_id = accion.id
+JOIN dm_actores a ON asig.business_partner_id = a.id
+WHERE asig.organizacion_id = 'org-uuid'
+  AND asig.eliminado_en IS NULL
+  AND asig.tipo_asignacion = 'dueño'
+  AND asig.es_actual = true
+ORDER BY accion.codigo_accion;
+```
+
+### All Active Assignments
+
+```sql
+SELECT
+  accion.codigo_accion,
+  asig.tipo_asignacion,
+  asig.subcodigo,
+  asig.codigo_completo,
+  CASE a.tipo_actor
+    WHEN 'persona' THEN a.nombre_completo
+    WHEN 'empresa' THEN a.razon_social
+  END as nombre,
+  asig.fecha_inicio,
+  asig.es_actual
+FROM vn_asociados asig
+JOIN dm_acciones accion ON asig.accion_id = accion.id
+JOIN dm_actores a ON asig.business_partner_id = a.id
+WHERE asig.organizacion_id = 'org-uuid'
+  AND asig.eliminado_en IS NULL
+  AND asig.es_actual = true
+ORDER BY accion.codigo_accion, asig.tipo_asignacion;
+```
+
+### Assignments by Actor
+
+```sql
+SELECT
+  a.codigo_bp,
+  a.nombre_completo,
+  COUNT(*) FILTER (WHERE asig.es_actual = true) as activas,
+  COUNT(*) FILTER (WHERE asig.es_actual = false) as finalizadas,
+  asig.tipo_asignacion
+FROM vn_asociados asig
+JOIN dm_actores a ON asig.business_partner_id = a.id
+WHERE asig.organizacion_id = 'org-uuid'
+  AND asig.eliminado_en IS NULL
+GROUP BY a.id, a.codigo_bp, a.nombre_completo, asig.tipo_asignacion
+ORDER BY activas DESC;
+```
+
+### Assignment History
+
+```sql
+SELECT
+  accion.codigo_accion,
+  asig.tipo_asignacion,
+  a.nombre_completo,
+  asig.fecha_inicio,
+  asig.fecha_fin,
+  CASE
+    WHEN asig.fecha_fin IS NULL THEN 'Vigente'
+    ELSE 'Finalizada'
+  END as estado
+FROM vn_asociados asig
+JOIN dm_acciones accion ON asig.accion_id = accion.id
+JOIN dm_actores a ON asig.business_partner_id = a.id
+WHERE asig.organizacion_id = 'org-uuid'
+  AND asig.eliminado_en IS NULL
+  -- AND asig.accion_id = 'accion-uuid'  -- Specific action
+ORDER BY asig.fecha_inicio DESC;
 ```
 
 ---
 
 ## Relationship Queries
 
-### Creating Relationships
+### All Active Relationships
 
-#### Create Relationship via RPC (Recommended)
-
-**SQL:**
-```sql
-SELECT crear_relacion_bp(
-  bp_origen_id := '..persona-uuid..',
-  bp_destino_id := '..empresa-uuid..',
-  tipo_relacion := 'laboral',
-  descripcion := 'Gerente General',
-  fecha_inicio := '2024-01-01',
-  atributos := '{"salario_rango": "alto", "dedicacion": "tiempo_completo"}'::jsonb
-);
-```
-
-**TypeScript:**
-```typescript
-const { data, error } = await supabase.rpc('crear_relacion_bp', {
-  bp_origen_id: personaId,
-  bp_destino_id: empresaId,
-  tipo_relacion: 'laboral',
-  descripcion: 'Gerente General',
-  fecha_inicio: '2024-01-01',
-  atributos: {
-    salario_rango: 'alto',
-    dedicacion: 'tiempo_completo'
-  }
-})
-```
-
----
-
-### Bidirectional Queries
-
-#### Get All Relationships for a Business Partner
-
-**Using RPC (Recommended):**
-```sql
-SELECT * FROM obtener_relaciones_bp(
-  bp_id := '..bp-uuid..',
-  solo_vigentes := TRUE
-);
-```
-
-**TypeScript:**
-```typescript
-const { data, error } = await supabase.rpc('obtener_relaciones_bp', {
-  bp_id: bpId,
-  solo_vigentes: true
-})
-```
-
-**Manual Query (Alternative):**
 ```sql
 SELECT
-  r.*,
-  CASE
-    WHEN r.bp_origen_id = '..bp-uuid..' THEN r.bp_destino_id
-    ELSE r.bp_origen_id
-  END AS bp_relacionado_id
-FROM bp_relaciones r
-WHERE (r.bp_origen_id = '..bp-uuid..' OR r.bp_destino_id = '..bp-uuid..')
+  r.tipo_relacion,
+  r.rol_origen,
+  r.rol_destino,
+  origen.nombre_completo as origen_nombre,
+  destino.nombre_completo as destino_nombre,
+  r.fecha_inicio,
+  r.es_actual
+FROM vn_relaciones_actores r
+JOIN dm_actores origen ON r.bp_origen_id = origen.id
+JOIN dm_actores destino ON r.bp_destino_id = destino.id
+WHERE r.organizacion_id = 'org-uuid'
   AND r.eliminado_en IS NULL
-  AND r.es_actual = TRUE
-ORDER BY r.fecha_inicio DESC;
+  AND r.es_actual = true
+ORDER BY r.tipo_relacion, origen.nombre_completo;
 ```
 
-**TypeScript:**
-```typescript
-const { data, error } = await supabase
-  .from('bp_relaciones')
-  .select(`
-    *,
-    bp_origen:business_partners!bp_origen_id(codigo_bp),
-    bp_destino:business_partners!bp_destino_id(codigo_bp)
-  `)
-  .or(`bp_origen_id.eq.${bpId},bp_destino_id.eq.${bpId}`)
-  .is('eliminado_en', null)
-  .eq('es_actual', true)
-  .order('fecha_inicio', { ascending: false })
-```
-
----
-
-### Relationship History
-
-#### Get All Historical Relationships (Including Finalized)
+### Relationships by Type
 
 ```sql
 SELECT
-  r.*,
-  bp_origen.codigo_bp AS origen_codigo,
-  bp_destino.codigo_bp AS destino_codigo,
-  CASE
-    WHEN r.fecha_fin IS NULL THEN 'Vigente'
-    ELSE 'Finalizada'
-  END AS estado
-FROM bp_relaciones r
-JOIN business_partners bp_origen ON r.bp_origen_id = bp_origen.id
-JOIN business_partners bp_destino ON r.bp_destino_id = bp_destino.id
-WHERE r.eliminado_en IS NULL
-  AND (r.bp_origen_id = '..bp-uuid..' OR r.bp_destino_id = '..bp-uuid..')
-ORDER BY r.fecha_inicio DESC;
+  origen.nombre_completo as persona,
+  destino.razon_social as empresa,
+  r.rol_origen as cargo,
+  r.fecha_inicio
+FROM vn_relaciones_actores r
+JOIN dm_actores origen ON r.bp_origen_id = origen.id
+JOIN dm_actores destino ON r.bp_destino_id = destino.id
+WHERE r.organizacion_id = 'org-uuid'
+  AND r.eliminado_en IS NULL
+  AND r.tipo_relacion = 'laboral'
+  AND r.es_actual = true
+ORDER BY origen.nombre_completo;
 ```
 
-**TypeScript:**
-```typescript
-const { data, error } = await supabase
-  .from('bp_relaciones')
-  .select(`
-    *,
-    bp_origen:business_partners!bp_origen_id(codigo_bp),
-    bp_destino:business_partners!bp_destino_id(codigo_bp)
-  `)
-  .or(`bp_origen_id.eq.${bpId},bp_destino_id.eq.${bpId}`)
-  .is('eliminado_en', null)
-  .order('fecha_inicio', { ascending: false })
-```
+### Get All Relationships for an Actor
 
----
-
-## Acciones Queries
-
-### Assignment Operations
-
-#### Create Assignment via RPC (Recommended)
-
-**SQL:**
 ```sql
-SELECT crear_asignacion_accion(
-  accion_id := '..accion-uuid..',
-  persona_id := '..bp-uuid..',
-  tipo_asignacion := 'dueño',
-  subcodigo := NULL, -- Auto-generated
-  fecha_inicio := CURRENT_DATE,
-  atributos := '{"modo_adquisicion": "compra"}'::jsonb
-);
-```
-
-**TypeScript:**
-```typescript
-const { data, error } = await supabase.rpc('crear_asignacion_accion', {
-  accion_id: accionId,
-  persona_id: personaId,
-  tipo_asignacion: 'dueño',
-  // subcodigo auto-generated
-  fecha_inicio: new Date().toISOString().split('T')[0],
-  atributos: {
-    modo_adquisicion: 'compra'
-  }
-})
-```
-
-#### Transfer Ownership
-
-**SQL:**
-```sql
-SELECT transferir_accion(
-  accion_id := '..accion-uuid..',
-  nuevo_dueno_id := '..new-bp-uuid..',
-  fecha_transferencia := CURRENT_DATE,
-  atributos := '{"tipo_transferencia": "venta", "precio": 50000000}'::jsonb
-);
-```
-
-**TypeScript:**
-```typescript
-const { data, error } = await supabase.rpc('transferir_accion', {
-  accion_id: accionId,
-  nuevo_dueno_id: nuevoDuenoId,
-  fecha_transferencia: new Date().toISOString().split('T')[0],
-  atributos: {
-    tipo_transferencia: 'venta',
-    precio: 50000000
-  }
-})
-```
-
----
-
-### Ownership Tracking
-
-#### Get Current Owner of Action
-
-**Using View:**
-```sql
+-- Using the function
 SELECT *
-FROM v_asignaciones_vigentes
-WHERE accion_id = '..accion-uuid..'
-  AND tipo_asignacion = 'dueño';
-```
+FROM obtener_relaciones_bp('actor-uuid', true);
 
-**TypeScript:**
-```typescript
-const { data, error } = await supabase
-  .from('v_asignaciones_vigentes')
-  .select('*')
-  .eq('accion_id', accionId)
-  .eq('tipo_asignacion', 'dueño')
-  .single()
-```
-
-#### Get All Beneficiaries
-
-**SQL:**
-```sql
+-- Or manual query
 SELECT
-  aa.*,
-  bp.codigo_bp AS persona_codigo,
-  COALESCE(
-    p.nombres || ' ' || p.apellidos,
-    e.razon_social
-  ) AS nombre_persona
-FROM asignaciones_acciones aa
-JOIN business_partners bp ON aa.business_partner_id = bp.id
-LEFT JOIN personas p ON bp.id = p.id
-LEFT JOIN empresas e ON bp.id = e.id
-WHERE aa.accion_id = '..accion-uuid..'
-  AND aa.tipo_asignacion = 'beneficiario'
-  AND aa.es_vigente = TRUE
-  AND aa.eliminado_en IS NULL;
+  r.tipo_relacion,
+  r.rol_origen,
+  r.rol_destino,
+  CASE r.bp_origen_id
+    WHEN 'actor-uuid' THEN destino.nombre_completo
+    ELSE origen.nombre_completo
+  END as related_to,
+  r.es_actual
+FROM vn_relaciones_actores r
+JOIN dm_actores origen ON r.bp_origen_id = origen.id
+JOIN dm_actores destino ON r.bp_destino_id = destino.id
+WHERE r.organizacion_id = 'org-uuid'
+  AND r.eliminado_en IS NULL
+  AND (r.bp_origen_id = 'actor-uuid' OR r.bp_destino_id = 'actor-uuid')
+ORDER BY r.tipo_relacion, r.es_actual DESC, r.fecha_inicio DESC;
 ```
 
----
-
-### Historical Queries
-
-#### Get Complete Ownership History
-
-**Using View:**
-```sql
-SELECT *
-FROM v_asignaciones_historial
-WHERE accion_id = '..accion-uuid..'
-  AND tipo_asignacion = 'dueño'
-ORDER BY fecha_inicio DESC;
-```
-
-**TypeScript:**
-```typescript
-const { data, error } = await supabase
-  .from('v_asignaciones_historial')
-  .select('*')
-  .eq('accion_id', accionId)
-  .eq('tipo_asignacion', 'dueño')
-  .order('fecha_inicio', { ascending: false })
-```
-
-#### Get Assignments by Date Range
-
-```sql
-SELECT *
-FROM asignaciones_acciones
-WHERE accion_id = '..accion-uuid..'
-  AND fecha_inicio >= '2024-01-01'
-  AND (fecha_fin IS NULL OR fecha_fin <= '2024-12-31')
-  AND eliminado_en IS NULL;
-```
-
----
-
-## Opportunities Queries
-
-### Creating Opportunities
-
-#### Create Opportunity (Withdrawal Request)
-
-**SQL:**
-```sql
-INSERT INTO oportunidades (
-  codigo,
-  tipo,
-  fecha_solicitud,
-  solicitante_id,
-  organizacion_id,
-  monto_estimado,
-  atributos
-) VALUES (
-  generate_uuid(), -- or use application code
-  'Solicitud Retiro'::tipo_oportunidad_enum,
-  CURRENT_DATE,
-  '..bp-uuid..',
-  '..org-uuid..',
-  5000000,
-  '{"motivo": "Retiro de fondos"}'::jsonb
-);
-```
-
-**TypeScript:**
-```typescript
-const { data, error } = await supabase
-  .from('oportunidades')
-  .insert({
-    codigo: generateCode(),
-    tipo: 'Solicitud Retiro',
-    fecha_solicitud: new Date().toISOString().split('T')[0],
-    solicitante_id: bpId,
-    organizacion_id: orgId,
-    monto_estimado: 5000000,
-    atributos: { motivo: 'Retiro de fondos' }
-  })
-```
-
-### Managing Opportunities
-
-#### Get Open Opportunities
+### Family Relationships
 
 ```sql
 SELECT
-  o.*,
-  bp_solicitante.codigo_bp AS solicitante_codigo,
-  COALESCE(
-    p_solicitante.nombres || ' ' || p_solicitante.apellidos,
-    e_solicitante.razon_social
-  ) AS solicitante_nombre
-FROM oportunidades o
-JOIN business_partners bp_solicitante ON o.solicitante_id = bp_solicitante.id
-LEFT JOIN personas p_solicitante ON bp_solicitante.id = p_solicitante.id
-LEFT JOIN empresas e_solicitante ON bp_solicitante.id = e_solicitante.id
-WHERE o.estado = 'abierta'
-  AND o.eliminado_en IS NULL
-  AND o.organizacion_id = '..org-uuid..'
-ORDER BY o.fecha_solicitud DESC;
-```
-
-#### Update Opportunity Status
-
-```sql
-UPDATE oportunidades
-SET estado = 'en_proceso',
-    responsable_id = '..user-uuid..'
-WHERE id = '..oportunidad-uuid..';
+  origen.nombre_completo as persona1,
+  r.rol_origen as parentesco1,
+  r.rol_destino as parentesco2,
+  destino.nombre_completo as persona2
+FROM vn_relaciones_actores r
+JOIN dm_actores origen ON r.bp_origen_id = origen.id
+JOIN dm_actores destino ON r.bp_destino_id = destino.id
+WHERE r.organizacion_id = 'org-uuid'
+  AND r.eliminado_en IS NULL
+  AND r.tipo_relacion = 'familiar'
+  AND r.es_actual = true
+ORDER BY origen.nombre_completo;
 ```
 
 ---
 
-## Tasks Queries
+## Analytics Queries
 
-### Creating Tasks
-
-#### Create Task (Auto-Generates codigo_tarea)
-
-```sql
-INSERT INTO tareas (
-  titulo,
-  descripcion,
-  prioridad,
-  estado,
-  fecha_vencimiento,
-  asignado_a,
-  organizacion_id,
-  relacionado_con_bp
-) VALUES (
-  'Revisar documentación',
-  'Revisar documentación de socios nuevos',
-  'alta'::prioridad_tarea_enum,
-  'pendiente'::estado_tarea_enum,
-  '2024-01-15',
-  '..user-uuid..',
-  '..org-uuid..',
-  '..bp-uuid..'
-);
--- codigo_tarea is auto-generated: TSK-00000001
-```
-
-**TypeScript:**
-```typescript
-const { data, error } = await supabase
-  .from('tareas')
-  .insert({
-    titulo: 'Revisar documentación',
-    descripcion: 'Revisar documentación de socios nuevos',
-    prioridad: 'alta',
-    estado: 'pendiente',
-    fecha_vencimiento: '2024-01-15',
-    asignado_a: userId,
-    organizacion_id: orgId,
-    relacionado_con_bp: bpId
-  })
-  .select()
-  .single()
-
-console.log(data.codigo_tarea) // 'TSK-00000001'
-```
-
-### Managing Tasks
-
-#### Query Tasks by Code
-
-```sql
-SELECT *
-FROM v_tareas_org
-WHERE codigo_tarea = 'TSK-00000001';
-```
-
-**TypeScript:**
-```typescript
-const { data, error } = await supabase
-  .from('v_tareas_org')
-  .select('*')
-  .eq('codigo_tarea', 'TSK-00000001')
-  .single()
-```
-
-#### Query Tasks with Assignee Names
+### Monthly Revenue
 
 ```sql
 SELECT
-  codigo_tarea,
-  titulo,
-  estado,
-  asignado_nombre,
-  fecha_vencimiento
-FROM v_tareas_org
+  DATE_TRUNC('month', creado_en) as month,
+  COUNT(*) as total_tr_doc_comercial,
+  SUM(CASE WHEN estado = 'ganado' THEN valor_total ELSE 0 END) as revenue_ganado,
+  SUM(CASE WHEN estado IN ('propuesta', 'negociacion') THEN valor_total ELSE 0 END) as pipeline
+FROM tr_doc_comercial
 WHERE organizacion_id = 'org-uuid'
-ORDER BY fecha_vencimiento ASC;
+  AND eliminado_en IS NULL
+  AND creado_en >= DATE_TRUNC('year', CURRENT_DATE)
+GROUP BY month
+ORDER BY month DESC;
 ```
 
-**TypeScript:**
-```typescript
-const { data, error } = await supabase
-  .from('v_tareas_org')
-  .select('codigo_tarea, titulo, estado, asignado_nombre, fecha_vencimiento')
-  .eq('organizacion_id', orgId)
-  .order('fecha_vencimiento', { ascending: true })
+### Sales Funnel
+
+```sql
+WITH funnel AS (
+  SELECT
+    CASE
+      WHEN estado = 'lead' THEN 1
+      WHEN estado = 'calificado' THEN 2
+      WHEN estado = 'propuesta' THEN 3
+      WHEN estado = 'negociacion' THEN 4
+      WHEN estado = 'ganado' THEN 5
+      WHEN estado = 'perdido' THEN 6
+    END as stage_order,
+    estado,
+    COUNT(*) as count,
+    SUM(valor_total) as value
+  FROM tr_doc_comercial
+  WHERE organizacion_id = 'org-uuid'
+    AND eliminado_en IS NULL
+  GROUP BY estado
+)
+SELECT
+  estado,
+  count,
+  value,
+  SUM(count) OVER (ORDER BY stage_order) - count as dropped_off
+FROM funnel
+ORDER BY stage_order;
 ```
 
-#### Find Tasks by Organization Member
+### Top Actors by Value
 
 ```sql
 SELECT
-  t.codigo_tarea,
-  t.titulo,
-  om.nombre_completo AS asignado,
-  t.estado
-FROM tareas t
-JOIN organization_members om
-  ON om.user_id = t.asignado_a
-  AND om.organization_id = t.organizacion_id
-WHERE om.user_id = 'user-uuid'
+  a.codigo_bp,
+  CASE a.tipo_actor
+    WHEN 'persona' THEN a.nombre_completo
+    WHEN 'empresa' THEN a.razon_social
+  END as nombre,
+  COUNT(DISTINCT doc.id) as total_tr_doc_comercial,
+  COALESCE(SUM(doc.valor_total), 0) as valor_total
+FROM dm_actores a
+LEFT JOIN tr_doc_comercial doc ON doc.asociado_id = a.id
+  AND doc.eliminado_en IS NULL
+  AND doc.estado = 'ganado'
+WHERE a.organizacion_id = 'org-uuid'
+  AND a.eliminado_en IS NULL
+GROUP BY a.id, a.codigo_bp, a.tipo_actor, a.nombre_completo, a.razon_social
+ORDER BY valor_total DESC
+LIMIT 10;
+```
+
+### Task Performance by User
+
+```sql
+SELECT
+  asignado.nombre_completo,
+  COUNT(*) as total_tasks,
+  SUM(CASE WHEN t.estado = 'completada' THEN 1 ELSE 0 END) as completed,
+  SUM(CASE WHEN t.estado = 'completada' AND t.fecha_vencimiento >= t.actualizado_en THEN 1 ELSE 0 END) as on_time,
+  SUM(CASE WHEN t.estado = 'completada' AND t.fecha_vencimiento < t.actualizado_en THEN 1 ELSE 0 END) as late
+FROM tr_tr_tareas t
+JOIN dm_actores asignado ON t.asignado_a = asignado.id
+WHERE t.organizacion_id = 'org-uuid'
+  AND t.eliminado_en IS NULL
+  AND t.creado_en >= CURRENT_DATE - INTERVAL '30 days'
+GROUP BY asignado.id, asignado.nombre_completo
+ORDER BY completed DESC;
+```
+
+### Growth Metrics
+
+```sql
+SELECT
+  DATE_TRUNC('month', creado_en) as month,
+  COUNT(DISTINCT organizacion_id) as new_orgs,
+  COUNT(*) FILTER (WHERE tipo_actor = 'persona') as new_personas,
+  COUNT(*) FILTER (WHERE tipo_actor = 'empresa') as new_empresas
+FROM dm_actores
+WHERE eliminado_en IS NULL
+  AND creado_en >= DATE_TRUNC('year', CURRENT_DATE)
+GROUP BY month
+ORDER BY month DESC;
+```
+
+---
+
+## Maintenance Queries
+
+### Find Soft-Deleted Records
+
+```sql
+-- By table
+SELECT COUNT(*) as deleted_records
+FROM dm_actores
+WHERE eliminado_en IS NOT NULL;
+
+-- By organization
+SELECT
+  'dm_actores' as table_name,
+  COUNT(*) FILTER (WHERE eliminado_en IS NULL) as active,
+  COUNT(*) FILTER (WHERE eliminado_en IS NOT NULL) as deleted
+FROM dm_actores
+WHERE organizacion_id = 'org-uuid'
+UNION ALL
+SELECT
+  'tr_doc_comercial' as table_name,
+  COUNT(*) FILTER (WHERE eliminado_en IS NULL) as active,
+  COUNT(*) FILTER (WHERE eliminado_en IS NOT NULL) as deleted
+FROM tr_doc_comercial
+WHERE organizacion_id = 'org-uuid';
+```
+
+### Find Orphaned Records
+
+```sql
+-- Actors without organization (shouldn't exist with CASCADE)
+SELECT COUNT(*)
+FROM dm_actores
+WHERE organizacion_id IS NULL
+  AND eliminado_en IS NULL;
+
+-- Tasks with invalid opportunity reference
+SELECT t.id, t.titulo, t.oportunidad_id
+FROM tr_tr_tareas t
+LEFT JOIN tr_doc_comercial opp ON t.oportunidad_id = opp.id
+WHERE t.oportunidad_id IS NOT NULL
+  AND opp.id IS NULL
   AND t.eliminado_en IS NULL;
 ```
 
-**TypeScript:**
-```typescript
-const { data, error } = await supabase
-  .from('tareas')
-  .select(`
-    codigo_tarea,
-    titulo,
-    estado,
-    organization_members!inner(nombre_completo)
-  `)
-  .eq('asignado_a', userId)
-  .is('eliminado_en', null)
+### Index Usage
+
+```sql
+-- Check which indexes are being used
+SELECT
+  schemaname,
+  tablename,
+  indexname,
+  idx_scan as scans,
+  idx_tup_read as tuples_read,
+  idx_tup_fetch as tuples_fetched
+FROM pg_stat_user_indexes
+WHERE schemaname = 'public'
+ORDER BY idx_scan DESC;
+
+-- Find unused indexes
+SELECT
+  schemaname,
+  tablename,
+  indexname,
+  pg_size_pretty(pg_relation_size(indexrelid::regclass)) as size
+FROM pg_stat_user_indexes
+WHERE schemaname = 'public'
+  AND idx_scan = 0
+  AND indexname NOT LIKE '%_pkey'
+ORDER BY pg_relation_size(indexrelid::regclass) DESC;
 ```
 
-#### Get Tasks for a Business Partner (Using Enhanced View)
+### Table Sizes
 
 ```sql
 SELECT
-  t.codigo_tarea,
-  t.titulo,
-  t.estado,
-  t.prioridad,
-  t.asignado_nombre,
-  bp_relacionado.codigo_bp AS bp_codigo,
-  COALESCE(
-    p_relacionado.nombres || ' ' || p_relacionado.apellidos,
-    e_relacionado.razon_social
-  ) AS bp_nombre
-FROM v_tareas_org t
-WHERE t.relacionado_con_bp = '..bp-uuid..'
-ORDER BY t.prioridad DESC, t.fecha_vencimiento ASC;
+  schemaname,
+  tablename,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
+  pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) as index_size
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 ```
 
-**TypeScript:**
+### Bloat Check
+
+```sql
+-- Find tables with high bloat (>30%)
+SELECT
+  schemaname,
+  tablename,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
+  pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+```
+
+---
+
+## Supabase Client Examples
+
+### TypeScript / JavaScript
+
 ```typescript
-const { data, error } = await supabase
-  .from('v_tareas_org')
+// Get all actors for an organization
+const { data: actores } = await supabase
+  .from('dm_actores')
   .select('*')
-  .eq('relacionado_con_bp', bpId)
-  .order('prioridad', { ascending: false })
-  .order('fecha_vencimiento', { ascending: true })
-```
-
-#### Update Task Status
-
-```sql
-UPDATE tareas
-SET estado = 'en_progreso'
-WHERE id = '..tarea-uuid..';
--- actualizado_en is auto-updated by trigger
-```
-
-**TypeScript:**
-```typescript
-const { error } = await supabase
-  .from('tareas')
-  .update({ estado: 'en_progreso' })
-  .eq('id', tareaId)
-```
-
----
-
-## Soft Delete Patterns
-
-### Soft Delete Record
-
-**Business Partner:**
-```sql
-UPDATE business_partners
-SET eliminado_en = NOW() -- eliminado_por auto-set by trigger
-WHERE id = '..bp-uuid..';
-```
-
-**TypeScript:**
-```typescript
-const { error } = await supabase
-  .from('business_partners')
-  .update({ eliminado_en: new Date().toISOString() })
-  .eq('id', bpId)
-```
-
-### Query Only Active Records
-
-**Always include:**
-```sql
-WHERE eliminado_en IS NULL
-```
-
-**TypeScript:**
-```typescript
-.is('eliminado_en', null)
-```
-
-### Query Archived Records
-
-```sql
-SELECT *
-FROM business_partners
-WHERE eliminado_en IS NOT NULL
-ORDER BY eliminado_en DESC;
-```
-
-**TypeScript:**
-```typescript
-.not('eliminado_en', 'is', null)
-.order('eliminado_en', { ascending: false })
-```
-
-### Restore Soft-Deleted Record
-
-```sql
-UPDATE business_partners
-SET eliminado_en = NULL,
-    eliminado_por = NULL
-WHERE id = '..bp-uuid..';
-```
-
----
-
-## JSONB Queries
-
-### Query by JSONB Field
-
-**Check if field exists:**
-```sql
-SELECT *
-FROM business_partners
-WHERE atributos ? 'categoria_socio';
-```
-
-**TypeScript:**
-```typescript
-.contains('atributos', { categoria_socio: 'fundador' })
-```
-
-**Get specific value:**
-```sql
-SELECT *
-FROM personas
-WHERE perfil_persona->>'ciudad' = 'Bogotá';
-```
-
-**TypeScript:**
-```typescript
-.eq('perfil_persona->ciudad', 'Bogotá')
-```
-
-### Query by Nested JSONB
-
-```sql
-SELECT *
-FROM empresas
-WHERE perfil_empresa->'contacto'->>'email' = 'contacto@empresa.com';
-```
-
-### Update JSONB Field
-
-**Merge new fields:**
-```sql
-UPDATE business_partners
-SET atributos = atributos || '{"vip": true}'::jsonb
-WHERE id = '..bp-uuid..';
-```
-
-**TypeScript:**
-```typescript
-const { data: current } = await supabase
-  .from('business_partners')
-  .select('atributos')
-  .eq('id', bpId)
-  .single()
-
-const { error } = await supabase
-  .from('business_partners')
-  .update({
-    atributos: {
-      ...current.atributos,
-      vip: true
-    }
-  })
-  .eq('id', bpId)
-```
-
----
-
-## Aggregation Queries
-
-### Count Business Partners by Type
-
-```sql
-SELECT
-  tipo_actor,
-  COUNT(*) AS total
-FROM business_partners
-WHERE eliminado_en IS NULL
-  AND organizacion_id = '..org-uuid..'
-GROUP BY tipo_actor;
-```
-
-**TypeScript:**
-```typescript
-const { data, error } = await supabase
-  .from('business_partners')
-  .select('tipo_actor')
-  .is('eliminado_en', null)
   .eq('organizacion_id', orgId)
+  .is('eliminado_en', null)
+  .eq('activo', true)
+  .order('creado_en', { ascending: false });
 
-const counts = data?.reduce((acc, row) => {
-  acc[row.tipo_actor] = (acc[row.tipo_actor] || 0) + 1
-  return acc
-}, {} as Record<string, number>)
-```
+// Get tasks with opportunity details
+const { data: tr_tareas } = await supabase
+  .from('tr_tr_tareas')
+  .select(`
+    *,
+    oportunidad:tr_doc_comercial(
+      codigo,
+      estado,
+      valor_total
+    ),
+    asignado:dm_actores(
+      codigo_bp,
+      nombre_completo,
+      email
+    )
+  `)
+  .eq('organizacion_id', orgId)
+  .eq('asignado_a', userId)
+  .is('eliminado_en', null);
 
-### Count Active Relationships by Type
+// Insert new actor
+const { data: newActor, error } = await supabase
+  .from('dm_actores')
+  .insert({
+    organizacion_id: orgId,
+    tipo_actor: 'persona',
+    primer_nombre: 'Juan',
+    primer_apellido: 'Pérez',
+    email: 'juan@example.com'
+  })
+  .select()
+  .single();
 
-```sql
-SELECT
-  tipo_relacion,
-  COUNT(*) AS total
-FROM bp_relaciones
-WHERE eliminado_en IS NULL
-  AND es_actual = TRUE
-GROUP BY tipo_relacion
-ORDER BY total DESC;
-```
+// Soft delete actor
+const { error } = await supabase.rpc('soft_delete_bp', {
+  p_id: actorId
+});
 
-### Get Assignment Statistics
-
-```sql
-SELECT
-  a.codigo AS accion,
-  COUNT(*) FILTER (WHERE aa.tipo_asignacion = 'dueño') AS duenos,
-  COUNT(*) FILTER (WHERE aa.tipo_asignacion = 'titular') AS titulares,
-  COUNT(*) FILTER (WHERE aa.tipo_asignacion = 'beneficiario') AS beneficiarios
-FROM acciones a
-LEFT JOIN asignaciones_acciones aa ON a.id = aa.accion_id
-WHERE a.eliminado_en IS NULL
-GROUP BY a.id, a.codigo
-ORDER BY a.codigo;
+// Check permissions
+const { data: hasPermission } = await supabase.rpc('has_org_permission', {
+  p_org_id: orgId,
+  p_permission: 'tr_tareas:update'
+});
 ```
 
 ---
 
-## Transaction Patterns
+## Best Practices
 
-### Multi-Table Insert (CTI Pattern)
+### 1. Always Filter by Organization
 
-**PostgreSQL Transaction:**
 ```sql
-BEGIN;
+-- Good
+SELECT * FROM dm_actores
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL;
 
--- Insert into base table
-INSERT INTO business_partners (
-  organizacion_id, tipo_actor, email_principal
-) VALUES (
-  '..org-uuid..', 'persona', 'example@email.com'
-) RETURNING id;
-
--- Insert into specialization table
-INSERT INTO personas (
-  id, nombres, apellidos
-) VALUES (
-  '..bp-id-from-above..', 'John', 'Doe'
-);
-
-COMMIT;
+-- Bad (security risk - queries all config_organizaciones)
+SELECT * FROM dm_actores
+WHERE eliminado_en IS NULL;
 ```
 
-**Note:** Use `crear_persona` RPC instead - it handles transaction automatically.
+### 2. Use Prepared Statements
 
-### Conditional Update
+```typescript
+// Good - Parameterized
+await supabase
+  .from('dm_actores')
+  .select()
+  .eq('organizacion_id', orgId)  // Parameterized
+
+// Bad - String interpolation (SQL injection risk)
+const query = `SELECT * FROM dm_actores WHERE organizacion_id = '${orgId}'`;
+```
+
+### 3. Select Only Needed Columns
 
 ```sql
--- Only update if not soft-deleted
-UPDATE business_partners
-SET email_principal = 'new@email.com'
-WHERE id = '..bp-uuid..'
-  AND eliminado_en IS NULL;
+-- Good - Only what you need
+SELECT id, codigo_bp, nombre_completo, email
+FROM dm_actores
+WHERE organizacion_id = 'org-uuid';
+
+-- Bad - Returns all columns (slower)
+SELECT * FROM dm_actores
+WHERE organizacion_id = 'org-uuid';
+```
+
+### 4. Use Views for Complex Joins
+
+```sql
+-- Good - Use view
+SELECT * FROM v_actores_org
+WHERE organizacion_id = 'org-uuid';
+
+-- Acceptable - Direct query
+SELECT a.*, c.city_name
+FROM dm_actores a
+LEFT JOIN config_ciudades c ON a.ciudad_id = c.id
+WHERE a.organizacion_id = 'org-uuid';
+```
+
+### 5. Handle Nulls Properly
+
+```sql
+-- Good - COALESCE for default values
+SELECT
+  codigo_bp,
+  COALESCE(email, 'Sin email') as email,
+  COALESCE(telefono, 'Sin teléfono') as telefono
+FROM dm_actores
+WHERE organizacion_id = 'org-uuid';
+
+-- Good - Filter NULLs
+SELECT *
+FROM tr_tr_tareas
+WHERE oportunidad_id IS NOT NULL;
 ```
 
 ---
 
 ## Performance Tips
 
-### 1. Use Views for Common Queries
+### 1. Use Partial Indexes
 
-**Instead of:**
-```typescript
-// Slow: Multiple JOINs every time
-const { data } = await supabase
-  .from('business_partners')
-  .select('*, personas(*), empresas(*)')
-  .is('eliminado_en', null)
+```sql
+-- Query uses partial index automatically
+SELECT * FROM dm_actores
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL;  -- Uses idx_dm_actores_activos
 ```
 
-**Use:**
-```typescript
-// Fast: Pre-optimized view
-const { data } = await supabase
-  .from('v_actores_unificados')
-  .select('*')
-  .is('eliminado_en', null)
+### 2. Avoid Functions on Indexed Columns
+
+```sql
+-- Bad - Function prevents index use
+WHERE LOWER(nombre_completo) = 'juan perez'
+
+-- Good - Use ILIKE
+WHERE nombre_completo ILIKE 'Juan Perez'
 ```
 
-### 2. Limit Results
+### 3. Use EXISTS Instead of IN
 
-```typescript
-.select('*')
-.limit(50)
-.range(0, 49) // Pagination
+```sql
+-- Good - EXISTS stops at first match
+SELECT *
+FROM dm_actores a
+WHERE EXISTS (
+  SELECT 1 FROM tr_doc_comercial doc
+  WHERE doc.asociado_id = a.id
+    AND doc.estado = 'ganado'
+);
+
+-- Slower - IN scans all values
+SELECT *
+FROM dm_actores a
+WHERE a.id IN (
+  SELECT doc.asociado_id
+  FROM tr_doc_comercial doc
+  WHERE doc.estado = 'ganado'
+);
 ```
 
-### 3. Select Only Needed Fields
+### 4. Limit Result Sets
 
-```typescript
-// Instead of SELECT *
-.select('id, codigo_bp, email_principal')
-```
-
-### 4. Use Indexes for Filters
-
-The database has indexes on:
-- `business_partners.organizacion_id` (organization filter)
-- `business_partners.codigo_bp` (unique lookup)
-- `acciones.codigo_accion` (action lookup)
-- `asignaciones_acciones.accion_id` (assignment queries)
-
-Always filter by indexed columns when possible.
-
-### 5. Avoid N+1 Queries
-
-**Instead of:**
-```typescript
-// N+1: One query per relationship
-for (const bp of businessPartners) {
-  const relations = await supabase.rpc('obtener_relaciones_bp', { bp_id: bp.id })
-}
-```
-
-**Use:**
-```typescript
-// Single query with JOIN
-const { data } = await supabase
-  .from('bp_relaciones')
-  .select('*, bp_origen:business_partners!bp_origen_id(codigo_bp), bp_destino:business_partners!bp_destino_id(codigo_bp)')
-  .in('bp_origen_id', businessPartnerIds)
+```sql
+-- Always use LIMIT for large tables
+SELECT * FROM tr_doc_comercial
+WHERE organizacion_id = 'org-uuid'
+ORDER BY creado_en DESC
+LIMIT 100;
 ```
 
 ---
 
-## Related Documentation
+## See Also
 
-### Database Documentation
-- **[OVERVIEW.md](./OVERVIEW.md)** - Architecture patterns and concepts
-- **[SCHEMA.md](./SCHEMA.md)** - Complete schema with ERD diagrams
-- **[TABLES.md](./TABLES.md)** - Data dictionary for all tables
-- **[FUNCTIONS.md](./FUNCTIONS.md)** - All database functions
-- **[VIEWS.md](./VIEWS.md)** - Pre-built views reference
-- **[RLS.md](./RLS.md)** - Row Level Security policies
-
-### API Documentation
-- **[../api/README.md](../api/README.md)** - API overview and RPC index
-- **[../api/CREAR_PERSONA.md](../api/CREAR_PERSONA.md)** - Create natural person
-- **[../api/CREAR_EMPRESA.md](../api/CREAR_EMPRESA.md)** - Create company
-- **[../api/BP_RELACIONES.md](../api/BP_RELACIONES.md)** - Relationship management
-- **[../api/ACCIONES.md](../api/ACCIONES.md)** - Club shares management
-
----
-
-**Last Generated:** 2026-01-03
-**Total Query Examples:** 50+
-**Frontend Patterns:** Server Actions + TanStack Query
+- [TABLES.md](TABLES.md) - Complete data dictionary
+- [OVERVIEW.md](OVERVIEW.md) - Architecture concepts
+- [SCHEMA.md](SCHEMA.md) - ERD and relationships
+- [VIEWS.md](VIEWS.md) - Database views

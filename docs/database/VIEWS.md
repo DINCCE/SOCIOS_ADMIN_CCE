@@ -1,714 +1,585 @@
-# Database Views Reference
+# Database Views
 
-> **Complete reference for all pre-built database views**
->
-> Last updated: 2026-01-03 | Auto-generated from live database schema
+> **Last Updated:** 2026-01-08
+> **Total Views:** 3
+
+Views provide simplified, read-only access to complex data structures without duplicating data.
 
 ---
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Business Partner Views](#business-partner-views)
-  - [v_actores_unificados](#v_actores_unificados)
-  - [v_personas_org](#v_personas_org)
-  - [v_empresas_org](#v_empresas_org)
-  - [v_empresas_completa](#v_empresas_completa)
-- [Acciones Views](#acciones-views)
-  - [v_asignaciones_vigentes](#v_asignaciones_vigentes)
-  - [v_asignaciones_historial](#v_asignaciones_historial)
-  - [v_acciones_asignadas](#v_acciones_asignadas)
-- [View Usage Patterns](#view-usage-patterns)
-- [Performance Considerations](#performance-considerations)
-- [Related Documentation](#related-documentation)
+1. [v_actores_org](#v_actores_org) - Unified business partners view
+2. [v_doc_comercial_org](#v_doc_comercial_org) - Commercial documents with actor details
+3. [v_tr_tareas_org](#v_tr_tareas_org) - Tasks with opportunity and actor details
 
 ---
 
-## Overview
+## v_actores_org
 
-The database provides **7 pre-built views** that simplify common queries and encapsulate business logic. All views use `SECURITY INVOKER` to respect Row Level Security (RLS) policies.
+**Purpose:** Unified view of all business partners (persons and companies) with all information consolidated in a single table.
 
-### View Categories
+**Description:** > Vista unificada de actores (personas y empresas) con toda la información consolidada en dm_actores. Ya no requiere JOIN con dm_personas ni dm_empresas.
 
-| Category | Views | Purpose |
-|----------|-------|---------|
-| **Business Partners** | 4 | Unified queries for personas + empresas |
-| **Acciones** | 3 | Assignment tracking and history |
+### Definition
 
-### Key Features
-
-- ✅ **SECURITY INVOKER** - Views execute with caller's permissions (respects RLS)
-- ✅ **Soft Delete Filtering** - Automatically excludes deleted records
-- ✅ **Optimized JOINs** - Pre-optimized for common query patterns
-- ✅ **Normalized Fields** - Consistent field names across views
-
-**Total:** 7 views
-
----
-
-## Business Partner Views
-
-### v_actores_unificados
-
-**Purpose:** Combined view of personas + empresas with unified field names for polymorphic queries.
-
-**Use Cases:**
-- Displaying all business partners in a single list
-- Search across both personas and empresas
-- Dropdown/select components that need all BP types
-
-**Definition:**
 ```sql
-CREATE VIEW v_actores_unificados
-WITH (security_invoker = true) AS
+CREATE OR REPLACE VIEW v_actores_org AS
 SELECT
-  bp.id,
-  bp.codigo_bp,
-  bp.tipo_actor,
-  bp.organizacion_id,
-  -- Unified name field
-  COALESCE(
-    p.nombres || ' ' || p.apellidos,
-    e.razon_social
-  ) AS nombre_completo,
-  -- Unified identification
-  COALESCE(
-    p.numero_documento,
-    e.nit || '-' || e.digito_verificacion
-  ) AS identificacion,
-  -- Contact fields
-  bp.email_principal,
-  COALESCE(bp.celular_principal, bp.telefono_principal) AS telefono,
-  -- Metadata
-  bp.atributos,
-  COALESCE(p.perfil_persona, e.perfil_empresa) AS perfil,
+  -- Common fields
+  id,
+  codigo_bp,
+  tipo_actor,
+  organizacion_id,
+  email,
+  telefono,
+  whatsapp,
+  foto_url,
+  ciudad_id,
+  direccion,
+  activo,
+  fecha_inactivacion,
+  motivo_inactivacion,
+  atributos,
+  -- Person-specific fields
+  primer_nombre,
+  segundo_nombre,
+  primer_apellido,
+  segundo_apellido,
+  nombre_completo,
+  fecha_nacimiento,
+  estado_civil,
+  genero,
+  -- Company-specific fields
+  razon_social,
+  nit,
+  digito_verificacion,
+  -- Document fields
+  tipo_documento,
+  num_documento,
+  identificacion_completa,
+  -- Soft delete
+  eliminado_en,
+  eliminado_por,
   -- Audit fields
-  bp.creado_en,
-  bp.actualizado_en,
-  bp.creado_por,
-  bp.actualizado_por
-FROM business_partners bp
-LEFT JOIN personas p ON bp.id = p.id AND bp.tipo_actor = 'persona'
-LEFT JOIN empresas e ON bp.id = e.id AND bp.tipo_actor = 'empresa'
-WHERE bp.eliminado_en IS NULL;
+  creado_en,
+  actualizado_en,
+  creado_por,
+  actualizado_por
+FROM dm_actores
+WHERE eliminado_en IS NULL;
 ```
 
-**TypeScript Usage:**
-```typescript
-// Get all business partners
-const { data, error } = await supabase
-  .from('v_actores_unificados')
-  .select('*')
-  .eq('organizacion_id', orgId)
-  .order('nombre_completo')
+### Columns
 
-// Search by name
-const { data, error } = await supabase
-  .from('v_actores_unificados')
-  .select('*')
-  .ilike('nombre_completo', `%${searchTerm}%`)
-  .eq('organizacion_id', orgId)
+| Column | Type | Source | Description |
+|--------|------|--------|-------------|
+| **Common Fields** |||||
+| id | uuid | dm_actores.id | Primary key |
+| codigo_bp | text | dm_actores.codigo_bp | Business partner code |
+| tipo_actor | tipo_actor_enum | dm_actores.tipo_actor | 'persona' or 'empresa' |
+| organizacion_id | uuid | dm_actores.organizacion_id | Organization |
+| email | text | dm_actores.email | Email address |
+| telefono | text | dm_actores.telefono | Phone number |
+| whatsapp | text | dm_actores.whatsapp | WhatsApp |
+| foto_url | text | dm_actores.foto_url | Profile photo URL |
+| ciudad_id | uuid | dm_actores.ciudad_id | City (FK: config_ciudades) |
+| direccion | text | dm_actores.direccion | Street address |
+| activo | boolean | dm_actores.activo | Active status |
+| **Person Fields** |||||
+| primer_nombre | text | dm_actores.primer_nombre | First name |
+| segundo_nombre | text | dm_actores.segundo_nombre | Middle name |
+| primer_apellido | text | dm_actores.primer_apellido | First surname |
+| segundo_apellido | text | dm_actores.segundo_apellido | Second surname |
+| nombre_completo | text | dm_actores.nombre_completo | Full name (computed) |
+| fecha_nacimiento | date | dm_actores.fecha_nacimiento | Birth date |
+| estado_civil | text | dm_actores.estado_civil | Civil status |
+| genero | text | dm_actores.genero | Gender |
+| **Company Fields** |||||
+| razon_social | text | dm_actores.razon_social | Legal business name |
+| nit | text | dm_actores.nit | Tax ID |
+| digito_verificacion | integer | dm_actores.digito_verificacion | NIT check digit |
+| **Document Fields** |||||
+| tipo_documento | text | dm_actores.tipo_documento | Document type |
+| num_documento | text | dm_actores.num_documento | Document number |
+| identificacion_completa | text | (computed) | Full identification |
+| **Audit Fields** |||||
+| eliminado_en | timestamptz | dm_actores.eliminado_en | Soft delete timestamp |
+| creado_en | timestamptz | dm_actores.creado_en | Creation timestamp |
+| actualizado_en | timestamptz | dm_actores.actualizado_en | Last update |
 
-// Filter by type
-const { data, error } = await supabase
-  .from('v_actores_unificados')
-  .select('*')
-  .eq('tipo_actor', 'persona')
-  .eq('organizacion_id', orgId)
+### Usage Examples
+
+```sql
+-- Get all active persons for an organization
+SELECT
+  codigo_bp,
+  nombre_completo,
+  email,
+  telefono
+FROM v_actores_org
+WHERE organizacion_id = 'org-uuid'
+  AND tipo_actor = 'persona'
+  AND activo = true
+ORDER BY nombre_completo;
+
+-- Get all companies
+SELECT
+  codigo_bp,
+  razon_social,
+  nit,
+  email
+FROM v_actores_org
+WHERE tipo_actor = 'empresa'
+  AND activo = true;
+
+-- Search by identification
+SELECT *
+FROM v_actores_org
+WHERE num_documento = '12345678';
 ```
 
-**Fields:**
+### Benefits
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | Business partner ID |
-| `codigo_bp` | TEXT | BP code (BP-0000001) |
-| `tipo_actor` | TEXT | 'persona' or 'empresa' |
-| `organizacion_id` | UUID | Organization ID |
-| `nombre_completo` | TEXT | Unified name (nombres + apellidos OR razon_social) |
-| `identificacion` | TEXT | Unified ID (numero_documento OR nit-dv) |
-| `email_principal` | TEXT | Primary email |
-| `telefono` | TEXT | Primary phone (celular OR telefono) |
-| `atributos` | JSONB | Custom metadata |
-| `perfil` | JSONB | Unified profile (perfil_persona OR perfil_empresa) |
-| `creado_en` | TIMESTAMPTZ | Creation timestamp |
-| `actualizado_en` | TIMESTAMPTZ | Last update timestamp |
-| `creado_por` | UUID | Creator user ID |
-| `actualizado_por` | UUID | Last updater user ID |
+1. **Simplified queries** - No need to JOIN with dm_personas or dm_empresas (no longer exist)
+2. **Single source of truth** - All actor data in one place using STI pattern
+3. **Single Table Inheritance** - All actor types consolidated in dm_actores with tipo_actor discriminator
+4. **Soft delete filter** - Automatically excludes soft-deleted records
 
 ---
 
-### v_personas_org
+## v_doc_comercial_org
 
-**Purpose:** Filtered view of active personas per organization with base table data.
+**Purpose:** Commercial documents (opportunities) with full actor details for requester and responsible person.
 
-**Use Cases:**
-- List all natural persons in organization
-- Persona-specific queries
-- Member directories
+**Description:** > Vista de documentos comerciales con datos de solicitante y pagador (usando dm_actores consolidado). Tabla origen: tr_doc_comercial
 
-**Definition:**
+### Definition
+
 ```sql
-CREATE VIEW v_personas_org
-WITH (security_invoker = true) AS
+CREATE OR REPLACE VIEW v_doc_comercial_org AS
 SELECT
-  p.*,
-  bp.codigo_bp,
-  bp.organizacion_id,
-  bp.email_principal,
-  bp.celular_principal,
-  bp.atributos,
-  bp.creado_en,
-  bp.actualizado_en,
-  bp.creado_por,
-  bp.actualizado_por
-FROM personas p
-JOIN business_partners bp ON p.id = bp.id
-WHERE bp.tipo_actor = 'persona'
-  AND bp.eliminado_en IS NULL;
-```
-
-**TypeScript Usage:**
-```typescript
-// Get all personas in organization
-const { data, error } = await supabase
-  .from('v_personas_org')
-  .select('*')
-  .eq('organizacion_id', orgId)
-  .order('apellidos', { ascending: true })
-
-// Get by document number
-const { data, error } = await supabase
-  .from('v_personas_org')
-  .select('*')
-  .eq('numero_documento', '1234567890')
-  .single()
-```
-
-**Fields:** All fields from `personas` + selected `business_partners` fields
-
----
-
-### v_empresas_org
-
-**Purpose:** Filtered view of active empresas per organization with base table data.
-
-**Use Cases:**
-- List all companies in organization
-- Company directories
-- Corporate member lists
-
-**Definition:**
-```sql
-CREATE VIEW v_empresas_org
-WITH (security_invoker = true) AS
-SELECT
-  e.*,
-  bp.codigo_bp,
-  bp.organizacion_id,
-  bp.email_principal,
-  bp.telefono_principal,
-  bp.atributos,
-  bp.creado_en,
-  bp.actualizado_en,
-  bp.creado_por,
-  bp.actualizado_por
-FROM empresas e
-JOIN business_partners bp ON e.id = bp.id
-WHERE bp.tipo_actor = 'empresa'
-  AND bp.eliminado_en IS NULL;
-```
-
-**TypeScript Usage:**
-```typescript
-// Get all empresas
-const { data, error } = await supabase
-  .from('v_empresas_org')
-  .select('*')
-  .eq('organizacion_id', orgId)
-  .order('razon_social')
-
-// Get by NIT
-const { data, error } = await supabase
-  .from('v_empresas_org')
-  .select('*')
-  .eq('nit', '900123456')
-  .single()
-```
-
-**Fields:** All fields from `empresas` + selected `business_partners` fields
-
----
-
-### v_empresas_completa
-
-**Purpose:** Complete empresa data with joins to organization and legal representative.
-
-**Use Cases:**
-- Detailed company view
-- Company profile pages
-- Reports requiring full company data
-
-**Definition:**
-```sql
-CREATE VIEW v_empresas_completa
-WITH (security_invoker = true) AS
-SELECT
-  e.*,
-  bp.codigo_bp,
-  bp.organizacion_id,
-  bp.email_principal,
-  bp.telefono_principal,
-  bp.atributos,
-  bp.creado_en,
-  bp.actualizado_en,
-  -- Organization data
-  o.nombre AS organizacion_nombre,
-  -- Legal representative data
-  rep.codigo_bp AS rep_legal_codigo,
-  COALESCE(
-    rep_p.nombres || ' ' || rep_p.apellidos,
-    rep_e.razon_social
-  ) AS rep_legal_nombre
-FROM empresas e
-JOIN business_partners bp ON e.id = bp.id
-JOIN organizations o ON bp.organizacion_id = o.id
-LEFT JOIN business_partners rep ON e.representante_legal_id = rep.id
-LEFT JOIN personas rep_p ON rep.id = rep_p.id
-LEFT JOIN empresas rep_e ON rep.id = rep_e.id
-WHERE bp.tipo_actor = 'empresa'
-  AND bp.eliminado_en IS NULL;
-```
-
-**TypeScript Usage:**
-```typescript
-// Get complete empresa data
-const { data, error } = await supabase
-  .from('v_empresas_completa')
-  .select('*')
-  .eq('id', empresaId)
-  .single()
-```
-
-**Additional Fields:**
-- `organizacion_nombre` - Organization name
-- `rep_legal_codigo` - Legal representative BP code
-- `rep_legal_nombre` - Legal representative full name
-
----
-
-## Acciones Views
-
-### v_asignaciones_vigentes
-
-**Purpose:** Current active assignments with business partner details (only valid assignments where `es_vigente = TRUE`).
-
-**Use Cases:**
-- List current action owners
-- Active beneficiaries display
-- "Who owns this action?" queries
-
-**Definition:**
-```sql
-CREATE VIEW v_asignaciones_vigentes
-WITH (security_invoker = true) AS
-SELECT
-  aa.id,
-  aa.accion_id,
-  aa.business_partner_id,
-  aa.tipo_asignacion,
-  aa.subcodigo,
-  aa.codigo_completo,
-  aa.fecha_inicio,
-  aa.atributos,
-  aa.creado_en,
-  aa.creado_por,
-  -- Accion data
-  a.codigo AS accion_codigo,
-  a.nombre AS accion_nombre,
-  -- Business partner data
-  bp.codigo_bp AS persona_codigo,
-  bp.tipo_actor AS persona_tipo,
-  COALESCE(
-    p.nombres || ' ' || p.apellidos,
-    e.razon_social
-  ) AS persona_nombre
-FROM asignaciones_acciones aa
-JOIN acciones a ON aa.accion_id = a.id
-JOIN business_partners bp ON aa.business_partner_id = bp.id
-LEFT JOIN personas p ON bp.id = p.id
-LEFT JOIN empresas e ON bp.id = e.id
-WHERE aa.es_vigente = TRUE
-  AND aa.eliminado_en IS NULL
-  AND a.eliminado_en IS NULL
-  AND bp.eliminado_en IS NULL;
-```
-
-**TypeScript Usage:**
-```typescript
-// Get current owner of action
-const { data, error } = await supabase
-  .from('v_asignaciones_vigentes')
-  .select('*')
-  .eq('accion_id', accionId)
-  .eq('tipo_asignacion', 'dueño')
-  .single()
-
-// Get all beneficiaries
-const { data, error } = await supabase
-  .from('v_asignaciones_vigentes')
-  .select('*')
-  .eq('accion_id', accionId)
-  .eq('tipo_asignacion', 'beneficiario')
-
-// Get all assignments for a person
-const { data, error } = await supabase
-  .from('v_asignaciones_vigentes')
-  .select('*')
-  .eq('business_partner_id', personaId)
-```
-
-**Fields:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | Assignment ID |
-| `accion_id` | UUID | Action ID |
-| `business_partner_id` | UUID | Business partner ID |
-| `tipo_asignacion` | TEXT | dueño, titular, or beneficiario |
-| `subcodigo` | TEXT | Assignment subcode (00-99) |
-| `codigo_completo` | TEXT | Complete code (accion + subcodigo) |
-| `fecha_inicio` | DATE | Assignment start date |
-| `atributos` | JSONB | Assignment metadata |
-| `accion_codigo` | TEXT | Action code (4398) |
-| `accion_nombre` | TEXT | Action name |
-| `persona_codigo` | TEXT | BP code (BP-0000001) |
-| `persona_tipo` | TEXT | 'persona' or 'empresa' |
-| `persona_nombre` | TEXT | BP full name |
-
----
-
-### v_asignaciones_historial
-
-**Purpose:** Complete assignment history including finalized assignments (all assignments regardless of `es_vigente` status).
-
-**Use Cases:**
-- Historical ownership tracking
-- Audit trails
-- "Who owned this action in 2020?" queries
-- Transfer history
-
-**Definition:**
-```sql
-CREATE VIEW v_asignaciones_historial
-WITH (security_invoker = true) AS
-SELECT
-  aa.id,
-  aa.accion_id,
-  aa.business_partner_id,
-  aa.tipo_asignacion,
-  aa.subcodigo,
-  aa.codigo_completo,
-  aa.fecha_inicio,
-  aa.fecha_fin,
-  aa.es_vigente,
-  aa.atributos,
-  aa.creado_en,
-  aa.creado_por,
-  -- Accion data
-  a.codigo AS accion_codigo,
-  a.nombre AS accion_nombre,
-  -- Business partner data
-  bp.codigo_bp AS persona_codigo,
-  bp.tipo_actor AS persona_tipo,
-  COALESCE(
-    p.nombres || ' ' || p.apellidos,
-    e.razon_social
-  ) AS persona_nombre,
-  -- Status
+  -- Document fields
+  doc.id,
+  doc.codigo,
+  doc.tipo,
+  doc.estado,
+  doc.organizacion_id,
+  doc.fecha_doc,
+  doc.fecha_venc_doc,
+  -- Financials
+  doc.items,
+  doc.moneda_iso,
+  doc.valor_neto,
+  doc.valor_descuento,
+  doc.valor_impuestos,
+  doc.valor_total,
+  doc.monto_estimado,
+  -- Actors
+  doc.asociado_id,
+  doc.solicitante_id,
+  doc.responsable_id,
+  doc.pagador_id,
+  -- Requester details (from dm_actores)
+  solicitante.codigo_bp AS solicitante_codigo,
+  solicitante.tipo_actor AS solicitante_tipo,
   CASE
-    WHEN aa.fecha_fin IS NULL THEN 'Vigente'
-    WHEN aa.fecha_fin <= CURRENT_DATE THEN 'Finalizada'
-    ELSE 'Por Finalizar'
-  END AS estado
-FROM asignaciones_acciones aa
-JOIN acciones a ON aa.accion_id = a.id
-JOIN business_partners bp ON aa.business_partner_id = bp.id
-LEFT JOIN personas p ON bp.id = p.id
-LEFT JOIN empresas e ON bp.id = e.id
-WHERE aa.eliminado_en IS NULL
-  AND a.eliminado_en IS NULL
-  AND bp.eliminado_en IS NULL;
+    WHEN solicitante.tipo_actor = 'persona' THEN solicitante.nombre_completo
+    WHEN solicitante.tipo_actor = 'empresa' THEN solicitante.razon_social
+  END AS solicitante_nombre,
+  solicitante.email AS solicitante_email,
+  solicitante.telefono AS solicitante_telefono,
+  -- Responsible person details
+  responsable.codigo_bp AS responsable_codigo,
+  responsable.tipo_actor AS responsable_tipo,
+  CASE
+    WHEN responsable.tipo_actor = 'persona' THEN responsable.nombre_completo
+    WHEN responsable.tipo_actor = 'empresa' THEN responsable.razon_social
+  END AS responsable_nombre,
+  responsable.email AS responsable_email,
+  -- Metadata
+  doc.documento_origen_id,
+  doc.notas,
+  doc.tags,
+  doc.atributos,
+  -- Audit
+  doc.eliminado_en,
+  doc.creado_en,
+  doc.actualizado_en
+FROM tr_doc_comercial doc
+LEFT JOIN dm_actores solicitante ON doc.solicitante_id = solicitante.id
+LEFT JOIN dm_actores responsable ON doc.responsable_id = responsable.id
+WHERE doc.eliminado_en IS NULL;
 ```
 
-**TypeScript Usage:**
-```typescript
-// Get complete ownership history
-const { data, error } = await supabase
-  .from('v_asignaciones_historial')
-  .select('*')
-  .eq('accion_id', accionId)
-  .eq('tipo_asignacion', 'dueño')
-  .order('fecha_inicio', { ascending: false })
+### Key Columns
 
-// Get assignments in date range
-const { data, error } = await supabase
-  .from('v_asignaciones_historial')
-  .select('*')
-  .eq('accion_id', accionId)
-  .gte('fecha_inicio', '2024-01-01')
-  .lte('fecha_inicio', '2024-12-31')
-```
+| Column | Type | Description |
+|--------|------|-------------|
+| **Document Identity** ||||
+| id | uuid | Document ID |
+| codigo | text | Opportunity code |
+| tipo | tr_doc_comercial_tipo | Document type |
+| estado | tr_doc_comercial_estados | Status |
+| **Financials** ||||
+| valor_neto | numeric | Net value |
+| valor_descuento | numeric | Discount |
+| valor_impuestos | numeric | Taxes |
+| valor_total | numeric | Total (computed) |
+| **Requester (Solicitante)** ||||
+| solicitante_nombre | text | Name (person or company) |
+| solicitante_email | text | Email |
+| solicitante_telefono | text | Phone |
+| **Responsible Person** ||||
+| responsable_nombre | text | Name |
+| responsable_email | text | Email |
 
-**Additional Fields:**
-- `fecha_fin` - Assignment end date (NULL if active)
-- `es_vigente` - Boolean (TRUE if active)
-- `estado` - Status text ('Vigente', 'Finalizada', 'Por Finalizar')
+### Usage Examples
 
----
-
-### v_acciones_asignadas
-
-**Purpose:** Summary view showing owner (dueño), holder (titular), and beneficiaries per action.
-
-**Use Cases:**
-- Action ownership dashboard
-- Quick "who's associated with this action?" queries
-- Assignment summaries
-
-**Definition:**
 ```sql
-CREATE VIEW v_acciones_asignadas
-WITH (security_invoker = true) AS
+-- Get opportunities with requester details
 SELECT
-  a.id AS accion_id,
-  a.codigo AS accion_codigo,
-  a.nombre AS accion_nombre,
-  a.organizacion_id,
-  -- Owner
-  (
-    SELECT persona_codigo
-    FROM v_asignaciones_vigentes
-    WHERE accion_id = a.id
-      AND tipo_asignacion = 'dueño'
-    LIMIT 1
-  ) AS dueno_codigo,
-  (
-    SELECT persona_nombre
-    FROM v_asignaciones_vigentes
-    WHERE accion_id = a.id
-      AND tipo_asignacion = 'dueño'
-    LIMIT 1
-  ) AS dueno_nombre,
-  -- Titular
-  (
-    SELECT persona_codigo
-    FROM v_asignaciones_vigentes
-    WHERE accion_id = a.id
-      AND tipo_asignacion = 'titular'
-    LIMIT 1
-  ) AS titular_codigo,
-  (
-    SELECT persona_nombre
-    FROM v_asignaciones_vigentes
-    WHERE accion_id = a.id
-      AND tipo_asignacion = 'titular'
-    LIMIT 1
-  ) AS titular_nombre,
-  -- Beneficiaries (array)
-  (
-    SELECT array_agg(persona_codigo ORDER BY codigo_completo)
-    FROM v_asignaciones_vigentes
-    WHERE accion_id = a.id
-      AND tipo_asignacion = 'beneficiario'
-  ) AS beneficiarios_codigos,
-  (
-    SELECT array_agg(persona_nombre ORDER BY codigo_completo)
-    FROM v_asignaciones_vigentes
-    WHERE accion_id = a.id
-      AND tipo_asignacion = 'beneficiario'
-  ) AS beneficiarios_nombres,
-  -- Counts
-  (
-    SELECT COUNT(*)
-    FROM v_asignaciones_vigentes
-    WHERE accion_id = a.id
-      AND tipo_asignacion = 'beneficiario'
-  ) AS total_beneficiarios
-FROM acciones a
-WHERE a.eliminado_en IS NULL;
+  codigo,
+  tipo,
+  estado,
+  solicitante_nombre,
+  responsable_nombre,
+  valor_total
+FROM v_doc_comercial_org
+WHERE organizacion_id = 'org-uuid'
+  AND estado IN ('propuesta', 'negociacion')
+ORDER BY fecha_doc DESC;
+
+-- Pipeline report by requester
+SELECT
+  solicitante_nombre,
+  estado,
+  COUNT(*) as cantidad,
+  SUM(valor_total) as valor_total
+FROM v_doc_comercial_org
+WHERE organizacion_id = 'org-uuid'
+  AND eliminado_en IS NULL
+GROUP BY solicitante_nombre, estado
+ORDER BY valor_total DESC;
 ```
 
-**TypeScript Usage:**
-```typescript
-// Get all actions with assignments summary
-const { data, error } = await supabase
-  .from('v_acciones_asignadas')
-  .select('*')
-  .eq('organizacion_id', orgId)
-  .order('accion_codigo')
+### Benefits
 
-// Get specific action summary
-const { data, error } = await supabase
-  .from('v_acciones_asignadas')
-  .select('*')
-  .eq('accion_codigo', '4398')
-  .single()
-```
-
-**Fields:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `accion_id` | UUID | Action ID |
-| `accion_codigo` | TEXT | Action code (4398) |
-| `accion_nombre` | TEXT | Action name |
-| `organizacion_id` | UUID | Organization ID |
-| `dueno_codigo` | TEXT | Owner BP code (or NULL) |
-| `dueno_nombre` | TEXT | Owner full name (or NULL) |
-| `titular_codigo` | TEXT | Holder BP code (or NULL) |
-| `titular_nombre` | TEXT | Holder full name (or NULL) |
-| `beneficiarios_codigos` | TEXT[] | Array of beneficiary BP codes |
-| `beneficiarios_nombres` | TEXT[] | Array of beneficiary names |
-| `total_beneficiarios` | BIGINT | Count of beneficiaries |
+1. **Pre-joined actor data** - No need to JOIN dm_actores separately
+2. **Smart name resolution** - Automatically chooses nombre_completo or razon_social
+3. **Soft delete filter** - Excludes deleted documents
+4. **Contact info included** - Email and phone for immediate use
 
 ---
 
-## View Usage Patterns
+## v_tr_tareas_org
 
-### Prefer Views Over Manual JOINs
+**Purpose:** Tasks with related opportunity details and business partner information.
 
-**❌ Don't:**
-```typescript
-// Slow: Multiple JOINs every time
-const { data } = await supabase
-  .from('business_partners')
-  .select(`
-    *,
-    personas(*),
-    empresas(*)
-  `)
-  .is('eliminado_en', null)
-  .eq('organizacion_id', orgId)
+**Description:** > Vista de tr_tareas con información de oportunidad y actor relacionado (usando dm_actores consolidado). Tabla origen: tr_tr_tareas
+
+### Definition
+
+```sql
+CREATE OR REPLACE VIEW v_tr_tareas_org AS
+SELECT
+  -- Task fields
+  t.id,
+  t.codigo_tarea,
+  t.titulo,
+  t.descripcion,
+  t.prioridad,
+  t.estado,
+  t.organizacion_id,
+  t.fecha_vencimiento,
+  -- Relationships
+  t.oportunidad_id,
+  t.asignado_a,
+  t.relacionado_con_bp,
+  -- Opportunity details
+  opp.codigo AS oportunidad_codigo,
+  opp.tipo AS oportunidad_tipo,
+  opp.estado AS oportunidad_estado,
+  opp.valor_total AS oportunidad_valor,
+  -- Assigned person details
+  asignado.codigo_bp AS asignado_codigo,
+  asignado.tipo_actor AS asignado_tipo,
+  CASE
+    WHEN asignado.tipo_actor = 'persona' THEN asignado.nombre_completo
+    WHEN asignado.tipo_actor = 'empresa' THEN asignado.razon_social
+  END AS asignado_nombre,
+  asignado.email AS asignado_email,
+  asignado.whatsapp AS asignado_whatsapp,
+  -- Related business partner details
+  relacionado.codigo_bp AS relacionado_codigo,
+  relacionado.tipo_actor AS relacionado_tipo,
+  CASE
+    WHEN relacionado.tipo_actor = 'persona' THEN relacionado.nombre_completo
+    WHEN relacionado.tipo_actor = 'empresa' THEN relacionado.razon_social
+  END AS relacionado_nombre,
+  -- Metadata
+  t.atributos,
+  -- Audit
+  t.eliminado_en,
+  t.creado_en,
+  t.actualizado_en
+FROM tr_tr_tareas t
+LEFT JOIN tr_doc_comercial opp ON t.oportunidad_id = opp.id
+LEFT JOIN dm_actores asignado ON t.asignado_a = asignado.id
+LEFT JOIN dm_actores relacionado ON t.relacionado_con_bp = relacionado.id
+WHERE t.eliminado_en IS NULL;
 ```
 
-**✅ Do:**
-```typescript
-// Fast: Pre-optimized view
-const { data } = await supabase
-  .from('v_actores_unificados')
-  .select('*')
-  .eq('organizacion_id', orgId)
+### Key Columns
+
+| Column | Type | Description |
+|--------|------|-------------|
+| **Task** ||||
+| id | uuid | Task ID |
+| codigo_tarea | text | Task code |
+| titulo | text | Task title |
+| prioridad | tr_tr_tareas_prioridad | Priority |
+| estado | tr_tr_tareas_estado | Status |
+| fecha_vencimiento | date | Due date |
+| **Opportunity** ||||
+| oportunidad_codigo | text | Opportunity code |
+| oportunidad_estado | tr_doc_comercial_estados | Opportunity status |
+| oportunidad_valor | numeric | Opportunity value |
+| **Assigned Person** ||||
+| asignado_nombre | text | Name of assignee |
+| asignado_email | text | Email |
+| asignado_whatsapp | text | WhatsApp |
+| **Related Business Partner** ||||
+| relacionado_nombre | text | Related partner name |
+
+### Usage Examples
+
+```sql
+-- Get tasks for a user with opportunity context
+SELECT
+  codigo_tarea,
+  titulo,
+  prioridad,
+  estado,
+  fecha_vencimiento,
+  asignado_nombre,
+  oportunidad_codigo,
+  oportunidad_valor
+FROM v_tr_tareas_org
+WHERE organizacion_id = 'org-uuid'
+  AND asignado_a = 'user-uuid'
+  AND estado != 'completada'
+ORDER BY prioridad DESC, fecha_vencimiento ASC;
+
+-- Tasks by opportunity
+SELECT
+  oportunidad_codigo,
+  COUNT(*) as total_tr_tareas,
+  SUM(CASE WHEN estado = 'completada' THEN 1 ELSE 0 END) as completadas,
+  SUM(CASE WHEN estado = 'pendiente' THEN 1 ELSE 0 END) as pendientes
+FROM v_tr_tareas_org
+WHERE organizacion_id = 'org-uuid'
+  AND oportunidad_id IS NOT NULL
+GROUP BY oportunidad_codigo;
+
+-- Overdue tasks
+SELECT
+  codigo_tarea,
+  titulo,
+  asignado_nombre,
+  asignado_whatsapp,
+  fecha_vencimiento
+FROM v_tr_tareas_org
+WHERE fecha_vencimiento < CURRENT_DATE
+  AND estado NOT IN ('completada', 'cancelada');
 ```
 
-### Combine Views with Filters
+### Benefits
 
-```typescript
-// Get all active owners
-const { data, error } = await supabase
-  .from('v_asignaciones_vigentes')
-  .select('*')
-  .eq('tipo_asignacion', 'dueño')
-  .eq('organizacion_id', orgId)
+1. **Rich context** - Task + opportunity + actor details in one query
+2. **Smart name resolution** - Automatically shows correct name field
+3. **Contact information** - Email and WhatsApp ready for notifications
+4. **Soft delete filter** - Only active tasks shown
 
-// Get personas created this year
-const { data, error } = await supabase
-  .from('v_personas_org')
-  .select('*')
-  .gte('creado_en', '2024-01-01')
-  .eq('organizacion_id', orgId)
-```
+---
 
-### Use Views for Reporting
+## View Patterns
 
-```typescript
-// Monthly assignment report
-const { data, error } = await supabase
-  .from('v_asignaciones_historial')
-  .select('*')
-  .gte('fecha_inicio', '2024-01-01')
-  .lt('fecha_inicio', '2024-02-01')
-  .order('fecha_inicio')
+### Common Characteristics
 
-// Combine multiple views for complex reports
-const [personas, empresas, asignaciones] = await Promise.all([
-  supabase.from('v_personas_org').select('*'),
-  supabase.from('v_empresas_org').select('*'),
-  supabase.from('v_asignaciones_vigentes').select('*')
-])
-```
+All views share these patterns:
+
+1. **Soft Delete Filter**
+   ```sql
+   WHERE eliminado_en IS NULL
+   ```
+   Automatically excludes soft-deleted records.
+
+2. **Smart Name Resolution**
+   ```sql
+   CASE
+     WHEN tipo_actor = 'persona' THEN nombre_completo
+     WHEN tipo_actor = 'empresa' THEN razon_social
+   END
+   ```
+   Shows the appropriate name field based on actor type.
+
+3. **Organization Isolation**
+   All views include `organizacion_id` for filtering by tenant.
+
+4. **Contact Info Inclusion**
+   Email, phone, and WhatsApp included for immediate use.
 
 ---
 
 ## Performance Considerations
 
-### 1. Views Respect RLS
+### View Performance
 
-All views use `SECURITY INVOKER`, meaning:
-- ✅ RLS policies are enforced on underlying tables
-- ✅ User sees only data they have permission to access
-- ✅ No security bypass risks
+Views in PostgreSQL are **not materialized** by default. This means:
 
-### 2. No Materialization
+- **Pros**: Always show current data, no storage overhead
+- **Cons**: Query executes underlying logic each time
 
-Views are **NOT materialized** - they execute query every time:
-- Data is always fresh (no cache staleness)
-- Performance depends on underlying table indexes
-- Consider caching view results in TanStack Query
+### Optimization Tips
 
-**Example caching:**
-```typescript
-const { data } = useQuery({
-  queryKey: ['actores', orgId],
-  queryFn: async () => {
-    const { data } = await supabase
-      .from('v_actores_unificados')
-      .select('*')
-      .eq('organizacion_id', orgId)
-    return data
-  },
-  staleTime: 60 * 1000, // Cache for 1 minute
-})
-```
+1. **Index your WHERE clauses**:
+   ```sql
+   -- Good: Uses partial index
+   SELECT * FROM v_actores_org
+   WHERE organizacion_id = 'uuid'
+     AND eliminado_en IS NULL;  -- Uses idx_dm_actores_activos
+   ```
 
-### 3. Index Optimization
+2. **Limit columns**:
+   ```sql
+   -- Good: Only select needed columns
+   SELECT codigo_bp, nombre_completo, email
+   FROM v_actores_org;
+   ```
 
-Views benefit from indexes on:
-- `business_partners.organizacion_id` (organization filter)
-- `business_partners.codigo_bp` (unique lookup)
-- `acciones.codigo_accion` (action lookup)
-- `asignaciones_acciones.accion_id` (assignment queries)
+3. **Consider materialized views** for:
+   - Heavy aggregations
+   - Frequently accessed data
+   - Complex joins
 
-### 4. Limit Results
+### Example: Materialized View for Dashboard
 
-Always limit results for large datasets:
-```typescript
-.select('*')
-.limit(100)
-.range(0, 49) // Pagination
+```sql
+CREATE MATERIALIZED VIEW mv_dashboard_opportunities AS
+SELECT
+  organizacion_id,
+  estado,
+  COUNT(*) as cantidad,
+  SUM(valor_total) as valor_total
+FROM tr_doc_comercial
+WHERE eliminado_en IS NULL
+GROUP BY organizacion_id, estado;
+
+CREATE UNIQUE INDEX ON mv_dashboard_opportunities(organizacion_id, estado);
+
+-- Refresh periodically
+REFRESH MATERIALIZED VIEW mv_dashboard_opportunities;
 ```
 
 ---
 
-## Related Documentation
+## Using Views in Application Code
 
-### Database Documentation
-- **[OVERVIEW.md](./OVERVIEW.md)** - Architecture patterns and concepts
-- **[SCHEMA.md](./SCHEMA.md)** - Complete schema with ERD diagrams
-- **[TABLES.md](./TABLES.md)** - Data dictionary for all tables
-- **[FUNCTIONS.md](./FUNCTIONS.md)** - All database functions
-- **[RLS.md](./RLS.md)** - Row Level Security policies
-- **[QUERIES.md](./QUERIES.md)** - SQL cookbook and patterns
+### Supabase Client (TypeScript)
 
-### API Documentation
-- **[../api/README.md](../api/README.md)** - API overview and RPC index
-- **[../api/CREAR_PERSONA.md](../api/CREAR_PERSONA.md)** - Create natural person
-- **[../api/CREAR_EMPRESA.md](../api/CREAR_EMPRESA.md)** - Create company
-- **[../api/BP_RELACIONES.md](../api/BP_RELACIONES.md)** - Relationship management
-- **[../api/ACCIONES.md](../api/ACCIONES.md)** - Club shares management
+```typescript
+// Get all actors for an organization
+const { data: actores } = await supabase
+  .from('v_actores_org')
+  .select('codigo_bp, nombre_completo, email, tipo_actor')
+  .eq('organizacion_id', orgId)
+  .eq('activo', true);
+
+// Get tasks with opportunity context
+const { data: tr_tareas } = await supabase
+  .from('v_tr_tareas_org')
+  .select('*')
+  .eq('asignado_a', userId)
+  .eq('estado', 'pendiente')
+  .order('fecha_vencimiento', { ascending: true });
+
+// Get opportunities pipeline
+const { data: tr_doc_comercial } = await supabase
+  .from('v_doc_comercial_org')
+  .select('*')
+  .eq('organizacion_id', orgId)
+  .gte('fecha_doc', '2026-01-01')
+  .order('fecha_doc', { ascending: false });
+```
+
+### Raw SQL
+
+```sql
+-- Join view with other tables
+SELECT
+  v.*,
+  COUNT(t.id) as total_tr_tareas
+FROM v_actores_org v
+LEFT JOIN tr_tr_tareas t ON t.asignado_a = v.id
+WHERE v.organizacion_id = 'org-uuid'
+  AND v.tipo_actor = 'persona'
+GROUP BY v.id
+ORDER BY v.nombre_completo;
+```
 
 ---
 
-**Last Generated:** 2026-01-03
-**Total Views:** 7 (4 Business Partners + 3 Acciones)
-**Security:** All views use SECURITY INVOKER
+## Security
+
+### RLS on Views
+
+Views **inherit RLS policies** from their underlying tables:
+
+- If user can read `dm_actores`, they can read `v_actores_org`
+- Organization isolation is automatically enforced
+- Soft delete filtering is built into the view definition
+
+### Best Practices
+
+1. **Never grant direct SELECT on base tables** to application users
+2. **Use views as the API layer** for data access
+3. **Combine with RLS** for defense in depth
+4. **Add comments** to views explaining their purpose
+
+---
+
+## Maintenance
+
+### When to Update Views
+
+Update views when:
+1. Underlying table schema changes
+2. New columns added that should be exposed
+3. Business logic changes (e.g., name resolution)
+4. Performance optimization needed
+
+### View Versioning
+
+Consider versioning for breaking changes:
+
+```sql
+-- Original view
+CREATE VIEW v_actores_org AS ...
+
+-- New version with different columns
+CREATE VIEW v_actores_org_v2 AS ...
+
+-- Gradually migrate application code
+DROP VIEW v_actores_org;
+ALTER VIEW v_actores_org_v2 RENAME TO v_actores_org;
+```
+
+---
+
+## See Also
+
+- [TABLES.md](TABLES.md) - Complete table definitions
+- [OVERVIEW.md](OVERVIEW.md) - Architecture concepts
+- [SCHEMA.md](SCHEMA.md) - Relationships and ERD
+- [QUERIES.md](QUERIES.md) - Query patterns and examples

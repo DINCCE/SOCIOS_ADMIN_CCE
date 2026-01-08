@@ -40,7 +40,7 @@ import { DataTableViewOptions } from '@/features/socios/components/data-table-vi
 import { DataTableFacetedFilter } from '@/features/socios/components/data-table-faceted-filter'
 import { DataTableResetFilters } from '@/features/socios/components/data-table-reset-filters'
 import { Skeleton } from '@/components/ui/skeleton'
-import { columns, type OportunidadView } from '@/features/procesos/oportunidades/columns'
+import { columns, type DocumentoComercialView } from '@/features/procesos/oportunidades/columns'
 import { oportunidadesEstadoOptions, oportunidadesTipoOptions, getOportunidadTagsOptions } from '@/lib/table-filters'
 
 export function OportunidadesPageClient() {
@@ -58,16 +58,16 @@ export function OportunidadesPageClient() {
   const [rowSelection, setRowSelection] = React.useState({})
 
   const { data: initialData = [], isLoading } = useQuery({
-    queryKey: ['oportunidades'],
+    queryKey: ['doc_comercial'],
     queryFn: async () => {
       const supabase = createClient()
       const { data, error } = await supabase
-        .from('v_oportunidades_org')
+        .from('v_doc_comercial_org')
         .select('*')
         .order('fecha_solicitud', { ascending: false })
 
       if (error) throw error
-      return data as OportunidadView[]
+      return data as DocumentoComercialView[]
     },
   })
 
@@ -76,17 +76,17 @@ export function OportunidadesPageClient() {
     if (!globalSearch) return initialData
 
     const searchLower = globalSearch.toLowerCase()
-    return initialData.filter((oportunidad) => {
+    return initialData.filter((docComercial) => {
       // Buscar en nombre del solicitante
-      if (oportunidad.solicitante_nombre?.toLowerCase().includes(searchLower)) {
+      if (docComercial.solicitante_nombre?.toLowerCase().includes(searchLower)) {
         return true
       }
       // Buscar en código
-      if (oportunidad.codigo?.toLowerCase().includes(searchLower)) {
+      if (docComercial.codigo?.toLowerCase().includes(searchLower)) {
         return true
       }
       // Buscar en notas
-      if (oportunidad.notas?.toLowerCase().includes(searchLower)) {
+      if (docComercial.notas?.toLowerCase().includes(searchLower)) {
         return true
       }
       return false
@@ -123,8 +123,8 @@ export function OportunidadesPageClient() {
     <PageShell>
       {/* Header */}
       <PageHeader
-        title="Oportunidades"
-        description="Gestiona las oportunidades de negocio y solicitudes"
+        title="Documentos Comerciales"
+        description="Gestiona los documentos comerciales: oportunidades, ofertas, pedidos y reservas"
         metadata={`${filteredData.length} de ${initialData.length}`}
         actions={<NewOportunidadSheet />}
       />

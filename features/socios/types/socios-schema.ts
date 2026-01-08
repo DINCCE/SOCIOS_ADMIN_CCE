@@ -1,4 +1,15 @@
 import { z } from "zod"
+import type {
+  TipoActorEnum,
+  DmActorNaturalezaFiscal,
+  DmActorTipoDocumento,
+  DmActorRegimenTributario,
+  DmActorEstado,
+  DmActorGenero,
+  DmActorEstadoCivil,
+  DmActoresNivelEducacion,
+  DmActoresTipoRelacion
+} from "@/lib/db-types"
 
 /**
  * Schema for Persona view (v_personas_completa)
@@ -6,26 +17,26 @@ import { z } from "zod"
  * IMPORTANT: Matches actual database schema
  */
 export const personaSchema = z.object({
-  // From personas table
+  // From dm_actores table (unified schema)
   id: z.string().uuid(),
-  tipo_documento: z.enum(["CC", "CE", "TI", "PA", "RC", "NIT", "PEP", "PPT", "DNI", "NUIP"]),
+  tipo_documento: z.enum(["CC", "CE", "PA", "TI", "RC", "PEP", "PPT", "NIT"]),
   numero_documento: z.string(),
   fecha_expedicion: z.string().nullable(),
   lugar_expedicion: z.string().nullable(), // Legacy text field (kept for backward compatibility)
-  lugar_expedicion_id: z.string().uuid().nullable(), // New FK to geographic_locations
+  lugar_expedicion_id: z.string().uuid().nullable(), // New FK to config_ciudades
   primer_nombre: z.string(),
   segundo_nombre: z.string().nullable(),
   primer_apellido: z.string(),
   segundo_apellido: z.string().nullable(),
-  genero: z.enum(["masculino", "femenino", "otro", "no_especifica"]),
+  genero: z.enum(["masculino", "femenino", "otro", "no aplica"]),
   fecha_nacimiento: z.string(),
   lugar_nacimiento: z.string().nullable(), // Legacy text field (kept for backward compatibility)
-  lugar_nacimiento_id: z.string().uuid().nullable(), // New FK to geographic_locations
+  lugar_nacimiento_id: z.string().uuid().nullable(), // New FK to config_ciudades
   nacionalidad: z.string().nullable(),
-  estado_civil: z.enum(["soltero", "casado", "union_libre", "divorciado", "viudo", "separado"]).nullable(),
+  estado_civil: z.enum(["soltero", "casado", "union libre", "divorciado", "viudo"]).nullable(),
   ocupacion: z.string().nullable(),
   profesion: z.string().nullable(),
-  nivel_educacion: z.enum(["primaria", "bachillerato", "tecnico", "tecnologo", "pregrado", "posgrado", "maestria", "doctorado"]).nullable(),
+  nivel_educacion: z.enum(["sin estudios", "primaria", "bachillerato", "técnica", "profesional", "especialización", "maestría", "doctorado"]).nullable(),
   tipo_sangre: z.string().nullable(),
   eps: z.string().nullable(),
   fecha_socio: z.string().nullable(),
@@ -50,18 +61,18 @@ export const personaSchema = z.object({
   creado_en: z.string(),
   actualizado_en: z.string(),
 
-  // From business_partners table
+  // From dm_actores table (business partner fields)
   organizacion_id: z.string().uuid(),
   tipo_actor: z.enum(["persona", "empresa"]),
-  codigo: z.string(),
-  estado: z.enum(["activo", "inactivo", "suspendido"]),
+  codigo_bp: z.string(),
+  estado_actor: z.enum(["activo", "inactivo", "bloqueado"]),
   email_principal: z.string().nullable(),
   telefono_principal: z.string().nullable(),
   bp_creado_en: z.string(),
   bp_actualizado_en: z.string(),
   eliminado_en: z.string().nullable(),
 
-  // From organizations table
+  // From config_organizaciones table
   organizacion_nombre: z.string(),
 
   // Computed fields
@@ -134,9 +145,9 @@ export type Empresa = z.infer<typeof empresaSchema>
 /**
  * Type for estado enum values
  */
-export type EstadoSocio = "activo" | "inactivo" | "suspendido"
+export type EstadoSocio = "activo" | "inactivo" | "bloqueado"
 
 /**
  * Type for tipo_documento enum values
  */
-export type TipoDocumento = "CC" | "CE" | "PA" | "TI" | "RC"
+export type TipoDocumento = "CC" | "CE" | "PA" | "TI" | "RC" | "PEP" | "PPT" | "NIT"

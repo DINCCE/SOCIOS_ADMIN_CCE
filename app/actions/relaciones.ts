@@ -22,7 +22,7 @@ export async function crearRelacionFromForm(data: {
 
   // Get organization from origen BP
   const { data: bpData } = await supabase
-    .from('business_partners')
+    .from('dm_actores')
     .select('organizacion_id')
     .eq('id', data.bp_origen_id)
     .single()
@@ -270,7 +270,7 @@ export async function vincularFamiliar(data: {
 
   // Get organization from origen BP
   const { data: bpData } = await supabase
-    .from('business_partners')
+    .from('dm_actores')
     .select('organizacion_id')
     .eq('id', data.bp_origen_id)
     .single()
@@ -398,7 +398,7 @@ export async function editarTipoParentesco(
     }
   }
 
-  revalidatePath('/admin/socios/personas')
+  revalidatePath('/admin/socios/actores')
 
   return {
     success: true,

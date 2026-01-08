@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import type { TrDocComercialEstados } from '@/lib/db-types'
 import { useQuery } from '@tanstack/react-query'
 import {
   Table,
@@ -34,7 +35,7 @@ type OportunidadView = {
   eliminado_en: string | null
 }
 
-type EstadoOportunidad = Database['public']['Enums']['estado_oportunidad_enum']
+type EstadoOportunidad = TrDocComercialEstados
 
 const ESTADO_CONFIG: Record<
   EstadoOportunidad,

@@ -577,13 +577,13 @@ export const COMPONENT_REGISTRY: ComponentMeta[] = [
     keywords: ['tareas', 'tablero', 'kanban', 'proceso', 'columnas'],
   },
   {
-    id: 'oportunidad-card',
-    name: 'Oportunidad Card',
+    id: 'doc-comercial-card',
+    name: 'Documento Comercial Card',
     category: 'custom-process',
-    description: 'Tarjeta de oportunidad comercial',
+    description: 'Tarjeta de documento comercial',
     source: 'custom',
     filePath: '@/components/procesos/oportunidades/oportunidad-card',
-    keywords: ['oportunidad', 'card', 'tarjeta', 'venta', 'proceso'],
+    keywords: ['documento', 'comercial', 'card', 'tarjeta', 'venta', 'proceso'],
   },
   {
     id: 'view-toggle',

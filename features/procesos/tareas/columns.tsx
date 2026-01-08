@@ -27,9 +27,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { DataTableColumnHeader } from "@/features/socios/components/data-table-column-header"
 import type { Database } from "@/types_db"
+import type { TrTareasEstado, TrTareasPrioridad } from "@/lib/db-types"
 
-type EstadoTarea = Database['public']['Enums']['estado_tarea_enum']
-type PrioridadTarea = Database['public']['Enums']['prioridad_tarea_enum']
+type EstadoTarea = TrTareasEstado
+type PrioridadTarea = TrTareasPrioridad
 
 const ESTADO_CONFIG: Record<
   EstadoTarea,

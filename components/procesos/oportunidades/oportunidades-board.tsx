@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import type { TrDocComercialEstados } from '@/lib/db-types'
 import { useQuery } from '@tanstack/react-query'
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
@@ -31,7 +32,7 @@ export type OportunidadView = {
   eliminado_en: string | null
 }
 
-export type EstadoOportunidad = Database['public']['Enums']['estado_oportunidad_enum']
+export type EstadoOportunidad = TrDocComercialEstados
 
 const COLUMN_CONFIG: Record<
   EstadoOportunidad,

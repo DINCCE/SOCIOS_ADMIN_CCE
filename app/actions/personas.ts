@@ -3,7 +3,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { PersonFormValues } from '@/lib/schemas/person-schema'
-import { translateDocumentType } from '@/lib/utils/document-type-mapper'
 
 /**
  * Create persona from PersonFormValues (from new-person-sheet form)
@@ -20,7 +19,7 @@ export async function crearPersonaFromPersonFormValues(
   // 1. Get organization (current pattern: first org)
   // TODO: Replace with user session organization when profiles table exists
   const { data: orgData, error: orgError } = await supabase
-    .from('organizations')
+    .from('config_organizaciones')
     .select('id')
     .limit(1)
     .single()
@@ -178,7 +177,7 @@ export async function crearPersonaFromForm(data: {
 
   if (result.success) {
     // Revalidate personas list page
-    revalidatePath('/admin/socios/personas')
+    revalidatePath('/admin/socios/actores')
   }
 
   return result
@@ -195,7 +194,7 @@ export async function actualizarPersona(id: string, data: Record<string, unknown
   const supabase = await createClient()
 
   const { error } = await supabase
-    .from('personas')
+    .from('dm_actores')
     .update(data)
     .eq('id', id)
 
@@ -209,7 +208,7 @@ export async function actualizarPersona(id: string, data: Record<string, unknown
   }
 
   // Revalidate both list and detail page
-  revalidatePath('/admin/socios/personas')
+  revalidatePath('/admin/socios/actores')
   revalidatePath(`/admin/socios/personas/${id}`)
 
   return {
@@ -250,7 +249,7 @@ export async function updatePersonaIdentity(
 
   // All identity fields are in personas table (CTI pattern)
   const { error } = await supabase
-    .from('personas')
+    .from('dm_actores')
     .update({
       tipo_documento: data.tipo_documento,
       numero_documento: data.numero_documento,
@@ -279,7 +278,7 @@ export async function updatePersonaIdentity(
   }
 
   // Revalidate pages
-  revalidatePath('/admin/socios/personas')
+  revalidatePath('/admin/socios/actores')
   revalidatePath(`/admin/socios/personas/${id}`)
 
   return {
@@ -321,7 +320,7 @@ export async function updatePersonaProfile(
 
   // 1. Update business_partners (status and primary contact only)
   const { error: bpError } = await supabase
-    .from('business_partners')
+    .from('dm_actores')
     .update({
       estado: data.estado,
       email_principal: data.email_principal,
@@ -339,7 +338,7 @@ export async function updatePersonaProfile(
 
   // 2. Update personas (professional profile, dates, secondary contact, social networks)
   const { error: personaError } = await supabase
-    .from('personas')
+    .from('dm_actores')
     .update({
       fecha_socio: data.fecha_socio,
       fecha_aniversario: data.fecha_aniversario,
@@ -366,7 +365,7 @@ export async function updatePersonaProfile(
   }
 
   // Revalidate pages
-  revalidatePath('/admin/socios/personas')
+  revalidatePath('/admin/socios/actores')
   revalidatePath(`/admin/socios/personas/${id}`)
 
   return {
@@ -396,7 +395,7 @@ export async function updatePersonaSecurity(
 
   // Update personas (medical and emergency contact fields)
   const { error } = await supabase
-    .from('personas')
+    .from('dm_actores')
     .update({
       tipo_sangre: data.tipo_sangre,
       eps: data.eps,
@@ -414,7 +413,7 @@ export async function updatePersonaSecurity(
   }
 
   // Revalidate pages
-  revalidatePath('/admin/socios/personas')
+  revalidatePath('/admin/socios/actores')
   revalidatePath(`/admin/socios/personas/${id}`)
 
   return {
@@ -435,7 +434,7 @@ export async function softDeletePersona(id: string) {
 
   // 1. Soft delete personas record
   const { error: personaError } = await supabase
-    .from('personas')
+    .from('dm_actores')
     .update({ eliminado_en: new Date().toISOString() })
     .eq('id', id)
 
@@ -450,7 +449,7 @@ export async function softDeletePersona(id: string) {
 
   // 2. Soft delete corresponding business_partners record
   const { error: bpError } = await supabase
-    .from('business_partners')
+    .from('dm_actores')
     .update({ eliminado_en: new Date().toISOString() })
     .eq('id', id)
 
@@ -464,7 +463,7 @@ export async function softDeletePersona(id: string) {
   }
 
   // Revalidate pages
-  revalidatePath('/admin/socios/personas')
+  revalidatePath('/admin/socios/actores')
   revalidatePath(`/admin/socios/personas/${id}`)
 
   return {

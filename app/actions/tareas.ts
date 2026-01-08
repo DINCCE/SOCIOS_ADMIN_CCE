@@ -42,7 +42,7 @@ export async function crearTarea(data: {
     }
   }
 
-  revalidatePath('/admin/tareas')
+  revalidatePath('/admin/procesos/tareas')
 
   return {
     success: true,
@@ -93,7 +93,7 @@ export async function actualizarTarea(
     }
   }
 
-  revalidatePath('/admin/tareas')
+  revalidatePath('/admin/procesos/tareas')
   revalidatePath(`/admin/tareas/${tarea_id}`)
 
   return {
@@ -112,7 +112,7 @@ export async function softDeleteTarea(tarea_id: string) {
   const supabase = await createClient()
 
   const { error } = await supabase
-    .from('tareas')
+    .from('tr_tareas')
     .update({ eliminado_en: new Date().toISOString() })
     .eq('id', tarea_id)
 
@@ -124,7 +124,7 @@ export async function softDeleteTarea(tarea_id: string) {
     }
   }
 
-  revalidatePath('/admin/tareas')
+  revalidatePath('/admin/procesos/tareas')
 
   return {
     success: true,
@@ -151,7 +151,7 @@ export async function listTareas(
   const supabase = await createClient()
 
   let query = supabase
-    .from('tareas')
+    .from('tr_tareas')
     .select(`
       *,
       oportunidad (

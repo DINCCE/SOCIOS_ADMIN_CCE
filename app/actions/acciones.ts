@@ -85,7 +85,7 @@ export async function softDeleteAccion(accion_id: string) {
   const supabase = await createClient()
 
   const { error } = await supabase
-    .from('acciones')
+    .from('dm_acciones')
     .update({ eliminado_en: new Date().toISOString() })
     .eq('id', accion_id)
 
@@ -115,7 +115,7 @@ export async function listAcciones(organizacion_id: string) {
   const supabase = await createClient()
 
   const { data, error } = await supabase
-    .from('acciones')
+    .from('dm_acciones')
     .select('*')
     .eq('organizacion_id', organizacion_id)
     .is('eliminado_en', null)
@@ -155,7 +155,7 @@ export async function crearAsignacion(data: {
 
   // Get organization from accion
   const { data: accionData } = await supabase
-    .from('acciones')
+    .from('dm_acciones')
     .select('organizacion_id')
     .eq('id', data.accion_id)
     .single()
@@ -282,7 +282,7 @@ export async function listAsignaciones(
   const supabase = await createClient()
 
   const { data, error } = await supabase
-    .from('asignaciones_acciones')
+    .from('vn_asociados')
     .select(`
       *,
       business_partners (
@@ -326,7 +326,7 @@ export async function softDeleteAsignacion(asignacion_id: string) {
   const supabase = await createClient()
 
   const { error } = await supabase
-    .from('asignaciones_acciones')
+    .from('vn_asociados')
     .update({ eliminado_en: new Date().toISOString() })
     .eq('id', asignacion_id)
 

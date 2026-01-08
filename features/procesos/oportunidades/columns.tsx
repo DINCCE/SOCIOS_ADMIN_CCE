@@ -19,24 +19,25 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { DataTableColumnHeader } from "@/features/socios/components/data-table-column-header"
 import { formatCurrency, formatDocumentId } from "@/lib/utils"
-
-type EstadoOportunidad = 'nueva' | 'en_progreso' | 'ganada' | 'perdida' | 'descartada'
+import type { TrDocComercialEstados } from "@/lib/db-types"
 
 const ESTADO_CONFIG: Record<
-  EstadoOportunidad,
+  TrDocComercialEstados,
   { label: string; dotClassName: string }
 > = {
-  nueva: { label: 'Nueva', dotClassName: 'bg-status-neutral' },
-  en_progreso: { label: 'En Progreso', dotClassName: 'bg-status-warning' },
-  ganada: { label: 'Ganada', dotClassName: 'bg-status-positive' },
-  perdida: { label: 'Pérdida', dotClassName: 'bg-status-negative' },
-  descartada: { label: 'Descartada', dotClassName: 'bg-status-negative' },
+  'Nueva': { label: 'Nueva', dotClassName: 'bg-status-neutral' },
+  'En Progreso': { label: 'En Progreso', dotClassName: 'bg-status-warning' },
+  'Ganada': { label: 'Ganada', dotClassName: 'bg-status-positive' },
+  'Pérdida': { label: 'Pérdida', dotClassName: 'bg-status-negative' },
+  'Descartada': { label: 'Descartada', dotClassName: 'bg-status-negative' },
 }
 
-export type OportunidadView = {
+export type DocumentoComercialView = {
+  // === Campos existentes (mantener compatibilidad) ===
   id: string
   codigo: string
   tipo: string
+  sub_tipo: string | null
   estado: string
   fecha_solicitud: string
   monto_estimado: number | null
@@ -51,9 +52,47 @@ export type OportunidadView = {
   responsable_email: string | null
   creado_en: string
   eliminado_en: string | null
+
+  // === Campos nuevos (opcionales para backward compatibility) ===
+  fecha_venc_doc: string | null
+
+  // Asociado
+  asociado_id: string | null
+  asociado_codigo_completo: string | null
+  asociado_subcodigo: string | null
+  asociado_tipo_asignacion: string | null
+  asociado_es_vigente: boolean | null
+  asociado_codigo_bp: string | null
+  asociado_nombre: string | null
+
+  // Pagador
+  pagador_id: string | null
+  pagador_codigo_bp: string | null
+  pagador_tipo_actor: string | null
+  pagador_nombre: string | null
+
+  // Documento origen
+  documento_origen_id: string | null
+  documento_origen_codigo: string | null
+  documento_origen_tipo: string | null
+  documento_origen_estado: string | null
+
+  // Campos financieros nuevos
+  items: Record<string, unknown> | null
+  moneda_iso: string | null
+  valor_neto: number | null
+  valor_descuento: number | null
+  valor_impuestos: number | null
+  valor_total: number | null
+
+  // Otros campos de auditoría
+  creado_por: string | null
+  actualizado_en: string
+  actualizado_por: string | null
+  eliminado_por: string | null
 }
 
-export const columns: ColumnDef<OportunidadView>[] = [
+export const columns: ColumnDef<DocumentoComercialView>[] = [
   {
     id: 'select',
     header: ({ table }) => (
@@ -122,7 +161,7 @@ export const columns: ColumnDef<OportunidadView>[] = [
     accessorKey: 'estado',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" className="text-left" />,
     cell: ({ row }) => {
-      const estado = row.getValue('estado') as EstadoOportunidad
+      const estado = row.getValue('estado') as TrDocComercialEstados
       const config = ESTADO_CONFIG[estado] || { label: estado, dotClassName: 'bg-status-neutral' }
       return (
         <div className="flex justify-start">
