@@ -12,9 +12,94 @@ import type {
 } from "@/lib/db-types"
 
 /**
+ * Schema for Persona list view (v_actores_org)
+ * Simplified version for list/table display - optimized for v_actores_org view
+ * Maps to v_actores_org view fields which has limited, calculated columns
+ */
+export const personaListSchema = z.object({
+  // From v_actores_org view
+  id: z.string().uuid(),
+  codigo: z.string(),
+  nombre: z.string(),
+  identificacion: z.string().nullable(),
+  tipo_actor: z.enum(["persona", "empresa"]),
+  email: z.string().nullable(),
+  telefono: z.string().nullable(),
+  estado: z.enum(["activo", "inactivo", "bloqueado"]),
+  organizacion_id: z.string().uuid(),
+  es_socio: z.boolean(),
+  es_cliente: z.boolean(),
+  es_proveedor: z.boolean(),
+  eliminado_en: z.string().nullable(),
+  // Optional: These may be added to view later via JOINs
+  foto_url: z.string().nullable().optional(),
+})
+
+export type PersonaList = z.infer<typeof personaListSchema>
+
+/**
+ * Schema for Empresa list view (v_actores_org)
+ * Simplified version for list/table display - optimized for v_actores_org view
+ * Maps to v_actores_org view fields which has limited, calculated columns
+ * Uses perfil_profesional_corporativo JSONB for extended company data
+ */
+export const empresaListSchema = z.object({
+  // From v_actores_org view
+  id: z.string().uuid(),
+  codigo: z.string(),
+  nit: z.string().nullable(),
+  digito_verificacion: z.number().nullable().optional(),
+  razon_social: z.string(),
+  nombre_comercial: z.string().nullable(),
+  tipo_sociedad: z.string().nullable(), // From nat_fiscal field
+  fecha_constitucion: z.string().nullable(),
+  ciudad_constitucion: z.string().nullable(),
+  pais_constitucion: z.string().nullable(),
+  numero_registro: z.string().nullable(),
+  codigo_ciiu: z.string().nullable(), // From perfil_profesional_corporativo
+  sector_industria: z.string().nullable(), // From perfil_profesional_corporativo
+  actividad_economica: z.string().nullable(), // From perfil_profesional_corporativo
+  tamano_empresa: z.string().nullable(), // From perfil_profesional_corporativo
+  representante_legal_id: z.string().uuid().nullable(),
+  cargo_representante: z.string().nullable(),
+  telefono_secundario: z.string().nullable(),
+  whatsapp: z.string().nullable(), // From perfil_profesional_corporativo
+  website: z.string().nullable(), // From perfil_profesional_corporativo
+  linkedin_url: z.string().nullable(), // From perfil_profesional_corporativo
+  facebook_url: z.string().nullable(), // From perfil_profesional_corporativo
+  instagram_handle: z.string().nullable(), // From perfil_profesional_corporativo
+  twitter_handle: z.string().nullable(), // From perfil_profesional_corporativo
+  logo_url: z.string().nullable(), // From perfil_profesional_corporativo
+  ingresos_anuales: z.number().nullable(), // From perfil_profesional_corporativo
+  numero_empleados: z.number().nullable(), // From perfil_profesional_corporativo
+  atributos: z.record(z.string(), z.any()).nullable(),
+  creado_en: z.string(),
+  actualizado_en: z.string(),
+
+  // From v_actores_org view (business partner fields)
+  organizacion_id: z.string().uuid(),
+  tipo_actor: z.enum(["persona", "empresa"]),
+  estado: z.enum(["activo", "inactivo", "bloqueado"]),
+  email_principal: z.string().nullable(),
+  telefono_principal: z.string().nullable(),
+  bp_creado_en: z.string(),
+  bp_actualizado_en: z.string(),
+  eliminado_en: z.string().nullable(),
+
+  // Computed fields
+  organizacion_nombre: z.string(),
+  nit_completo: z.string().nullable(), // Can be null if DV is missing
+  nombre_representante_legal: z.string().nullable(),
+  tags: z.array(z.string()).optional().default([]), // Optional since not in v_actores_org
+})
+
+export type EmpresaList = z.infer<typeof empresaListSchema>
+
+/**
  * Schema for Persona view (v_personas_completa)
  * Combines data from personas, business_partners, and organizations tables
  * IMPORTANT: Matches actual database schema
+ * NOTE: Used for detail pages that query dm_actores directly
  */
 export const personaSchema = z.object({
   // From dm_actores table (unified schema)

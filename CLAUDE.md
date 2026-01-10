@@ -22,6 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Update relevant docs after schema changes:
   - [docs/database/API.md](docs/database/API.md) - CRUD endpoints and RPC functions
   - [docs/database/TABLES.md](docs/database/TABLES.md) - Table schemas
+  - [docs/database/VIEWS.md](docs/database/VIEWS.md) - Database views and optimized queries
   - [docs/database/FUNCTIONS.md](docs/database/FUNCTIONS.md) - RPC functions
   - [docs/database/RLS.md](docs/database/RLS.md) - Security policies
   - [docs/database/OVERVIEW.md](docs/database/OVERVIEW.md) - Architecture overview

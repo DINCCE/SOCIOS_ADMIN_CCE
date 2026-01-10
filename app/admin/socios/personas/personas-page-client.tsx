@@ -31,9 +31,9 @@ import { DataTableFacetedFilter } from '@/features/socios/components/data-table-
 import { DataTableResetFilters } from '@/features/socios/components/data-table-reset-filters'
 import { FloatingActionBar } from '@/components/ui/floating-action-bar'
 import { Separator } from '@/components/ui/separator'
-import type { Persona } from '@/features/socios/types/socios-schema'
+import type { PersonaList } from '@/features/socios/types/socios-schema'
 import { columns } from '@/features/socios/personas/columns'
-import { personasEstadoOptions, personasTipoDocOptions, getPersonaTagsOptions } from '@/lib/table-filters'
+import { personasEstadoOptions } from '@/lib/table-filters'
 
 export function PersonasPageClient() {
   const router = useRouter()
@@ -43,17 +43,10 @@ export function PersonasPageClient() {
   const [globalSearch, setGlobalSearch] = React.useState("")
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
     codigo: false,
-    tipo_documento: false,
-    genero: false,
-    fecha_nacimiento: false,
-    nacionalidad: false,
-    tipo_sangre: false,
-    eps: false,
-    ocupacion: false,
-    fecha_socio: false,
-    estado_vital: false,
-    whatsapp: false,
-    organizacion_nombre: false,
+    tags: false, // Tags column hidden since dm_actores doesn't have a tags field
+    // Campos no disponibles en v_actores_org (ocultos temporalmente):
+    // tipo_documento, genero, fecha_nacimiento, nacionalidad, tipo_sangre,
+    // eps, ocupacion, fecha_socio, estado_vital, whatsapp, organizacion_nombre
   })
   const [rowSelection, setRowSelection] = React.useState({})
 
@@ -63,15 +56,36 @@ export function PersonasPageClient() {
     queryFn: async () => {
       const supabase = createClient()
       const { data, error: queryError } = await supabase
-        .from('v_personas_org')
-        .select('*')
+        .from('dm_actores')
+        .select('id, codigo_bp, primer_nombre, primer_apellido, num_documento, email_principal, telefono_principal, estado_actor, organizacion_id, es_socio, es_cliente, es_proveedor, eliminado_en')
+        .eq('tipo_actor', 'persona')
+        .is('eliminado_en', null)
         .order('primer_apellido', { ascending: true })
 
       if (queryError) {
         console.error('Query error:', queryError)
         throw queryError
       }
-      return data as Persona[]
+
+      // Transform to PersonaList format
+      const transformed = data?.map((actor: any) => ({
+        id: actor.id,
+        codigo: actor.codigo_bp,
+        nombre: `${actor.primer_nombre || ''} ${actor.primer_apellido || ''}`.trim(),
+        identificacion: actor.num_documento,
+        tipo_actor: actor.tipo_actor,
+        email: actor.email_principal,
+        telefono: actor.telefono_principal,
+        estado: actor.estado_actor,
+        organizacion_id: actor.organizacion_id,
+        es_socio: actor.es_socio,
+        es_cliente: actor.es_cliente,
+        es_proveedor: actor.es_proveedor,
+        eliminado_en: actor.eliminado_en,
+        foto_url: null, // Not in selected fields
+      })) || []
+
+      return transformed as PersonaList[]
     },
   })
 
@@ -81,20 +95,20 @@ export function PersonasPageClient() {
 
     const searchLower = globalSearch.toLowerCase()
     return initialData.filter((persona) => {
-      // Buscar en nombre completo
-      if (persona.nombre_completo?.toLowerCase().includes(searchLower)) {
+      // Buscar en nombre completo (campo 'nombre' en v_actores_org)
+      if (persona.nombre?.toLowerCase().includes(searchLower)) {
         return true
       }
-      // Buscar en número de documento
-      if (persona.numero_documento?.toLowerCase().includes(searchLower)) {
+      // Buscar en número de documento (campo 'identificacion' en v_actores_org)
+      if (persona.identificacion?.toLowerCase().includes(searchLower)) {
         return true
       }
-      // Buscar en email principal
-      if (persona.email_principal?.toLowerCase().includes(searchLower)) {
+      // Buscar en email principal (campo 'email' en v_actores_org)
+      if (persona.email?.toLowerCase().includes(searchLower)) {
         return true
       }
-      // Buscar en teléfono principal
-      if (persona.telefono_principal?.toLowerCase().includes(searchLower)) {
+      // Buscar en teléfono principal (campo 'telefono' en v_actores_org)
+      if (persona.telefono?.toLowerCase().includes(searchLower)) {
         return true
       }
       return false
@@ -107,21 +121,22 @@ export function PersonasPageClient() {
   }, [])
 
   // Dynamic visibility for "tags" column - only run on client after mount
-  React.useEffect(() => {
-    if (!hasMounted || !initialData.length) return
+  // Note: tags column removed since dm_actores doesn't have a tags field
+  // React.useEffect(() => {
+  //   if (!hasMounted || !initialData.length) return
 
-    const hasTags = initialData.some((item) => {
-      return (item.tags || []).length > 0
-    })
+  //   const hasTags = initialData.some((item) => {
+  //     return (item.tags || []).length > 0
+  //   })
 
-    setColumnVisibility(prev => {
-      if (prev.tags === hasTags) return prev
-      return {
-        ...prev,
-        tags: hasTags
-      }
-    })
-  }, [hasMounted, initialData.length])
+  //   setColumnVisibility(prev => {
+  //     if (prev.tags === hasTags) return prev
+  //     return {
+  //       ...prev,
+  //       tags: hasTags
+  //     }
+  //   })
+  // }, [hasMounted, initialData.length])
 
   const table = useReactTable({
     data: filteredData,
@@ -200,16 +215,16 @@ export function PersonasPageClient() {
               title="Estado"
               options={personasEstadoOptions}
             />
-            <DataTableFacetedFilter
+            {/* DataTableFacetedFilter
               column={table.getColumn("tipo_documento")}
               title="Tipo Doc."
               options={personasTipoDocOptions}
-            />
-            <DataTableFacetedFilter
+            */}
+            {/* DataTableFacetedFilter
               column={table.getColumn("tags")}
               title="Etiquetas"
               options={getPersonaTagsOptions(initialData)}
-            />
+            */}
             {table.getState().columnFilters.length > 0 && (
               <>
                 <Separator orientation="vertical" className="h-6" />

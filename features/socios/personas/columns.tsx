@@ -1,5 +1,17 @@
 "use client"
 
+/**
+ * Column definitions for Personas table
+ *
+ * NOTE: Optimized for v_actores_org view which has limited fields.
+ * For full persona details, detail pages should query dm_actores directly.
+ *
+ * Temporarily removed columns (not in v_actores_org):
+ * - tipo_documento, fecha_nacimiento, genero, nacionalidad,
+ * - tipo_sangre, eps, ocupacion, fecha_socio, estado_vital,
+ * - whatsapp, organizacion_nombre
+ */
+
 import { ColumnDef } from "@tanstack/react-table"
 import { MoreHorizontal } from "lucide-react"
 
@@ -20,7 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { DataTableColumnHeader } from "@/features/socios/components/data-table-column-header"
-import { Persona } from "@/features/socios/types/socios-schema"
+import type { PersonaList } from "@/features/socios/types/socios-schema"
 import { formatShortDate } from "@/lib/format"
 import { formatDocumentId } from "@/lib/utils"
 
@@ -36,7 +48,7 @@ const generoIcons: Record<string, string> = {
   femenino: "♀",
 }
 
-export const columns: ColumnDef<Persona>[] = [
+export const columns: ColumnDef<PersonaList>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -78,7 +90,7 @@ export const columns: ColumnDef<Persona>[] = [
     },
   },
   {
-    accessorKey: "nombre_completo",
+    accessorKey: "nombre",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Nombre Completo" />
     ),
@@ -86,7 +98,7 @@ export const columns: ColumnDef<Persona>[] = [
       const persona = row.original
       return (
         <IdentityCell
-          name={persona.nombre_completo}
+          name={persona.nombre}
           subtitle={persona.codigo}
           image={persona.foto_url}
           className="min-w-[200px] flex-1"
@@ -125,42 +137,36 @@ export const columns: ColumnDef<Persona>[] = [
       size: 130,
     },
   },
+  // {
+  //   accessorKey: "tipo_documento",
+  //   header: ({ column }) => (
+  //     <DataTableColumnHeader column={column} title="Tipo Doc." />
+  //   ),
+  //   cell: ({ row }) => {
+  //     const tipo = row.getValue("tipo_documento") as string
+  //     return tipo ? (
+  //       <Badge variant="metadata-outline">
+  //         {tipo}
+  //       </Badge>
+  //     ) : <NullCell />
+  //   },
+  //   filterFn: (row, id, value) => {
+  //     return value.includes(row.getValue(id))
+  //   },
+  //   enableHiding: true,
+  //   meta: {
+  //     size: 100,
+  //   },
+  // },
   {
-    accessorKey: "tipo_documento",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Tipo Doc." />
-    ),
-    cell: ({ row }) => {
-      const tipo = row.getValue("tipo_documento") as string
-      return tipo ? (
-        <Badge variant="metadata-outline">
-          {tipo}
-        </Badge>
-      ) : <NullCell />
-    },
-    filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id))
-    },
-    enableHiding: true,
-    meta: {
-      size: 100,
-    },
-  },
-  {
-    accessorKey: "numero_documento",
+    accessorKey: "identificacion",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Documento" className="text-left" />
     ),
     cell: ({ row }) => {
-      const tipoDocumento = row.original.tipo_documento
-      const numeroDocumento = row.getValue("numero_documento") as string
+      const numeroDocumento = row.getValue("identificacion") as string
       return (
         <div className="flex items-center gap-2">
-          <Badge
-            variant="metadata-outline"
-          >
-            {tipoDocumento}
-          </Badge>
           <CopyableCell
             value={numeroDocumento}
             label={formatDocumentId(numeroDocumento)}
@@ -173,12 +179,12 @@ export const columns: ColumnDef<Persona>[] = [
     },
   },
   {
-    accessorKey: "email_principal",
+    accessorKey: "email",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Email" />
     ),
     cell: ({ row }) => {
-      const email = row.getValue("email_principal") as string
+      const email = row.getValue("email") as string
       return email ? <CopyableCell value={email} /> : <NullCell />
     },
     meta: {
@@ -186,12 +192,12 @@ export const columns: ColumnDef<Persona>[] = [
     },
   },
   {
-    accessorKey: "telefono_principal",
+    accessorKey: "telefono",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Teléfono" />
     ),
     cell: ({ row }) => {
-      const telefono = row.getValue("telefono_principal") as string
+      const telefono = row.getValue("telefono") as string
       return telefono ? (
         <CopyableCell
           value={telefono}
@@ -230,153 +236,154 @@ export const columns: ColumnDef<Persona>[] = [
       size: 110,
     },
   },
-  {
-    accessorKey: "fecha_nacimiento",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Fecha Nacimiento" />
-    ),
-    cell: ({ row }) => {
-      const val = row.getValue("fecha_nacimiento") as string
-      return val ? <span>{formatShortDate(val)}</span> : <NullCell />
-    },
-    enableHiding: true,
-    meta: {
-      size: 120,
-    },
-  },
-  // --- Optional Columns (Hidden by default) ---
-  {
-    accessorKey: "genero",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Género" />
-    ),
-    cell: ({ row }) => {
-      const genero = row.getValue("genero") as string
-      if (!genero) return <NullCell />
-      const displayGenero = genero.charAt(0).toUpperCase() + genero.slice(1)
-      const icon = generoIcons[genero.toLowerCase()]
-      return (
-        <div className="flex items-center gap-1.5">
-          {icon && <span className="text-sm">{icon}</span>}
-          <span>{displayGenero}</span>
-        </div>
-      )
-    },
-    meta: {
-      size: 100,
-    },
-  },
-  {
-    accessorKey: "nacionalidad",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Nacionalidad" />
-    ),
-    cell: ({ row }) => {
-      const val = row.getValue("nacionalidad") as string
-      return val ? <span>{val}</span> : <NullCell />
-    },
-    enableHiding: true,
-    meta: {
-      size: 120,
-    },
-  },
-  {
-    accessorKey: "tipo_sangre",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="RH" />
-    ),
-    cell: ({ row }) => {
-      const val = row.getValue("tipo_sangre") as string
-      return val ? <span>{val}</span> : <NullCell />
-    },
-    enableHiding: true,
-    meta: {
-      size: 80,
-    },
-  },
-  {
-    accessorKey: "eps",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="EPS" />
-    ),
-    cell: ({ row }) => {
-      const val = row.getValue("eps") as string
-      return val ? <span>{val}</span> : <NullCell />
-    },
-    enableHiding: true,
-    meta: {
-      size: 150,
-    },
-  },
-  {
-    accessorKey: "ocupacion",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Ocupación" />
-    ),
-    cell: ({ row }) => {
-      const val = row.getValue("ocupacion") as string
-      return val ? <span>{val}</span> : <NullCell />
-    },
-    enableHiding: true,
-    meta: {
-      size: 150,
-    },
-  },
-  {
-    accessorKey: "fecha_socio",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Fecha Socio" />
-    ),
-    cell: ({ row }) => {
-      const val = row.getValue("fecha_socio") as string
-      return val ? <span className="whitespace-nowrap">{formatShortDate(val)}</span> : <NullCell />
-    },
-    enableHiding: true,
-    meta: {
-      size: 120,
-    },
-  },
-  {
-    accessorKey: "estado_vital",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="" />
-    ),
-    cell: ({ row }) => {
-      const val = row.getValue("estado_vital") as string
-      if (val?.toLowerCase() === "fallecido") {
-        return (
-          <div className="flex justify-center" title="Fallecido">
-            <span className="text-lg opacity-60">⚰️</span>
-          </div>
-        )
-      }
-      return null
-    },
-    enableHiding: true,
-    meta: {
-      size: 60,
-    },
-  },
-  {
-    accessorKey: "whatsapp",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="WhatsApp" />
-    ),
-    enableHiding: true,
-    meta: {
-      size: 140,
-    },
-  },
-  {
-    accessorKey: "organizacion_nombre",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Organización" />
-    ),
-    enableHiding: true,
-    meta: {
-      size: 150,
-    },
-  },
+  // Temporarily commented - not in v_actores_org view
+  // {
+  //   accessorKey: "fecha_nacimiento",
+  //   header: ({ column }) => (
+  //     <DataTableColumnHeader column={column} title="Fecha Nacimiento" />
+  //   ),
+  //   cell: ({ row }) => {
+  //     const val = row.getValue("fecha_nacimiento") as string
+  //     return val ? <span>{formatShortDate(val)}</span> : <NullCell />
+  //   },
+  //   enableHiding: true,
+  //   meta: {
+  //     size: 120,
+  //   },
+  // },
+  // // --- Optional Columns (Hidden by default) ---
+  // {
+  //   accessorKey: "genero",
+  //   header: ({ column }) => (
+  //     <DataTableColumnHeader column={column} title="Género" />
+  //   ),
+  //   cell: ({ row }) => {
+  //     const genero = row.getValue("genero") as string
+  //     if (!genero) return <NullCell />
+  //     const displayGenero = genero.charAt(0).toUpperCase() + genero.slice(1)
+  //     const icon = generoIcons[genero.toLowerCase()]
+  //     return (
+  //       <div className="flex items-center gap-1.5">
+  //         {icon && <span className="text-sm">{icon}</span>}
+  //         <span>{displayGenero}</span>
+  //       </div>
+  //     )
+  //   },
+  //   meta: {
+  //     size: 100,
+  //   },
+  // },
+  // {
+  //   accessorKey: "nacionalidad",
+  //   header: ({ column }) => (
+  //     <DataTableColumnHeader column={column} title="Nacionalidad" />
+  //   ),
+  //   cell: ({ row }) => {
+  //     const val = row.getValue("nacionalidad") as string
+  //     return val ? <span>{val}</span> : <NullCell />
+  //   },
+  //   enableHiding: true,
+  //   meta: {
+  //     size: 120,
+  //   },
+  // },
+  // {
+  //   accessorKey: "tipo_sangre",
+  //   header: ({ column }) => (
+  //     <DataTableColumnHeader column={column} title="RH" />
+  //   ),
+  //   cell: ({ row }) => {
+  //     const val = row.getValue("tipo_sangre") as string
+  //     return val ? <span>{val}</span> : <NullCell />
+  //   },
+  //   enableHiding: true,
+  //   meta: {
+  //     size: 80,
+  //   },
+  // },
+  // {
+  //   accessorKey: "eps",
+  //   header: ({ column }) => (
+  //     <DataTableColumnHeader column={column} title="EPS" />
+  //   ),
+  //   cell: ({ row }) => {
+  //     const val = row.getValue("eps") as string
+  //     return val ? <span>{val}</span> : <NullCell />
+  //   },
+  //   enableHiding: true,
+  //   meta: {
+  //     size: 150,
+  //   },
+  // },
+  // {
+  //   accessorKey: "ocupacion",
+  //   header: ({ column }) => (
+  //     <DataTableColumnHeader column={column} title="Ocupación" />
+  //   ),
+  //   cell: ({ row }) => {
+  //     const val = row.getValue("ocupacion") as string
+  //     return val ? <span>{val}</span> : <NullCell />
+  //   },
+  //   enableHiding: true,
+  //   meta: {
+  //     size: 150,
+  //   },
+  // },
+  // {
+  //   accessorKey: "fecha_socio",
+  //   header: ({ column }) => (
+  //     <DataTableColumnHeader column={column} title="Fecha Socio" />
+  //   ),
+  //   cell: ({ row }) => {
+  //     const val = row.getValue("fecha_socio") as string
+  //     return val ? <span className="whitespace-nowrap">{formatShortDate(val)}</span> : <NullCell />
+  //   },
+  //   enableHiding: true,
+  //   meta: {
+  //     size: 120,
+  //   },
+  // },
+  // {
+  //   accessorKey: "estado_vital",
+  //   header: ({ column }) => (
+  //     <DataTableColumnHeader column={column} title="" />
+  //   ),
+  //   cell: ({ row }) => {
+  //     const val = row.getValue("estado_vital") as string
+  //     if (val?.toLowerCase() === "fallecido") {
+  //       return (
+  //         <div className="flex justify-center" title="Fallecido">
+  //           <span className="text-lg opacity-60">⚰️</span>
+  //         </div>
+  //       )
+  //     }
+  //     return null
+  //   },
+  //   enableHiding: true,
+  //   meta: {
+  //     size: 60,
+  //   },
+  // },
+  // {
+  //   accessorKey: "whatsapp",
+  //   header: ({ column }) => (
+  //     <DataTableColumnHeader column={column} title="WhatsApp" />
+  //   ),
+  //   enableHiding: true,
+  //   meta: {
+  //     size: 140,
+  //   },
+  // },
+  // {
+  //   accessorKey: "organizacion_nombre",
+  //   header: ({ column }) => (
+  //     <DataTableColumnHeader column={column} title="Organización" />
+  //   ),
+  //   enableHiding: true,
+  //   meta: {
+  //     size: 150,
+  //   },
+  // },
   {
     id: "actions",
     cell: ({ row }) => {

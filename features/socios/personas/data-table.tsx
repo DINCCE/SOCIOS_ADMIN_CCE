@@ -12,10 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { Persona } from "@/features/socios/types/socios-schema"
+import type { PersonaList } from "@/features/socios/types/socios-schema"
 
 interface PersonasDataTableProps {
-  table: Table<Persona>
+  table: Table<PersonaList>
   router: ReturnType<typeof useRouter>
 }
 

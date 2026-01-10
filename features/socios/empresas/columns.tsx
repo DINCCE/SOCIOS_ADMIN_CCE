@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { DataTableColumnHeader } from "@/features/socios/components/data-table-column-header"
-import { Empresa } from "@/features/socios/types/socios-schema"
+import { EmpresaList } from "@/features/socios/types/socios-schema"
 import { formatDocumentId } from "@/lib/utils"
 
 const estadoVariants: Record<string, string> = {
@@ -34,7 +34,7 @@ const estadoVariants: Record<string, string> = {
 
 // Variants for tipo_sociedad are now handled by metadata-outline directly
 
-export const columns: ColumnDef<Empresa>[] = [
+export const columns: ColumnDef<EmpresaList>[] = [
   {
     id: "select",
     header: ({ table }) => (

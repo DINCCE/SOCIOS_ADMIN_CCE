@@ -151,6 +151,8 @@ COALESCE(EXISTS (
   JOIN config_roles_permisos rp ON rp.role = om.role
   WHERE om.user_id = auth.uid()
     AND om.organization_id = p_org
+    AND om.eliminado_en IS NULL
+    AND rp.eliminado_en IS NULL
     AND rp.resource = p_resource
     AND rp.action = p_action
     AND rp.allow = true
@@ -239,10 +241,10 @@ WHERE id IN (SELECT get_user_orgs());
 
 -- O usando join lateral
 SELECT o.*, om.role
-FROM get_user_orgs() org_id
-JOIN config_organizaciones o ON o.id = org_id
-JOIN config_organizacion_miembros om ON om.organization_id = o.id
-WHERE om.user_id = auth.uid();
+FROM get_user_orgs() guo
+JOIN config_organizaciones o ON o.id = guo.get_user_orgs
+JOIN config_organizacion_miembros om ON om.organization_id = o.id AND om.user_id = auth.uid()
+WHERE om.eliminado_en IS NULL;
 ```
 
 ---

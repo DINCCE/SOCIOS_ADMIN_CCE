@@ -22,10 +22,11 @@ export interface FilterOption {
 }
 
 // Opciones de filtro para Personas - Estado
+// Valores según dm_actor_estado: activo, inactivo, bloqueado
 export const personasEstadoOptions: FilterOption[] = [
   { value: "activo", label: "Activo", icon: CheckCircle2 },
   { value: "inactivo", label: "Inactivo", icon: XCircle },
-  { value: "suspendido", label: "Suspendido", icon: HelpCircle },
+  { value: "bloqueado", label: "Bloqueado", icon: HelpCircle },
 ]
 
 // Opciones de filtro para Personas - Tipo de Documento

@@ -816,7 +816,7 @@ Todas las tablas de negocio incluyen:
 
 - [OVERVIEW.md](OVERVIEW.md) - Visión general de la base de datos
 - [FUNCTIONS.md](FUNCTIONS.md) - Documentación de funciones y procedimientos
-- [VIEWS.md](VIEWS.md) - Documentación de vistas
+- [VIEWS.md](VIEWS.md) - Documentación de vistas de base de datos
 - [ENUMS.md](ENUMS.md) - Documentación de tipos enumerados
 - [RLS.md](RLS.md) - Políticas de seguridad y RLS
 - [API.md](API.md) - Ejemplos de consultas SQL comunes
