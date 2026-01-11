@@ -54,6 +54,10 @@ export const NAVIGATION_CONFIG: NavItem[] = [
     icon: Kanban,
     items: [
       {
+        title: 'Acciones',
+        url: '/admin/procesos/acciones',
+      },
+      {
         title: 'Documentos Comerciales',
         url: '/admin/procesos/oportunidades',
       },

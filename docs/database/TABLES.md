@@ -594,12 +594,13 @@ SELECT * FROM get_enum_values('dm_actores_tipo_relacion');
 4. **CONTEXTO Y EXTENSIONES** (El "Detalle")
 5. **AUDITORÍA Y CONTROL** (El "Rastro")
 
-**Columnas (29)**:
+**Columnas (30)**:
 
 | # | Columna | Tipo | Nullable | Default | Descripción |
 |---|---------|------|----------|---------|-------------|
 | 1 | id | uuid | NO | gen_random_uuid() | Identificador único |
 | 2 | codigo | text | NO | DOC-00000001 (seq) | Código único autogenerado |
+| 3 | titulo | text | NO | - | Título descriptivo del documento |
 | 4 | fecha_doc | date | NO | CURRENT_DATE | Fecha del documento |
 | 5 | estado | enum | NO | 'Nueva' | Nueva, En Progreso, Ganada, Pérdida, Descartada |
 | 6 | solicitante_id | uuid | NO | - | Referencia a dm_actores |

@@ -82,17 +82,20 @@ const { data } = await supabase
 
 ### v_doc_comercial_org
 
-**Propósito**: Vista de documentos comerciales (oportunidades, ofertas, pedidos) con información de solicitantes y pagadores
+**Propósito**: Vista de documentos comerciales (oportunidades, ofertas, pedidos) con información de solicitantes, pagadores y responsables
 
 **Tablas Base**:
 - tr_doc_comercial (tabla principal)
 - dm_actores (solicitante)
 - dm_actores (pagador)
+- config_organizacion_miembros (responsable)
 
 **Características**:
--JOIN con dm_actores para obtener nombres de solicitante y pagador
-- Consolidación de información financiera y de estados
-- Optimizada para reportes y listados
+- LEFT JOIN con dm_actores para obtener nombres de solicitante y pagador
+- LEFT JOIN con config_organizacion_miembros para obtener nombre del responsable
+- Consolidación de información financiera (montos, descuentos, impuestos)
+- Columnas calculadas con lógica de nombres para personas y empresas
+- Optimizada para reportes y listados comerciales
 
 **Columnas Principales**:
 
@@ -100,51 +103,85 @@ const { data } = await supabase
 |---------|------|-------------|
 | id | uuid | Identificador único del documento |
 | codigo | text | Código autogenerado (DOC-00000001) |
+| titulo | text | Título descriptivo del documento |
 | tipo | enum | Tipo: oportunidad, oferta, pedido_venta, reserva |
 | sub_tipo | enum | Subtipo: sol_ingreso, sol_retiro, oferta_eventos, pedido_eventos |
 | estado | enum | Estado: Nueva, En Progreso, Ganada, Pérdida, Descartada |
 | fecha_doc | date | Fecha del documento |
+| fecha_venc_doc | date | Fecha de vencimiento del documento |
 | organizacion_id | uuid | ID de la organización |
-| monto_estimado | numeric | Monto estimado inicial |
-| valor_total | numeric | Valor final calculado |
-| moneda_iso | enum | Moneda (COP, USD, EUR, etc.) |
-| solicitante_id | uuid | ID del actor solicitante |
-| solicitante_nombre | text | Nombre del solicitante (JOIN) |
-| pagador_id | uuid | ID del actor pagador |
-| pagador_nombre | text | Nombre del pagador (JOIN) |
-| responsable_id | uuid | ID del usuario responsable |
 | asociado_id | uuid | ID de la asignación de acción relacionada |
+| solicitante_id | uuid | ID del actor solicitante |
+| solicitante_nombre | text | Nombre del solicitante (calculado) |
+| pagador_id | uuid | ID del actor pagador |
+| pagador_nombre | text | Nombre del pagador (calculado) |
+| responsable_id | uuid | ID del usuario responsable |
+| responsable_nombre | text | Nombre completo del responsable (JOIN) |
+| documento_origen_id | uuid | ID del documento origen (si aplica) |
+| moneda_iso | enum | Moneda (COP, USD, EUR, etc.) |
+| monto_estimado | numeric | Monto estimado inicial |
+| valor_neto | numeric | Valor neto del documento |
+| valor_descuento | numeric | Valor total de descuentos |
+| valor_impuestos | numeric | Valor total de impuestos |
+| valor_total | numeric | Valor final calculado (neto - descuento + impuestos) |
+| items | jsonb | Items/lineas del documento en formato JSON |
+| notas | text | Notas adicionales |
+| tags | text[] | Etiquetas para categorización |
+| atributos | jsonb | Atributos adicionales en formato JSON |
+| creado_en | timestamptz | Fecha de creación |
+| creado_por | uuid | ID del usuario que creó |
+| actualizado_en | timestamptz | Fecha última actualización |
+| actualizado_por | uuid | ID del usuario que actualizó |
 | eliminado_en | timestamptz | Timestamp de soft delete |
+| eliminado_por | uuid | ID del usuario que eliminó |
 
 **Columnas Calculadas (JOIN)**:
-- `solicitante_nombre`: Nombre completo del solicitante desde dm_actores
-- `pagador_nombre`: Nombre completo del pagador desde dm_actores
+
+- `solicitante_nombre`: Nombre del solicitante desde dm_actores con lógica:
+  - Para personas: `primer_nombre + segundo_nombre + primer_apellido + segundo_apellido`
+  - Para empresas: `nombre_comercial` o `razon_social`
+  - Usa COALESCE para retornar el primer valor no nulo
+- `pagador_nombre`: Nombre del pagador desde dm_actores (misma lógica que solicitante)
+- `responsable_nombre`: Nombre completo del usuario desde config_organizacion_miembros
 
 **Casos de Uso**:
-1. **Listados de oportunidades**: Ver todas las oportunidades con nombres de clientes
-2. **Reportes de ventas**: Análisis de documentos ganados por cliente
-3. **Dashboard comercial**: Resumen de oportunidades por estado y cliente
-4. **Seguimiento de documentos**: Tracking de documentos con información de contacto
+
+1. **Listados de oportunidades**: Ver todas las oportunidades con nombres de clientes y responsables
+2. **Reportes de ventas**: Análisis de documentos ganados por cliente y responsable
+3. **Dashboard comercial**: Resumen de oportunidades por estado, cliente y vencimiento
+4. **Seguimiento de documentos**: Tracking de documentos con información de contacto completa
+5. **Análisis financiero**: Cálculos de montos, descuentos e impuestos por documento
 
 **Ejemplo de Uso**:
 
 ```typescript
-// Listar oportunidades con nombres de solicitantes
+// Listar oportunidades con nombres de solicitantes y responsables
 const { data } = await supabase
   .from('v_doc_comercial_org')
   .select(`
     id,
     codigo,
+    titulo,
+    tipo,
     estado,
+    fecha_doc,
+    fecha_venc_doc,
     valor_total,
+    monto_estimado,
     solicitante_nombre,
-    pagador_nombre
+    pagador_nombre,
+    responsable_nombre
   `)
   .eq('organizacion_id', organizacion_id)
   .eq('tipo', 'oportunidad')
   .is('eliminado_en', null)
   .order('fecha_doc', { ascending: false })
 ```
+
+**Referencias**:
+
+- Utilizado en: [app/actions/oportunidades.ts:18](app/actions/oportunidades.ts#L18)
+- Utilizado en: [features/procesos/oportunidades/columns.tsx](features/procesos/oportunidades/columns.tsx)
 
 ---
 

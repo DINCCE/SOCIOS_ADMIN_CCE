@@ -33,63 +33,59 @@ const ESTADO_CONFIG: Record<
 }
 
 export type DocumentoComercialView = {
-  // === Campos existentes (mantener compatibilidad) ===
+  // === Campos de v_doc_comercial_org ===
   id: string
   codigo: string
-  tipo: string
-  sub_tipo: string | null
-  estado: string
-  fecha_solicitud: string
-  monto_estimado: number | null
-  notas: string | null
-  tags: string[]
+  titulo: string
+  tipo: 'oportunidad' | 'oferta' | 'pedido_venta' | 'reserva'
+  sub_tipo: 'sol_ingreso' | 'sol_retiro' | 'oferta_eventos' | 'pedido_eventos' | null
+  estado: 'Nueva' | 'En Progreso' | 'Ganada' | 'Pérdida' | 'Descartada'
   organizacion_id: string
-  organizacion_nombre: string
-  solicitante_id: string
-  solicitante_codigo_bp: string
-  solicitante_nombre: string
+  solicitante_id: string | null
+  solicitante_codigo: string | null
+  solicitante_tipo_actor: 'persona' | 'empresa' | null
+  solicitante_primer_nombre: string | null
+  solicitante_primer_apellido: string | null
+  solicitante_numero_documento: string | null
+  solicitante_razon_social: string | null
+  solicitante_nit: string | null
   responsable_id: string | null
-  responsable_email: string | null
-  creado_en: string
-  eliminado_en: string | null
-
-  // === Campos nuevos (opcionales para backward compatibility) ===
-  fecha_venc_doc: string | null
-
-  // Asociado
-  asociado_id: string | null
-  asociado_codigo_completo: string | null
-  asociado_subcodigo: string | null
-  asociado_tipo_asignacion: string | null
-  asociado_es_vigente: boolean | null
-  asociado_codigo_bp: string | null
-  asociado_nombre: string | null
-
-  // Pagador
   pagador_id: string | null
-  pagador_codigo_bp: string | null
-  pagador_tipo_actor: string | null
-  pagador_nombre: string | null
-
-  // Documento origen
-  documento_origen_id: string | null
-  documento_origen_codigo: string | null
-  documento_origen_tipo: string | null
-  documento_origen_estado: string | null
-
-  // Campos financieros nuevos
-  items: Record<string, unknown> | null
-  moneda_iso: string | null
+  pagador_codigo: string | null
+  pagador_tipo_actor: 'persona' | 'empresa' | null
+  pagador_primer_nombre: string | null
+  pagador_primer_apellido: string | null
+  pagador_num_documento: string | null
+  pagador_razon_social: string | null
+  pagador_nit: string | null
+  monto_estimado: number | null
   valor_neto: number | null
   valor_descuento: number | null
   valor_impuestos: number | null
   valor_total: number | null
-
-  // Otros campos de auditoría
-  creado_por: string | null
+  moneda_iso: string | null
+  fecha_venc_doc: string | null
+  asociado_id: string | null
+  asociado_codigo: string | null
+  asociado_tipo: string | null
+  asociado_codigo_bp: string | null
+  asociado_primer_nombre: string | null
+  asociado_primer_apellido: string | null
+  documento_origen_id: string | null
+  documento_origen_codigo: string | null
+  notas: string | null
+  atributos: Record<string, unknown> | null
+  items: Record<string, unknown> | null
+  tags: string[]
+  creado_en: string
   actualizado_en: string
-  actualizado_por: string | null
-  eliminado_por: string | null
+  eliminado_en: string | null
+
+  // === Campos computados para compatibilidad ===
+  solicitante_nombre: string
+  solicitante_codigo_bp: string
+  pagador_nombre: string | null
+  pagador_codigo_bp: string | null
 }
 
 export const columns: ColumnDef<DocumentoComercialView>[] = [
@@ -142,6 +138,15 @@ export const columns: ColumnDef<DocumentoComercialView>[] = [
     meta: { size: 140 },
   },
   {
+    accessorKey: 'titulo',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Título" className="text-left" />,
+    cell: ({ row }) => {
+      const titulo = row.getValue('titulo') as string
+      return <span className="truncate max-w-[300px] block" title={titulo}>{titulo || '-'}</span>
+    },
+    meta: { size: 200 },
+  },
+  {
     accessorKey: 'tipo',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo" className="text-left" />,
     cell: ({ row }) => {
@@ -177,10 +182,10 @@ export const columns: ColumnDef<DocumentoComercialView>[] = [
     meta: { size: 110 },
   },
   {
-    accessorKey: 'fecha_solicitud',
+    accessorKey: 'creado_en',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" className="text-left" />,
     cell: ({ row }) => {
-      const fecha = new Date(row.getValue('fecha_solicitud'))
+      const fecha = new Date(row.getValue('creado_en'))
       return <span>{fecha.toLocaleDateString('es-CO')}</span>
     },
     meta: { size: 110 },

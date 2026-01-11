@@ -191,3 +191,16 @@ export const getTareaTagsOptions = (data: any[]): FilterOption[] => {
   })
   return Array.from(uniqueTags).sort().map((tag) => ({ value: tag, label: tag }))
 }
+
+// ============================================================================
+// ACCIONES
+// ============================================================================
+
+// Opciones de filtro para Acciones - Estado
+export const accionesEstadoOptions: FilterOption[] = [
+  { value: "disponible", label: "Disponible", icon: CheckCircle2 },
+  { value: "asignada", label: "Asignada", icon: Users },
+  { value: "arrendada", label: "Arrendada", icon: Building2 },
+  { value: "bloqueada", label: "Bloqueada", icon: AlertTriangle },
+  { value: "inactiva", label: "Inactiva", icon: XCircle },
+]
