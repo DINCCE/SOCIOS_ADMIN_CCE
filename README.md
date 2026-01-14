@@ -187,7 +187,7 @@ Complex operations use database RPCs:
 
 ### Permission System
 
-Multi-tenant RBAC via `organization_members`:
+Multi-tenant RBAC via `config_organizacion_miembros`:
 
 ```typescript
 import { checkPermission, isAdmin } from '@/lib/auth/permissions'

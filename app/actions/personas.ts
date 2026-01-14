@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getActiveOrganizationId } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { PersonFormValues } from '@/lib/schemas/person-schema'
 
@@ -14,31 +14,34 @@ import type { PersonFormValues } from '@/lib/schemas/person-schema'
 export async function crearPersonaFromPersonFormValues(
   formData: PersonFormValues
 ) {
+  console.log('[crearPersona] Iniciando creación de persona con formData:', formData)
+
   const supabase = await createClient()
 
-  // 1. Get organization (current pattern: first org)
-  // TODO: Replace with user session organization when profiles table exists
-  const { data: orgData, error: orgError } = await supabase
-    .from('config_organizaciones')
-    .select('id')
-    .limit(1)
-    .single()
+  console.log('[crearPersona] Cliente Supabase creado correctamente')
 
-  if (orgError || !orgData) {
-    console.error('Error fetching organization:', orgError)
+  // 1. Obtener organización activa del usuario
+  const organizacionId = await getActiveOrganizationId()
+
+  console.log('[crearPersona] Organización ID obtenida:', organizacionId)
+
+  if (!organizacionId) {
+    console.error('[crearPersona] ERROR: No se encontró organización ID')
     return {
       success: false,
-      message: 'No se encontró una organización activa para asociar la persona.',
+      message: 'No se encontró una organización activa para asociar la persona. Verifique su sesión.',
       bp_id: null,
       codigo_bp: null,
       warnings: null,
     }
   }
 
+  console.log('[crearPersona] Organización válida, continuando con creación...')
+
   // 2. Call existing crearPersonaFromForm directly with form data
   // The RPC now expects short codes (CC, CE, etc.) which are already in formData
   return crearPersonaFromForm({
-    organizacionId: orgData.id,
+    organizacionId: organizacionId,
     primerNombre: formData.primer_nombre,
     segundoNombre: formData.segundo_nombre || undefined,
     primerApellido: formData.primer_apellido,
@@ -46,8 +49,8 @@ export async function crearPersonaFromPersonFormValues(
     tipoDocumento: formData.tipo_documento,
     numeroDocumento: formData.numero_documento,
     emailPrincipal: formData.email_principal || undefined,
-    telefonoPrincipal: formData.telefono_principal || undefined,
-    fechaNacimiento: formData.fecha_nacimiento || undefined,
+    telefonoPrincipal: (formData.telefono_principal as string | null) ?? undefined,
+    fechaNacimiento: formData.fecha_nacimiento ? formData.fecha_nacimiento.toISOString().split('T')[0] : undefined,
     genero: formData.genero || undefined,
     estadoCivil: formData.estado_civil || undefined,
     nacionalidad: formData.nacionalidad || undefined,
@@ -70,6 +73,7 @@ export async function crearPersonaFromPersonFormValues(
     twitterHandle: formData.twitter_handle || undefined,
     contactoEmergenciaId: formData.contacto_emergencia_id || undefined,
     relacionEmergencia: formData.relacion_emergencia || undefined,
+    estado: formData.estado,
   })
 }
 
@@ -110,77 +114,177 @@ export async function crearPersonaFromForm(data: {
   twitterHandle?: string
   contactoEmergenciaId?: string
   relacionEmergencia?: string
+  estado?: string
 }) {
   const supabase = await createClient()
 
-  // Call RPC with parameters that match the actual database function
-  // Documentation: crear_persona(p_organizacion_id, p_primer_nombre, p_primer_apellido, p_tipo_documento, p_numero_documento, p_genero, p_fecha_nacimiento, p_email_principal, p_telefono_principal, ...)
-  const { data: rpcResponse, error } = await supabase.rpc('crear_persona', {
-    // Required parameters
+  // RPC validations before creating
+  // 1. Check document uniqueness
+  const { data: docCheck } = await supabase.rpc('dm_actores_documento_existe', {
     p_organizacion_id: data.organizacionId,
-    p_primer_nombre: data.primerNombre,
-    p_primer_apellido: data.primerApellido,
     p_tipo_documento: data.tipoDocumento,
-    p_numero_documento: data.numeroDocumento,
-    p_genero: data.genero,
-    p_fecha_nacimiento: data.fechaNacimiento || null,
-    p_email_principal: data.emailPrincipal,
-    p_telefono_principal: data.telefonoPrincipal,
-    p_fecha_expedicion: null,
-    p_lugar_expedicion: null,
-    // Optional parameters
-    p_segundo_nombre: data.segundoNombre,
-    p_segundo_apellido: data.segundoApellido,
-    p_estado_civil: data.estadoCivil,
-    p_nacionalidad: data.nacionalidad,
-    p_lugar_nacimiento: data.lugarNacimiento,
-    p_ocupacion: data.ocupacion,
-    p_profesion: data.profesion,
-    p_nivel_educacion: data.nivelEducacion,
-    p_tipo_sangre: data.tipoSangre,
-    p_eps: data.eps,
-    p_fecha_socio: data.fechaSocio,
-    p_fecha_aniversario: data.fechaAniversario,
-    p_tags: data.tags,
-    p_email_secundario: data.emailSecundario,
-    p_telefono_secundario: data.telefonoSecundario,
-    p_whatsapp: data.whatsapp,
-    p_linkedin_url: data.linkedinUrl,
-    p_facebook_url: data.facebookUrl,
-    p_instagram_handle: data.instagramHandle,
-    p_twitter_handle: data.twitterHandle,
-    p_foto_url: null,
-    p_contacto_emergencia_id: data.contactoEmergenciaId,
-    p_relacion_emergencia: data.relacionEmergencia,
-    // Note: JSONB fields (p_perfil_*) are omitted to use database DEFAULT '{}'::jsonb
+    p_num_documento: data.numeroDocumento,
+    p_excluir_id: null,
   })
 
-  if (error) {
-    console.error('Error creating persona via RPC:', error)
+  const docResult = docCheck as {
+    doc_exists: boolean
+    actor_id: string | null
+    codigo_bp: string | null
+    nombre_completo: string | null
+  }[] | null
+
+  if (docResult && docResult[0]?.doc_exists) {
     return {
       success: false,
-      message: `Error de sistema: ${error.message}`,
+      message: `Documento ya registrado para ${docResult[0].nombre_completo} (${docResult[0].codigo_bp})`,
       bp_id: null,
       codigo_bp: null,
       warnings: null,
     }
   }
 
-  // RPC returns a JSONB: { success, bp_id, codigo_bp, message, warnings }
-  const result = rpcResponse as {
-    success: boolean
-    bp_id: string | null
-    codigo_bp: string | null
-    message: string
-    warnings: string[] | null
+  // 2. Check email uniqueness (if provided)
+  if (data.emailPrincipal && data.emailPrincipal !== '') {
+    const { data: emailCheck } = await supabase.rpc('dm_actores_email_existe', {
+      p_organizacion_id: data.organizacionId,
+      p_email: data.emailPrincipal,
+      p_excluir_id: null,
+    })
+
+    const emailResult = emailCheck as {
+      email_exists: boolean
+      actor_id: string | null
+      codigo_bp: string | null
+      nombre_completo: string | null
+      email_encontrado: string | null
+    }[] | null
+
+    if (emailResult && emailResult[0]?.email_exists) {
+      return {
+        success: false,
+        message: `Email ya registrado para ${emailResult[0].nombre_completo} (${emailResult[0].codigo_bp})`,
+        bp_id: null,
+        codigo_bp: null,
+        warnings: null,
+      }
+    }
   }
 
-  if (result.success) {
-    // Revalidate personas list page
-    revalidatePath('/admin/socios/actores')
+  // 3. Check phone uniqueness (if provided)
+  if (data.telefonoPrincipal && data.telefonoPrincipal !== '') {
+    const { data: phoneCheck } = await supabase.rpc('dm_actores_telefono_existe', {
+      p_organizacion_id: data.organizacionId,
+      p_telefono: data.telefonoPrincipal,
+      p_excluir_id: null,
+    })
+
+    const phoneResult = phoneCheck as {
+      phone_exists: boolean
+      actor_id: string | null
+      codigo_bp: string | null
+      nombre_completo: string | null
+      telefono_encontrado: string | null
+    }[] | null
+
+    if (phoneResult && phoneResult[0]?.phone_exists) {
+      return {
+        success: false,
+        message: `Teléfono ya registrado para ${phoneResult[0].nombre_completo} (${phoneResult[0].codigo_bp})`,
+        bp_id: null,
+        codigo_bp: null,
+        warnings: null,
+      }
+    }
   }
 
-  return result
+  // Crear la persona usando INSERT directo a dm_actores (CRUD estándar de Supabase)
+  // La tabla dm_actores usa el patrón CTI y contiene tanto personas como empresas
+  const { data: newPersona, error: insertError } = await supabase
+    .from('dm_actores')
+    .insert({
+      organizacion_id: data.organizacionId,
+      tipo_actor: 'persona',
+      tipo_documento: data.tipoDocumento,
+      num_documento: data.numeroDocumento,
+      primer_nombre: data.primerNombre,
+      segundo_nombre: data.segundoNombre || null,
+      primer_apellido: data.primerApellido,
+      segundo_apellido: data.segundoApellido || null,
+      email_principal: data.emailPrincipal || null,
+      telefono_principal: data.telefonoPrincipal || null,
+      fecha_nacimiento: data.fechaNacimiento || null,
+      genero_actor: data.genero || null,
+      estado_civil: data.estadoCivil || null,
+      es_socio: true, // Por defecto, las personas creadas son socios
+      estado_actor: 'activo',
+      // Campos opcionales adicionales
+      email_secundario: data.emailSecundario || null,
+      telefono_secundario: data.telefonoSecundario || null,
+      // Perfiles JSONB
+      perfil_identidad: {
+        nacionalidad: data.nacionalidad || 'CO',
+        lugar_nacimiento: data.lugarNacimiento || null,
+      },
+      perfil_profesional_corporativo: {
+        ocupacion: data.ocupacion || null,
+        profesion: data.profesion || null,
+        nivel_educacion: data.nivelEducacion || null,
+      },
+      perfil_salud: {
+        eps: data.eps || null,
+        tipo_sangre: data.tipoSangre || null,
+      },
+      perfil_contacto: {
+        contacto_emergencia_id: data.contactoEmergenciaId || null,
+        relacion_emergencia: data.relacionEmergencia || null,
+      },
+      perfil_redes: {
+        linkedin: data.linkedinUrl || null,
+        facebook: data.facebookUrl || null,
+        instagram: data.instagramHandle || null,
+        twitter: data.twitterHandle || null,
+      },
+      perfil_intereses: {
+        tags: data.tags || [],
+      },
+    })
+    .select()
+    .single()
+
+  // Handle errors
+  if (insertError) {
+    console.error('Error inserting persona:', insertError)
+
+    // Check for specific database errors
+    if (insertError.message.includes('duplicate key') || insertError.message.includes('already exists')) {
+      return {
+        success: false,
+        message: 'Ya existe una persona con ese número de documento.',
+        bp_id: null,
+        codigo_bp: null,
+        warnings: null,
+      }
+    }
+
+    return {
+      success: false,
+      message: `Error al crear la persona: ${insertError.message}`,
+      bp_id: null,
+      codigo_bp: null,
+      warnings: null,
+    }
+  }
+
+  revalidatePath('/admin/socios/personas')
+
+  return {
+    success: true,
+    message: 'Persona creada exitosamente',
+    bp_id: newPersona.id,
+    codigo_bp: newPersona.codigo_bp,
+    warnings: null,
+  }
 }
 
 /**

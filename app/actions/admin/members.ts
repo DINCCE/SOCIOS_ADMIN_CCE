@@ -17,7 +17,7 @@ export async function addMember(data: {
   const supabase = await createClient()
 
   const { error } = await supabase
-    .from('organization_members')
+    .from('config_organizacion_miembros')
     .insert({
       user_id: data.user_id,
       organization_id: data.organization_id,
@@ -57,7 +57,7 @@ export async function updateMemberRole(
   const supabase = await createClient()
 
   const { error } = await supabase
-    .from('organization_members')
+    .from('config_organizacion_miembros')
     .update({ role })
     .eq('user_id', user_id)
     .eq('organization_id', organization_id)
@@ -93,7 +93,7 @@ export async function removeMember(
   const supabase = await createClient()
 
   const { error } = await supabase
-    .from('organization_members')
+    .from('config_organizacion_miembros')
     .delete()
     .eq('user_id', user_id)
     .eq('organization_id', organization_id)
@@ -125,7 +125,7 @@ export async function listMembers(organization_id: string) {
   const supabase = await createClient()
 
   const { data, error } = await supabase
-    .from('organization_members')
+    .from('config_organizacion_miembros')
     .select(`
       *,
       user:auth.users (

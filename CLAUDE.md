@@ -155,7 +155,7 @@ Database RPCs handle complex operations and permissions:
 
 ### Permission System
 
-Multi-tenant RBAC via organization_members:
+Multi-tenant RBAC via config_organizacion_miembros:
 
 - Check permissions: `checkPermission(resource, action, organizacion_id)` in [lib/auth/permissions.ts](lib/auth/permissions.ts:11)
 - Admin check: `isAdmin(organizacion_id)`

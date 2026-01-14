@@ -10,9 +10,10 @@ Este documento describe todas las funciones y procedimientos almacenados en la b
 
 1. [Funciones de Seguridad RBAC](#1-funciones-de-seguridad-rbac)
 2. [Funciones de Negocio](#2-funciones-de-negocio)
-3. [Funciones de Utilidad](#3-funciones-de-utilidad)
-4. [Triggers](#4-triggers)
-5. [Funciones del Sistema](#5-funciones-del-sistema)
+3. [Funciones de Validación](#3-funciones-de-validación)
+4. [Funciones de Utilidad](#4-funciones-de-utilidad)
+5. [Triggers](#5-triggers)
+6. [Funciones del Sistema](#6-funciones-del-sistema)
 
 ---
 
@@ -377,7 +378,302 @@ INSERT INTO vn_asociados (
 
 ---
 
-## 3. Funciones de Utilidad
+### rpc_accion_disponibilidad()
+
+Verifica la disponibilidad de una acción y retorna los ocupantes vigentes.
+
+**Firma**:
+```sql
+rpc_accion_disponibilidad(p_accion_id uuid, p_organizacion_id uuid)
+RETURNS jsonb
+```
+
+**Parámetros**:
+- `p_accion_id`: UUID de la acción a verificar
+- `p_organizacion_id`: UUID de la organización
+
+**Retorna**: Objeto JSONB con:
+- `disponible`: Boolean indicando si está disponible
+- `mensaje`: Mensaje descriptivo
+- `ocupantes`: Array de objetos con información de ocupantes vigentes
+
+**Modo de seguridad**: `SECURITY DEFINER`
+
+**Ejemplo de respuesta**:
+```json
+{
+  "disponible": false,
+  "mensaje": "Acción con asignaciones vigentes",
+  "ocupantes": [
+    {
+      "tipo_asignacion": "dueño",
+      "nombre_actor": "Juan Pérez",
+      "codigo_actor": "BP-001",
+      "fecha_inicio": "2024-01-01"
+    }
+  ]
+}
+```
+
+**Ejemplo de uso**:
+```sql
+SELECT rpc_accion_disponibilidad(
+  'accion_uuid',
+  'org_uuid'
+);
+```
+
+**Lógica**: Consulta la vista `v_asociados_org` filtrando por:
+- Acción especificada
+- Organización especificada
+- Asignaciones vigentes (`es_vigente = true`)
+- Fechas vigentes (inicio <= hoy y fin >= hoy o fin es NULL)
+
+---
+
+## 3. Funciones de Validación
+
+### dm_actores_documento_existe()
+
+Verifica si existe un actor con el mismo documento en la organización.
+
+**Firma**:
+```sql
+dm_actores_documento_existe(
+  p_organizacion_id uuid,
+  p_tipo_documento dm_actor_tipo_documento,
+  p_num_documento text,
+  p_excluir_id uuid DEFAULT NULL::uuid
+)
+RETURNS TABLE(
+  doc_exists boolean,
+  actor_id uuid,
+  codigo_bp text,
+  nombre_completo text
+)
+```
+
+**Parámetros**:
+- `p_organizacion_id`: UUID de la organización
+- `p_tipo_documento`: Tipo de documento a buscar
+- `p_num_documento`: Número de documento (trim aplicado)
+- `p_excluir_id`: UUID del actor a excluir (opcional, útil para updates)
+
+**Retorna**: Tabla con información del duplicado encontrado
+
+**Modo de seguridad**: `SECURITY INVOKER`
+
+**Estabilidad**: `STABLE`
+
+**Ejemplo de uso**:
+```sql
+-- Verificar si documento existe antes de insertar
+SELECT * FROM dm_actores_documento_existe(
+  'org_uuid',
+  'CC',
+  '12345678',
+  NULL
+);
+
+-- Verificar excluyendo el actor actual (para updates)
+SELECT * FROM dm_actores_documento_existe(
+  'org_uuid',
+  'CC',
+  '12345678',
+  'actor_actual_uuid'
+);
+```
+
+**Comportamiento**:
+- Realiza búsqueda trim comparando los documentos
+- Retorna un registro con `doc_exists = true` si encuentra duplicado
+- Retorna un registro con `doc_exists = false` si no encuentra duplicado
+- Incluye información del actor encontrado (id, código_bp, nombre_completo)
+
+---
+
+### dm_actores_email_existe()
+
+Verifica si existe un actor con el mismo email en la organización.
+
+**Firma**:
+```sql
+dm_actores_email_existe(
+  p_organizacion_id uuid,
+  p_email text,
+  p_excluir_id uuid DEFAULT NULL::uuid
+)
+RETURNS TABLE(
+  email_exists boolean,
+  actor_id uuid,
+  codigo_bp text,
+  nombre_completo text,
+  email_encontrado text
+)
+```
+
+**Parámetros**:
+- `p_organizacion_id`: UUID de la organización
+- `p_email`: Email a buscar (case-insensitive)
+- `p_excluir_id`: UUID del actor a excluir (opcional)
+
+**Retorna**: Tabla con información del duplicado encontrado
+
+**Modo de seguridad**: `SECURITY INVOKER`
+
+**Estabilidad**: `STABLE`
+
+**Ejemplo de uso**:
+```sql
+-- Verificar si email existe
+SELECT * FROM dm_actores_email_existe(
+  'org_uuid',
+  'usuario@example.com',
+  NULL
+);
+```
+
+**Comportamiento**:
+- Busca en `email_principal` y `email_secundario`
+- Comparación case-insensitive
+- Indica cuál email coincidió (`email_encontrado`)
+
+---
+
+### dm_actores_telefono_existe()
+
+Verifica si existe un actor con el mismo teléfono en la organización.
+
+**Firma**:
+```sql
+dm_actores_telefono_existe(
+  p_organizacion_id uuid,
+  p_telefono text,
+  p_excluir_id uuid DEFAULT NULL::uuid
+)
+RETURNS TABLE(
+  phone_exists boolean,
+  actor_id uuid,
+  codigo_bp text,
+  nombre_completo text,
+  telefono_encontrado text
+)
+```
+
+**Parámetros**:
+- `p_organizacion_id`: UUID de la organización
+- `p_telefono`: Teléfono a buscar
+- `p_excluir_id`: UUID del actor a excluir (opcional)
+
+**Retorna**: Tabla con información del duplicado encontrado
+
+**Modo de seguridad**: `SECURITY INVOKER`
+
+**Estabilidad**: `STABLE`
+
+**Ejemplo de uso**:
+```sql
+-- Verificar si teléfono existe
+SELECT * FROM dm_actores_telefono_existe(
+  'org_uuid',
+  '+57 300 123 4567',
+  NULL
+);
+```
+
+**Comportamiento**:
+- Busca en `telefono_principal` y `telefono_secundario`
+- Normaliza ambos teléfonos eliminando caracteres no numéricos
+- Indica cuál teléfono coincidió
+
+---
+
+### vn_asociados_validar_accion()
+
+Valida si una acción tiene asignaciones vigentes para el usuario actual (usa org_id del JWT).
+
+**Firma**:
+```sql
+vn_asociados_validar_accion(p_accion_id uuid)
+RETURNS jsonb
+```
+
+**Parámetros**:
+- `p_accion_id`: UUID de la acción a validar
+
+**Retorna**: Objeto JSONB con:
+- `disponible`: Boolean
+- `mensaje`: Mensaje descriptivo
+- `ocupantes`: Array de ocupantes vigentes
+
+**Modo de seguridad**: `SECURITY DEFINER`
+
+**Requiere**: `org_id` en el claim del JWT
+
+**Ejemplo de uso**:
+```sql
+SELECT vn_asociados_validar_accion('accion_uuid');
+```
+
+**Validaciones**:
+1. Verifica que `org_id` exista en el JWT
+2. Verifica que el usuario sea miembro de la organización
+3. Busca asignaciones vigentes en la organización
+
+**Errores**:
+- `22023` (invalid_parameter_value): Si falta `org_id` en el JWT
+- `42501` (insufficient_privilege): Si el usuario no es miembro de la organización
+
+---
+
+### vn_asociados_validar_asociado()
+
+Valida si un asociado tiene acciones vigentes asignadas para el usuario actual.
+
+**Firma**:
+```sql
+vn_asociados_validar_asociado(p_asociado_id uuid)
+RETURNS jsonb
+```
+
+**Parámetros**:
+- `p_asociado_id`: UUID del asociado a validar
+
+**Retorna**: Objeto JSONB con:
+- `disponible`: Boolean
+- `mensaje`: Mensaje descriptivo
+- `acciones`: Array de acciones vigentes
+
+**Modo de seguridad**: `SECURITY DEFINER`
+
+**Requiere**: `org_id` en el claim del JWT
+
+**Ejemplo de uso**:
+```sql
+SELECT vn_asociados_validar_asociado('asociado_uuid');
+```
+
+**Ejemplo de respuesta**:
+```json
+{
+  "disponible": false,
+  "mensaje": "Asociado con acciones vigentes",
+  "acciones": [
+    {
+      "accion_id": "uuid",
+      "codigo_accion": "ACC-001",
+      "nombre_accion": "Acción X",
+      "tipo_asignacion": "titular",
+      "fecha_inicio": "2024-01-01",
+      "fecha_fin": null
+    }
+  ]
+}
+```
+
+---
+
+## 4. Funciones de Utilidad
 
 ### search_locations()
 
@@ -528,7 +824,7 @@ WHERE nat_fiscal = 'jurídica';
 
 ---
 
-## 4. Triggers
+## 5. Triggers
 
 ### set_actualizado_por_en()
 
@@ -757,7 +1053,52 @@ INSERT INTO tr_doc_comercial (
 
 ---
 
-## 5. Funciones del Sistema
+### dm_actores_prevent_dup_doc_trg()
+
+Trigger que previene documentos duplicados en `dm_actores`.
+
+**Firma**:
+```sql
+dm_actores_prevent_dup_doc_trg()
+RETURNS trigger
+```
+
+**Evento**: `BEFORE INSERT OR UPDATE`
+
+**Tabla**: `dm_actores`
+
+**Modo de seguridad**: `SECURITY INVOKER`
+
+**Lógica**:
+```sql
+-- Valida si vienen los campos necesarios
+IF NEW.organizacion_id IS NOT NULL AND NEW.tipo_documento IS NOT NULL AND NEW.num_documento IS NOT NULL THEN
+  -- Llama a la función de validación
+  PERFORM 1 FROM dm_actores_documento_existe(
+    NEW.organizacion_id,
+    NEW.tipo_documento,
+    NEW.num_documento,
+    NULL
+  ) AS r(doc_exists boolean, actor_id uuid, codigo_bp text, nombre_completo text)
+  WHERE r.doc_exists = true;
+
+  IF found THEN
+    RAISE EXCEPTION USING
+      errcode = 'unique_violation',
+      message = format('El documento ingresado ya existe en la organización (codigo_bp=%s, nombre=%s).', r.codigo_bp, r.nombre_completo),
+      detail = 'Duplicidad por (organizacion_id, tipo_documento, num_documento)',
+      hint = 'Verifique el documento o use p_excluir_id para updates.';
+  END IF;
+END IF;
+
+RETURN NEW;
+```
+
+**Propósito**: Prevenir documentos duplicados dentro de la misma organización.
+
+---
+
+## 6. Funciones del Sistema
 
 ### unaccent()
 
@@ -816,6 +1157,12 @@ Funciones internas del diccionario de búsqueda full text de PostgreSQL (no usar
 | **Utilidad** | `get_user_email` | Obtener email de usuario |
 | **Utilidad** | `get_enum_values` | Obtener valores de un ENUM |
 | **Negocio** | `generar_siguiente_subcodigo` | Generar subcódigo de asignación |
+| **Negocio** | `rpc_accion_disponibilidad` | Verificar disponibilidad de acción |
+| **Validación** | `dm_actores_documento_existe` | Verificar duplicado de documento |
+| **Validación** | `dm_actores_email_existe` | Verificar duplicado de email |
+| **Validación** | `dm_actores_telefono_existe` | Verificar duplicado de teléfono |
+| **Validación** | `vn_asociados_validar_accion` | Validar acción con asignaciones |
+| **Validación** | `vn_asociados_validar_asociado` | Validar asociado con acciones |
 | **Utilidad** | `search_locations` | Buscar ciudades |
 | **Utilidad** | `calcular_digito_verificacion_nit` | Calcular DV de NIT |
 | **Trigger** | `set_actualizado_por_en` | Auditoría de actualización |
@@ -824,6 +1171,7 @@ Funciones internas del diccionario de búsqueda full text de PostgreSQL (no usar
 | **Trigger** | `om_prevent_key_change` | Proteger PK compuesta |
 | **Trigger** | `config_ciudades_build_search_text` | Recalcular búsqueda |
 | **Trigger** | `tr_doc_comercial_calcular_total` | Calcular total documento |
+| **Trigger** | `dm_actores_prevent_dup_doc_trg` | Prevenir duplicados de documento |
 
 ---
 

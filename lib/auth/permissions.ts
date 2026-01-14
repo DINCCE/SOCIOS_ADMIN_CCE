@@ -80,10 +80,15 @@ export async function isOwner(organizacion_id: string): Promise<boolean> {
 export async function getUserRole(organizacion_id: string): Promise<string | null> {
   const supabase = await createClient()
 
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
   const { data, error } = await supabase
-    .from('organization_members')
+    .from('config_organizacion_miembros')
     .select('role')
     .eq('organization_id', organizacion_id)
+    .eq('user_id', user.id)
+    .is('eliminado_en', null)
     .single()
 
   if (error) {

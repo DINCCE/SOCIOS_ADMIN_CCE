@@ -85,9 +85,10 @@ export function NewOportunidadSheet({ open: controlledOpen, onOpenChange, onSucc
             if (!user) throw new Error("No user found")
             // Get organization from user metadata or user organization relationship
             const { data } = await supabase
-                .from("organization_members")
+                .from("config_organizacion_miembros")
                 .select("organization_id")
                 .eq("user_id", user.id)
+                .is("eliminado_en", null)
                 .single()
             return {
                 orgId: data?.organization_id || "",

@@ -1408,3 +1408,87 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
   }
 }
+
+/* --- Phone Input Component Styles --- */
+/* Override react-phone-number-input default styles to match shadcn/ui */
+
+/* Country selector - remove default white background */
+.react-phone-number-input__country {
+  position: relative;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Country select button - match form field background */
+.react-phone-number-input__country-select {
+  position: relative;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+  padding: 0.5rem 0.75rem;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+}
+
+/* Country select arrow */
+.react-phone-number-input__country-select-arrow {
+  width: 0.75rem;
+  height: 0.75rem;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.react-phone-number-input__country-select:hover .react-phone-number-input__country-select-arrow {
+  opacity: 0.8;
+}
+
+/* Country flag icon - ensure visibility and proper styling */
+.react-phone-number-input__icon,
+.react-phone-number-input__icon img,
+.react-phone-number-input__icon svg {
+  width: 1.5rem !important;
+  height: 1rem !important;
+  object-fit: cover !important;
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  max-width: none !important;
+  border-radius: 2px !important;
+  border: none !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Phone number input */
+.react-phone-number-input__input {
+  flex: 1;
+  min-width: 0;
+  padding-left: 0.5rem;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: hsl(var(--foreground));
+}
+
+/* Remove default focus outlines - let Tailwind handle it */
+.react-phone-number-input__country-select:focus,
+.react-phone-number-input__input:focus {
+  outline: none;
+}
+
+/* Placeholder styling */
+.react-phone-number-input__input::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Dark mode adjustments */
+.dark .react-phone-number-input__country-select,
+.dark .react-phone-number-input__input {
+  color: hsl(var(--foreground));
+}
+
+.dark .react-phone-number-input__input::placeholder {
+  color: hsl(var(--muted-foreground));
+}

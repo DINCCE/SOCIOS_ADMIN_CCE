@@ -29,6 +29,7 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
 import {
     Select,
     SelectContent,
@@ -51,10 +52,23 @@ export function NewPersonSheet({ open: controlledOpen, onOpenChange, onSuccess }
     const [internalOpen, setInternalOpen] = useState(false)
     const [isPending, setIsPending] = useState(false)
     const router = useRouter()
-    
+
     // Use controlled open if provided, otherwise use internal state
     const open = controlledOpen !== undefined ? controlledOpen : internalOpen
     const setOpen = onOpenChange || setInternalOpen
+
+    // Filter function for name fields (letters including accents, ñ, spaces)
+    const filterLettersOnly = (value: string) => {
+        return value.replace(/[^a-zA-ZÀ-ÿ\u00f1\u00d1\s]/gu, '')
+    }
+
+    // Filter function for document number based on type
+    const filterDocumentNumber = (value: string, tipoDoc: string) => {
+        if (tipoDoc === "CC" || tipoDoc === "CE") {
+            return value.replace(/\D/g, '') // Keep only digits
+        }
+        return value // Allow alphanumeric for other types
+    }
 
     const form = useForm({
         resolver: zodResolver(personSchema),
@@ -68,17 +82,19 @@ export function NewPersonSheet({ open: controlledOpen, onOpenChange, onSuccess }
             email_principal: "",
             telefono_principal: "",
             estado: "activo",
-            genero: "no_especifica",
-            fecha_nacimiento: "",
+            genero: "",
+            fecha_nacimiento: undefined,
             estado_vital: "vivo",
             tags: [],
         },
     })
 
     async function onSubmit(data: PersonFormValues) {
+        console.log('[NewPersonSheet] Iniciando submit con datos:', data)
         setIsPending(true)
         try {
             const result = await crearPersonaFromPersonFormValues(data)
+            console.log('[NewPersonSheet] Resultado del servidor:', result)
 
             if (result.success === false) {
                 toast.error("Error al crear persona", {
@@ -152,12 +168,31 @@ export function NewPersonSheet({ open: controlledOpen, onOpenChange, onSuccess }
                                         <FormField
                                             control={form.control}
                                             name="tipo_documento"
-                                            render={({ field }) => (
+                                            render={({ field, fieldState }) => (
                                                 <FormItem>
                                                     <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Tipo</FormLabel>
-                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <Select
+                                                        onValueChange={(val) => {
+                                                            field.onChange(val)
+                                                            // Filter existing document number when type changes to CC/CE
+                                                            // Or clear it when changing from CC/CE to other types
+                                                            const currentDocNumber = form.getValues("numero_documento")
+
+                                                            if ((val === "CC" || val === "CE") && currentDocNumber) {
+                                                                // Filter out non-numeric characters when switching TO CC/CE
+                                                                const filtered = filterDocumentNumber(currentDocNumber, val)
+                                                                if (filtered !== currentDocNumber) {
+                                                                    form.setValue("numero_documento", filtered)
+                                                                }
+                                                            }
+                                                        }}
+                                                        defaultValue={field.value}
+                                                    >
                                                         <FormControl>
-                                                            <SelectTrigger className="h-11 bg-muted/30 border-muted-foreground/20 focus:ring-primary/20">
+                                                            <SelectTrigger className={cn(
+                                                                "h-11 bg-muted/30 border-muted-foreground/20 focus:ring-primary/20",
+                                                                fieldState.invalid && "border-destructive focus-visible:ring-destructive"
+                                                            )}>
                                                                 <SelectValue placeholder="Tipo" />
                                                             </SelectTrigger>
                                                         </FormControl>
@@ -179,14 +214,25 @@ export function NewPersonSheet({ open: controlledOpen, onOpenChange, onSuccess }
                                         <FormField
                                             control={form.control}
                                             name="numero_documento"
-                                            render={({ field }) => (
+                                            render={({ field, fieldState }) => (
                                                 <FormItem>
                                                     <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Número de Documento</FormLabel>
                                                     <FormControl>
                                                         <Input
-                                                            className="h-11 bg-muted/30 border-muted-foreground/20 font-mono tracking-widest focus-visible:ring-primary/20"
+                                                            className={cn(
+                                                                "h-11 bg-muted/30 border-muted-foreground/20 font-mono tracking-widest focus-visible:ring-primary/20",
+                                                                fieldState.invalid && "border-destructive focus-visible:ring-destructive"
+                                                            )}
                                                             placeholder="123456789"
+                                                            inputMode={form.watch("tipo_documento") === "CC" || form.watch("tipo_documento") === "CE" ? "numeric" : "text"}
                                                             {...field}
+                                                            onInput={(e) => {
+                                                                const currentTipoDoc = form.getValues("tipo_documento")
+                                                                const filtered = filterDocumentNumber(e.currentTarget.value, currentTipoDoc)
+                                                                if (filtered !== e.currentTarget.value) {
+                                                                    field.onChange(filtered)
+                                                                }
+                                                            }}
                                                         />
                                                     </FormControl>
                                                     <FormMessage className="text-[10px]" />
@@ -199,18 +245,21 @@ export function NewPersonSheet({ open: controlledOpen, onOpenChange, onSuccess }
                                     <FormField
                                         control={form.control}
                                         name="fecha_nacimiento"
-                                        render={({ field }) => (
+                                        render={({ field, fieldState }) => (
                                             <FormItem>
                                                 <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Fecha de Nacimiento</FormLabel>
                                                 <FormControl>
                                                     <DatePicker
-                                                        value={field.value}
+                                                        value={field.value as any}
                                                         onChange={field.onChange}
                                                         placeholder="Seleccionar fecha"
                                                         captionLayout="dropdown"
                                                         fromYear={1900}
                                                         toYear={new Date().getFullYear()}
-                                                        className="h-11 bg-muted/30 border-muted-foreground/20 focus:ring-primary/20"
+                                                        className={cn(
+                                                            "h-11 bg-muted/30 border-muted-foreground/20 focus:ring-primary/20",
+                                                            fieldState.invalid && "border-destructive focus-visible:ring-destructive"
+                                                        )}
                                                     />
                                                 </FormControl>
                                                 <FormMessage className="text-[10px]" />
@@ -220,20 +269,22 @@ export function NewPersonSheet({ open: controlledOpen, onOpenChange, onSuccess }
                                     <FormField
                                         control={form.control}
                                         name="genero"
-                                        render={({ field }) => (
+                                        render={({ field, fieldState }) => (
                                             <FormItem>
                                                 <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Género</FormLabel>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <Select onValueChange={field.onChange} value={field.value}>
                                                     <FormControl>
-                                                        <SelectTrigger className="h-11 bg-muted/30 border-muted-foreground/20 focus:ring-primary/20">
-                                                            <SelectValue placeholder="Seleccionar" />
+                                                        <SelectTrigger className={cn(
+                                                            "h-11 bg-muted/30 border-muted-foreground/20 focus:ring-primary/20",
+                                                            fieldState.invalid && "border-destructive focus-visible:ring-destructive"
+                                                        )}>
+                                                            <SelectValue placeholder="Seleccionar..." />
                                                         </SelectTrigger>
                                                     </FormControl>
                                                     <SelectContent>
                                                         <SelectItem value="masculino">Masculino</SelectItem>
                                                         <SelectItem value="femenino">Femenino</SelectItem>
                                                         <SelectItem value="otro">Otro</SelectItem>
-                                                        <SelectItem value="no_especifica">No especifica</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                                 <FormMessage className="text-[10px]" />
@@ -257,11 +308,26 @@ export function NewPersonSheet({ open: controlledOpen, onOpenChange, onSuccess }
                                     <FormField
                                         control={form.control}
                                         name="primer_nombre"
-                                        render={({ field }) => (
+                                        render={({ field, fieldState }) => (
                                             <FormItem>
                                                 <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Primer Nombre</FormLabel>
                                                 <FormControl>
-                                                    <Input className="h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20" placeholder="Ej: Juan" {...field} />
+                                                    <Input
+                                                        className={cn(
+                                                            "h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20",
+                                                            fieldState.invalid && "border-destructive focus-visible:ring-destructive"
+                                                        )}
+                                                        placeholder="Ej: Juan"
+                                                        pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s'\-]+"
+                                                        inputMode="text"
+                                                        {...field}
+                                                        onInput={(e) => {
+                                                            const filtered = filterLettersOnly(e.currentTarget.value)
+                                                            if (filtered !== e.currentTarget.value) {
+                                                                field.onChange(filtered)
+                                                            }
+                                                        }}
+                                                    />
                                                 </FormControl>
                                                 <FormMessage className="text-[10px]" />
                                             </FormItem>
@@ -270,11 +336,26 @@ export function NewPersonSheet({ open: controlledOpen, onOpenChange, onSuccess }
                                     <FormField
                                         control={form.control}
                                         name="segundo_nombre"
-                                        render={({ field }) => (
+                                        render={({ field, fieldState }) => (
                                             <FormItem>
                                                 <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Segundo Nombre</FormLabel>
                                                 <FormControl>
-                                                    <Input className="h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20" placeholder="(Opcional)" {...field} />
+                                                    <Input
+                                                        className={cn(
+                                                            "h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20",
+                                                            fieldState.invalid && "border-destructive focus-visible:ring-destructive"
+                                                        )}
+                                                        placeholder="(Opcional)"
+                                                        pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s'\-]+"
+                                                        inputMode="text"
+                                                        {...field}
+                                                        onInput={(e) => {
+                                                            const filtered = filterLettersOnly(e.currentTarget.value)
+                                                            if (filtered !== e.currentTarget.value) {
+                                                                field.onChange(filtered)
+                                                            }
+                                                        }}
+                                                    />
                                                 </FormControl>
                                                 <FormMessage className="text-[10px]" />
                                             </FormItem>
@@ -286,11 +367,26 @@ export function NewPersonSheet({ open: controlledOpen, onOpenChange, onSuccess }
                                     <FormField
                                         control={form.control}
                                         name="primer_apellido"
-                                        render={({ field }) => (
+                                        render={({ field, fieldState }) => (
                                             <FormItem>
                                                 <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Primer Apellido</FormLabel>
                                                 <FormControl>
-                                                    <Input className="h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20" placeholder="Ej: Pérez" {...field} />
+                                                    <Input
+                                                        className={cn(
+                                                            "h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20",
+                                                            fieldState.invalid && "border-destructive focus-visible:ring-destructive"
+                                                        )}
+                                                        placeholder="Ej: Pérez"
+                                                        pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s'\-]+"
+                                                        inputMode="text"
+                                                        {...field}
+                                                        onInput={(e) => {
+                                                            const filtered = filterLettersOnly(e.currentTarget.value)
+                                                            if (filtered !== e.currentTarget.value) {
+                                                                field.onChange(filtered)
+                                                            }
+                                                        }}
+                                                    />
                                                 </FormControl>
                                                 <FormMessage className="text-[10px]" />
                                             </FormItem>
@@ -299,11 +395,26 @@ export function NewPersonSheet({ open: controlledOpen, onOpenChange, onSuccess }
                                     <FormField
                                         control={form.control}
                                         name="segundo_apellido"
-                                        render={({ field }) => (
+                                        render={({ field, fieldState }) => (
                                             <FormItem>
                                                 <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Segundo Apellido</FormLabel>
                                                 <FormControl>
-                                                    <Input className="h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20" placeholder="(Opcional)" {...field} />
+                                                    <Input
+                                                        className={cn(
+                                                            "h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20",
+                                                            fieldState.invalid && "border-destructive focus-visible:ring-destructive"
+                                                        )}
+                                                        placeholder="(Opcional)"
+                                                        pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s'\-]+"
+                                                        inputMode="text"
+                                                        {...field}
+                                                        onInput={(e) => {
+                                                            const filtered = filterLettersOnly(e.currentTarget.value)
+                                                            if (filtered !== e.currentTarget.value) {
+                                                                field.onChange(filtered)
+                                                            }
+                                                        }}
+                                                    />
                                                 </FormControl>
                                                 <FormMessage className="text-[10px]" />
                                             </FormItem>
@@ -326,12 +437,15 @@ export function NewPersonSheet({ open: controlledOpen, onOpenChange, onSuccess }
                                     <FormField
                                         control={form.control}
                                         name="email_principal"
-                                        render={({ field }) => (
+                                        render={({ field, fieldState }) => (
                                             <FormItem>
                                                 <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Correo Electrónico</FormLabel>
                                                 <FormControl>
                                                     <Input
-                                                        className="h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20"
+                                                        className={cn(
+                                                            "h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20",
+                                                            fieldState.invalid && "border-destructive focus-visible:ring-destructive"
+                                                        )}
                                                         type="email"
                                                         placeholder="usuario@ejemplo.com"
                                                         {...field}
@@ -341,23 +455,14 @@ export function NewPersonSheet({ open: controlledOpen, onOpenChange, onSuccess }
                                             </FormItem>
                                         )}
                                     />
-                                    <FormField
-                                        control={form.control}
-                                        name="telefono_principal"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Teléfono / WhatsApp</FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        className="h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20"
-                                                        placeholder="+57 3..."
-                                                        {...field}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage className="text-[10px]" />
-                                            </FormItem>
-                                        )}
-                                    />
+                                    <div className="flex-1">
+                                        <PhoneInput
+                                            name="telefono_principal"
+                                            label="Teléfono / WhatsApp"
+                                            defaultCountry="CO"
+                                            className="bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </form>
