@@ -42,7 +42,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
     // Update active tab when URL changes
     useEffect(() => {
         const tabParam = searchParams.get("tab")
-        if (tabParam && ["overview", "profile", "relationships", "history"].includes(tabParam)) {
+        if (tabParam && ["overview", "profile", "family", "consumptions", "communications", "timeline", "settings"].includes(tabParam)) {
             setActiveTab(tabParam)
         }
     }, [searchParams])

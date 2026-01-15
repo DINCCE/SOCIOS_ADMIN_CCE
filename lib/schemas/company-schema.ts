@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { phoneSchema } from "@/schemas/telefono"
 
 export const companySchema = z.object({
     // Required fields
@@ -6,8 +7,14 @@ export const companySchema = z.object({
     nit: z.string().regex(/^[0-9]{7,12}$/, "El NIT debe contener solo números (7-12 dígitos)"),
     digito_verificacion: z.string().length(1, "El dígito de verificación es un solo número").optional().or(z.literal("")),
     tipo_sociedad: z.string().min(1, "El tipo de sociedad es obligatorio"),
-    email_principal: z.string().email("Email principal inválido").min(1, "Email principal es obligatorio"),
-    telefono_principal: z.string().regex(/^[0-9]{10}$/, "El teléfono principal debe tener exactamente 10 dígitos").min(1, "Teléfono principal es obligatorio"),
+
+    // Email: usar misma validación que person-schema
+    email_principal: z.string().min(1, "El correo electrónico es obligatorio").email("Correo inválido"),
+
+    // Teléfono: usar phoneSchema international E.164
+    telefono_principal: phoneSchema.refine((val) => val !== null && val !== "", {
+        message: "El teléfono es obligatorio",
+    }),
 
     // Optional fields
     nombre_comercial: z.string().optional().or(z.literal("")),

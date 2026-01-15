@@ -101,7 +101,7 @@ export async function crearOportunidad(data: {
 export async function actualizarOportunidad(
   oportunidad_id: string,
   data: {
-    estado?: 'nueva' | 'en_progreso' | 'ganada' | 'perdida' | 'descartada'
+    estado?: 'nueva' | 'en_progreso' | 'ganada' | 'perdida' | 'descartada' | 'Nueva' | 'En Progreso' | 'Ganada' | 'Pérdida' | 'Descartada'
     responsable_id?: string
     monto_estimado?: number
     notas?: string

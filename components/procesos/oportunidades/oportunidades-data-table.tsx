@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { OportunidadView } from "@/features/procesos/oportunidades/columns"
+import type { OportunidadView } from "./oportunidades-board"
 
 interface OportunidadesDataTableProps {
   table: Table<OportunidadView>

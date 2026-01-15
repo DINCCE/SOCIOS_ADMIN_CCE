@@ -85,7 +85,7 @@ export const columns: ColumnDef<AccionList>[] = [
     ),
     cell: ({ row }) => {
       const nombre = row.getValue("organizacion_nombre") as string | null
-      return <NullCell value={nombre} />
+      return <NullCell value={nombre || ""} />
     },
     meta: { size: 200 },
   },

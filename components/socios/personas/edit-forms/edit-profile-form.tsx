@@ -33,11 +33,11 @@ import { updatePersonaProfile } from "@/app/actions/personas"
 // Schema de validación
 const profileSchema = z.object({
     // Datos institucionales
-    estado: z.enum(["activo", "inactivo", "suspendido"]),
+    estado: z.enum(["activo", "inactivo", "bloqueado"]),
     fecha_socio: z.string().optional().nullable(),
     fecha_aniversario: z.string().optional().nullable(),
     // Perfil profesional
-    nivel_educacion: z.enum(["primaria", "bachillerato", "tecnico", "tecnologo", "pregrado", "posgrado", "maestria", "doctorado"]).optional().nullable(),
+    nivel_educacion: z.enum(["sin estudios", "primaria", "bachillerato", "técnica", "profesional", "especialización", "maestría", "doctorado"]).optional().nullable(),
     profesion: z.string().optional().nullable(),
     ocupacion: z.string().optional().nullable(),
     // Redes sociales

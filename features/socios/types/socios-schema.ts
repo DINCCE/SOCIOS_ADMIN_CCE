@@ -164,6 +164,10 @@ export const personaSchema = z.object({
   nombre_completo: z.string(),
   nombre_contacto_emergencia: z.string().nullable(),
   deuda: z.number().optional().nullable(),
+
+  // Alias fields for backward compatibility (mapped from dm_actores)
+  codigo: z.string().optional(),  // Alias for codigo_bp
+  estado: z.enum(["activo", "inactivo", "bloqueado"]).optional(),  // Alias for estado_actor
 })
 
 export type Persona = z.infer<typeof personaSchema>
@@ -209,7 +213,7 @@ export const empresaSchema = z.object({
   organizacion_id: z.string().uuid(),
   tipo_actor: z.enum(["persona", "empresa"]),
   codigo: z.string(),
-  estado: z.enum(["activo", "inactivo", "suspendido"]),
+  estado: z.enum(["activo", "inactivo", "bloqueado"]),
   email_principal: z.string().nullable(),
   telefono_principal: z.string().nullable(),
   bp_creado_en: z.string(),

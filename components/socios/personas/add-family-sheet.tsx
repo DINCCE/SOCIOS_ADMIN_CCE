@@ -50,7 +50,7 @@ import { NewPersonSheet } from "./new-person-sheet"
 // Schema for validation
 const addFamilySchema = z.object({
     persona_id: z.string().min(1, "Selecciona una persona"),
-    relacion: z.enum(["esposo_a", "hijo_a", "padre_madre", "hermano_a", "otro"]),
+    relacion: z.enum(["esposo_a", "hijo_a", "padre", "madre", "hermano_a", "suegro", "suegra", "otro"]),
 })
 
 type AddFamilyFormValues = z.infer<typeof addFamilySchema>
@@ -60,10 +60,10 @@ interface PersonaBuscada {
     codigo_bp: string
     nombre_completo: string
     identificacion: string
-    email_principal: string | null
     telefono: string | null
     tipo_actor: string
     foto_url?: string | null
+    already_linked?: boolean
 }
 
 interface AddFamilySheetProps {
@@ -376,8 +376,11 @@ export function AddFamilySheet({ bp_origen_id, organizacion_id, onSuccess }: Add
                                                 </FormControl>
                                                 <SelectContent>
                                                     <SelectItem value="esposo_a">Cónyuge</SelectItem>
+                                                    <SelectItem value="padre">Padre</SelectItem>
+                                                    <SelectItem value="madre">Madre</SelectItem>
                                                     <SelectItem value="hijo_a">Hijo/a</SelectItem>
-                                                    <SelectItem value="padre_madre">Padre/Madre</SelectItem>
+                                                    <SelectItem value="suegro">Suegro</SelectItem>
+                                                    <SelectItem value="suegra">Suegra</SelectItem>
                                                     <SelectItem value="hermano_a">Hermano/a</SelectItem>
                                                     <SelectItem value="otro">Otro</SelectItem>
                                                 </SelectContent>

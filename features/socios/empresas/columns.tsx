@@ -102,7 +102,7 @@ export const columns: ColumnDef<EmpresaList>[] = [
     cell: ({ row }) => {
       const empresa = row.original
       // Use nit_completo if available, otherwise fall back to nit
-      const nitValue = empresa.nit_completo || empresa.nit
+      const nitValue = empresa.nit_completo || empresa.nit || ""
       return (
         <CopyableCell
           value={nitValue}

@@ -4,6 +4,7 @@ import { PersonDetailHeader } from "@/components/socios/personas/person-detail-h
 import { PersonIdentityPanel } from "@/components/socios/personas/person-identity-panel"
 import { PersonTabsContent } from "@/components/socios/personas/person-tabs-content"
 import { Persona } from "@/features/socios/types/socios-schema"
+import { extractPersonaProfiles } from "@/lib/utils/jsonb-helpers"
 
 interface PersonPageProps {
     params: Promise<{ id: string }>
@@ -16,12 +17,7 @@ export default async function PersonDetailPage({ params }: PersonPageProps) {
     // Query dm_actores directly to access all fields including JSONB profiles
     const { data: personaRaw, error } = await supabase
         .from("dm_actores")
-        .select(`
-            *,
-            organizacion:config_organizaciones (
-                nombre as organizacion_nombre
-            )
-        `)
+        .select("*")
         .eq("id", id)
         .eq("tipo_actor", "persona")
         .is("eliminado_en", null)
@@ -32,73 +28,66 @@ export default async function PersonDetailPage({ params }: PersonPageProps) {
         return notFound()
     }
 
-    // Cast to any since types_db.ts is empty
+    // Cast to any since types_db.ts may need updating
     const raw = personaRaw as any
 
-    // Extract JSONB profile fields and map to Persona type
+    // Extract JSONB profile fields safely using helper
+    const profiles = extractPersonaProfiles(raw)
+
+    // Map dm_actores fields to Persona type
     const persona: Persona = {
-        // Extract from JSONB profiles
-        tipo_sangre: raw.perfil_salud?.tipo_sangre || null,
-        eps: raw.perfil_salud?.eps || null,
-        ocupacion: raw.perfil_profesional_corporativo?.ocupacion || null,
-        nacionalidad: raw.perfil_identidad?.nacionalidad || null,
-        linkedin_url: raw.perfil_redes?.linkedin || null,
-        facebook_url: raw.perfil_redes?.facebook || null,
-        instagram_handle: raw.perfil_redes?.instagram || null,
-        twitter_handle: raw.perfil_redes?.twitter || null,
-        whatsapp: raw.perfil_redes?.whatsapp || null,
-        // Map computed/named fields for Persona type compatibility
+        // Core identity (direct from dm_actores)
         id: raw.id,
         codigo_bp: raw.codigo_bp,
-        nombre_completo: `${raw.primer_nombre || ''} ${raw.primer_apellido || ''}`.trim(),
-        numero_documento: raw.num_documento || '',
-        email_principal: raw.email_principal || null,
-        telefono_principal: raw.telefono_principal || null,
-        estado_actor: raw.estado_actor,
-        genero: raw.genero_actor || null,
-        // Get organization name from JOIN
-        organizacion_nombre: raw.organizacion?.organizacion_nombre || '',
+        codigo: raw.codigo_bp,  // Alias para compatibilidad con personaSchema
         organizacion_id: raw.organizacion_id,
+        organizacion_nombre: 'Country Club Ejecutivos',  // Hardcoded por ahora, se puede obtener de config_organizaciones después
         tipo_actor: raw.tipo_actor,
-        // Default values for fields that may be in JSONB
-        fecha_expedicion: raw.perfil_identidad?.fecha_expedicion || null,
-        lugar_expedicion: raw.perfil_identidad?.lugar_expedicion || null,
-        lugar_expedicion_id: raw.perfil_identidad?.lugar_expedicion_id || null,
-        lugar_nacimiento: raw.perfil_identidad?.lugar_nacimiento || null,
-        lugar_nacimiento_id: raw.perfil_identidad?.lugar_nacimiento_id || null,
-        profesion: raw.perfil_profesional_corporativo?.profesion || null,
-        nivel_educacion: raw.perfil_profesional_corporativo?.nivel_educacion || null,
-        foto_url: raw.perfil_redes?.foto_url || null,
-        contacto_emergencia_id: raw.perfil_contacto?.contacto_emergencia_id || null,
-        relacion_emergencia: raw.perfil_contacto?.relacion_emergencia || null,
-        // Set default empty arrays/objects
+        estado_actor: raw.estado_actor,
+        estado: raw.estado_actor,  // Alias para compatibilidad con personaSchema
+
+        // Nombres (direct from dm_actores)
+        primer_nombre: raw.primer_nombre || '',
+        segundo_nombre: raw.segundo_nombre || null,
+        primer_apellido: raw.primer_apellido || '',
+        segundo_apellido: raw.segundo_apellido || null,
+        nombre_completo: `${raw.primer_nombre || ''} ${raw.primer_apellido || ''}`.trim(),
+
+        // Documento (direct from dm_actores)
+        tipo_documento: raw.tipo_documento || null,
+        numero_documento: raw.num_documento || '',
+
+        // Contacto (direct from dm_actores)
+        email_principal: raw.email_principal || null,
+        email_secundario: raw.email_secundario || null,
+        telefono_principal: raw.telefono_principal || null,
+        telefono_secundario: raw.telefono_secundario || null,
+
+        // Info personal (direct from dm_actores)
+        genero: raw.genero_actor || null,
+        fecha_nacimiento: raw.fecha_nacimiento || null,
+        estado_civil: raw.estado_civil || null,
+
+        // From JSONB profiles (usando helper para extracción segura)
+        ...profiles,
+
+        // Arrays/Objects
         tags: raw.tags || [],
         atributos: raw.atributos || {},
         perfil_intereses: raw.perfil_intereses || {},
         perfil_preferencias: raw.perfil_preferencias || {},
         perfil_metricas: raw.perfil_metricas || {},
         perfil_compliance: raw.perfil_compliance || {},
+
+        // Campo calculado (requiere query separada a dm_actores, null por ahora)
+        nombre_contacto_emergencia: null,
+
         // Timestamps
         creado_en: raw.creado_en,
         actualizado_en: raw.actualizado_en,
         bp_creado_en: raw.creado_en,
         bp_actualizado_en: raw.actualizado_en,
         eliminado_en: raw.eliminado_en,
-        // Required fields with defaults
-        primer_nombre: raw.primer_nombre || '',
-        segundo_nombre: raw.segundo_nombre || null,
-        primer_apellido: raw.primer_apellido || '',
-        segundo_apellido: raw.segundo_apellido || null,
-        tipo_documento: raw.tipo_documento || null,
-        fecha_nacimiento: raw.fecha_nacimiento || null,
-        estado_civil: raw.estado_civil || null,
-        fecha_socio: raw.fecha_socio || null,
-        fecha_aniversario: raw.fecha_aniversario || null,
-        estado_vital: raw.estado_vital || 'vivo',
-        email_secundario: raw.email_secundario || null,
-        telefono_secundario: raw.telefono_secundario || null,
-        nombre_contacto_emergencia: raw.nombre_contacto_emergencia || null,
-        deuda: raw.deuda || null,
     }
 
     return (

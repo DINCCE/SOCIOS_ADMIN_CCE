@@ -530,8 +530,8 @@ SELECT * FROM get_enum_values('dm_accion_estado');
 | 3 | bp_origen_id | uuid | NO | - | Actor que inicia la relación |
 | 4 | bp_destino_id | uuid | NO | - | Actor que recibe la relación |
 | 5 | tipo_relacion | enum | NO | - | Categoría: familiar, laboral, referencia, membresia, comercial, otra |
-| 6 | rol_origen | text | NO | - | Rol específico del origen en el contexto |
-| 7 | rol_destino | text | NO | - | Rol específico del destino en el contexto |
+| 6 | rol_origen | enum | NO | - | Rol específico del origen en el contexto |
+| 7 | rol_destino | enum | NO | - | Rol específico del destino en el contexto |
 | 8 | atributos | jsonb | NO | '{}'::jsonb | Atributos adicionales de la relación |
 | 9 | fecha_inicio | date | SÍ | - | Inicio de vigencia |
 | 10 | fecha_fin | date | SÍ | - | Fin de vigencia (NULL = vigente) |
@@ -565,11 +565,17 @@ SELECT * FROM get_enum_values('dm_accion_estado');
 | Campo          | Tipo Enum                       | Valores Válidos                                                                      |
 |----------------|---------------------------------|--------------------------------------------------------------------------------------|
 | tipo_relacion  | dm_actores_tipo_relacion        | `familiar`, `laboral`, `referencia`, `membresia`, `comercial`, `otra`               |
+| rol_origen     | vn_relacion_actores_rol         | `cónyuge`, `padre`, `madre`, `hijo/a`, `suegro`, `suegra`, `hermano/a`, `otro`, `yerno`, `nuera` |
+| rol_destino    | vn_relacion_actores_rol         | `cónyuge`, `padre`, `madre`, `hijo/a`, `suegro`, `suegra`, `hermano/a`, `otro`, `yerno`, `nuera` |
 
 **💡 Para obtener estos valores programáticamente:**
 
 ```sql
+-- Tipo de relación
 SELECT * FROM get_enum_values('dm_actores_tipo_relacion');
+
+-- Rol de origen / destino
+SELECT * FROM get_enum_values('vn_relacion_actores_rol');
 ```
 
 ---
@@ -770,6 +776,7 @@ SELECT * FROM get_enum_values('tr_tareas_estado');
 - **dm_actor_regimen_tributario**: responsable de iva, no responsable, etc.
 - **dm_actor_tipo_documento**: CC, CE, PA, TI, RC, PEP, PPT, NIT
 - **dm_actores_tipo_relacion**: familiar, laboral, referencia, membresía, comercial, otra
+- **vn_relacion_actores_rol**: cónyuge, padre, madre, hijo/a, suegro, suegra, hermano/a, otro, yerno, nuera
 - **dm_accion_estado**: disponible, asignada, arrendada, bloqueada, inactiva
 - **tr_doc_comercial_estados**: Nueva, En Progreso, Ganada, Pérdida, Descartada
 - **tr_doc_comercial_subtipo**: sol_ingreso, sol_retiro, oferta_eventos, pedido_eventos

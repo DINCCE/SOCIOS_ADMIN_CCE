@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
-import { AlertCircle, AlertTriangle, CheckCircle2, Clock, XCircle } from 'lucide-react'
+import { AlertCircle, AlertTriangle, CheckCircle2, Clock, XCircle, type LucideIcon } from 'lucide-react'
 import type { TareaView } from './tareas-board'
 import { EstadoTarea } from './tareas-board'
 import { PrioridadTarea } from './tareas-board'
@@ -17,42 +17,42 @@ interface TareaCardProps {
 
 const ESTADO_CONFIG: Record<
   EstadoTarea,
-  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: any }
+  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: LucideIcon }
 > = {
-  pendiente: { label: 'Pendiente', variant: 'default', icon: Clock },
-  en_progreso: { label: 'En Progreso', variant: 'secondary', icon: AlertCircle },
-  bloqueada: { label: 'Bloqueada', variant: 'secondary', icon: AlertTriangle },
-  hecha: { label: 'Hecha', variant: 'default', icon: CheckCircle2 },
-  cancelada: { label: 'Cancelada', variant: 'outline', icon: XCircle },
+  Pendiente: { label: 'Pendiente', variant: 'default', icon: Clock },
+  'En Progreso': { label: 'En Progreso', variant: 'secondary', icon: AlertCircle },
+  Pausada: { label: 'Pausada', variant: 'secondary', icon: AlertTriangle },
+  Terminada: { label: 'Terminada', variant: 'default', icon: CheckCircle2 },
+  Cancelada: { label: 'Cancelada', variant: 'outline', icon: XCircle },
 }
 
 const PRIORIDAD_CONFIG: Record<
   PrioridadTarea,
-  { label: string; color: string; bgColor: string; icon: any }
+  { label: string; color: string; bgColor: string; icon: LucideIcon }
 > = {
-  critica: { 
-    label: 'Crítica', 
-    color: 'text-red-700', 
-    bgColor: 'bg-red-50', 
-    icon: AlertCircle 
+  Urgente: {
+    label: 'Urgente',
+    color: 'text-red-700',
+    bgColor: 'bg-red-50',
+    icon: AlertCircle
   },
-  alta: { 
-    label: 'Alta', 
-    color: 'text-orange-700', 
-    bgColor: 'bg-orange-50', 
-    icon: AlertTriangle 
+  Alta: {
+    label: 'Alta',
+    color: 'text-orange-700',
+    bgColor: 'bg-orange-50',
+    icon: AlertTriangle
   },
-  media: { 
-    label: 'Media', 
-    color: 'text-blue-700', 
-    bgColor: 'bg-blue-50', 
-    icon: Clock 
+  Media: {
+    label: 'Media',
+    color: 'text-blue-700',
+    bgColor: 'bg-blue-50',
+    icon: Clock
   },
-  baja: { 
-    label: 'Baja', 
-    color: 'text-gray-700', 
-    bgColor: 'bg-gray-50', 
-    icon: Clock 
+  Baja: {
+    label: 'Baja',
+    color: 'text-gray-700',
+    bgColor: 'bg-gray-50',
+    icon: Clock
   },
 }
 

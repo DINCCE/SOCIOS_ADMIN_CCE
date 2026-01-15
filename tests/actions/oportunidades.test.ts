@@ -39,16 +39,17 @@ describe('Oportunidades Actions', () => {
       const data = {
         organizacion_id: generateTestOrganizationId(),
         codigo: 'OPP-000001',
-        tipo: 'Solicitud Retiro',
-        titulo: 'Test Opportunity',
-        descripcion: 'Test description',
+        tipo: 'Solicitud Retiro' as const,
+        solicitante_id: 'bp-123',
         monto_estimado: 1000000,
       }
 
       const result = await crearOportunidad(data)
 
       expect(result.success).toBe(true)
-      expect(result.oportunidad_id).toBe('opp-123')
+      if (result.success) {
+        expect(result.oportunidad_id).toBe('opp-123')
+      }
       expect(revalidatePath).toHaveBeenCalled()
     })
 
@@ -63,9 +64,8 @@ describe('Oportunidades Actions', () => {
       const result = await crearOportunidad({
         organizacion_id: generateTestOrganizationId(),
         codigo: 'OPP-000001',
-        tipo: 'Solicitud Retiro',
-        titulo: 'Test Opportunity',
-        descripcion: 'Test description',
+        tipo: 'Solicitud Retiro' as const,
+        solicitante_id: 'bp-123',
         monto_estimado: 1000000,
       })
 
@@ -86,7 +86,7 @@ describe('Oportunidades Actions', () => {
       })
 
       const result = await actualizarOportunidad('opp-123', {
-        estado: 'en_proceso',
+        estado: 'En Progreso',
         responsable_id: 'user-123',
         monto_estimado: 2000000,
         notas: 'Updated notes',
@@ -105,7 +105,7 @@ describe('Oportunidades Actions', () => {
       })
 
       const result = await actualizarOportunidad('opp-123', {
-        estado: 'en_proceso',
+        estado: 'En Progreso',
       })
 
       expect(result.success).toBe(false)

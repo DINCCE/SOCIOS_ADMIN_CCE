@@ -63,8 +63,8 @@ export async function actualizarTarea(
   data: {
     titulo?: string
     descripcion?: string
-    prioridad?: 'baja' | 'media' | 'alta' | 'critica'
-    estado?: 'pendiente' | 'en_progreso' | 'terminada' | 'pausada' | 'cancelada'
+    prioridad?: 'baja' | 'media' | 'alta' | 'critica' | 'Baja' | 'Media' | 'Alta' | 'Urgente'
+    estado?: 'pendiente' | 'en_progreso' | 'terminada' | 'pausada' | 'cancelada' | 'Pendiente' | 'En Progreso' | 'Terminada' | 'Pausada' | 'Cancelada'
     oportunidad_id?: string
     asignado_a?: string
     fecha_vencimiento?: string

@@ -3,17 +3,13 @@
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
-  BadgeCheck,
-  Bell,
   ChevronsUpDown,
-  CreditCard,
   LogOut,
-  Sparkles,
 } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
-import { ModeToggle } from '@/components/ui/mode-toggle'
-import { ColorSchemeToggle } from '@/components/ui/color-scheme-toggle'
+import { ThemeMenuButton } from '@/components/ui/theme-menu-button'
+import { ColorSchemeMenuButton } from '@/components/ui/color-scheme-menu-button'
 import {
   Avatar,
   AvatarFallback,
@@ -100,39 +96,11 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Sparkles />
-                Actualizar a Pro
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheck />
-                Cuenta
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard />
-                Facturación
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell />
-                Notificaciones
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <div className="flex items-center justify-between w-full pr-2">
-                <span>Tema</span>
-                <ModeToggle />
-              </div>
+              <ThemeMenuButton />
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <div className="flex items-center justify-between w-full pr-2">
-                <span>Color</span>
-                <ColorSchemeToggle />
-              </div>
+              <ColorSchemeMenuButton />
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>

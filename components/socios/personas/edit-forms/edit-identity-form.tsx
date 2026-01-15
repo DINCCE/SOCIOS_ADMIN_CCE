@@ -43,12 +43,12 @@ const identitySchema = z.object({
     segundo_nombre: z.string().optional().nullable(),
     primer_apellido: z.string().min(1, "Primer apellido requerido"),
     segundo_apellido: z.string().optional().nullable(),
-    genero: z.enum(["masculino", "femenino", "otro", "no_especifica"]),
+    genero: z.enum(["masculino", "femenino", "otro", "no aplica"]),
     fecha_nacimiento: z.string(),
     lugar_nacimiento: z.string().optional().nullable(), // Legacy field (backward compatibility)
     lugar_nacimiento_id: z.string().uuid().optional().nullable(), // New FK to geographic_locations
     nacionalidad: z.string().optional().nullable(),
-    estado_civil: z.enum(["soltero", "casado", "union_libre", "divorciado", "viudo", "separado"]).optional().nullable(),
+    estado_civil: z.enum(["soltero", "casado", "union libre", "divorciado", "viudo"]).optional().nullable(),
 })
 
 type IdentityFormValues = z.infer<typeof identitySchema>

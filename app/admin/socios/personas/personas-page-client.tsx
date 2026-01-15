@@ -68,7 +68,24 @@ export function PersonasPageClient() {
       }
 
       // Transform to PersonaList format
-      const transformed = data?.map((actor: any) => ({
+      interface RawPersona {
+        id: string
+        codigo_bp: string
+        primer_nombre: string | null
+        primer_apellido: string | null
+        num_documento: string
+        email_principal: string | null
+        telefono_principal: string | null
+        estado_actor: string
+        organizacion_id: string
+        es_socio: boolean
+        es_cliente: boolean
+        es_proveedor: boolean
+        eliminado_en: string | null
+        tipo_actor: string
+      }
+
+      const transformed = (data as unknown as RawPersona[])?.map((actor) => ({
         id: actor.id,
         codigo: actor.codigo_bp,
         nombre: `${actor.primer_nombre || ''} ${actor.primer_apellido || ''}`.trim(),

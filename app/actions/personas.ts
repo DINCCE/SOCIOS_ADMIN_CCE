@@ -585,6 +585,23 @@ export async function softDeletePersona(id: string) {
  * @param organizacion_id - Organization ID for filtering
  * @returns Array of available persons
  */
+
+// ...
+
+interface ActorView {
+  id: string
+  codigo: string
+  nombre: string
+  identificacion: string
+  email_principal: string | null
+  telefono_principal: string | null
+  foto_url: string | null
+  organizacion_id: string
+  tipo_actor: string
+  eliminado_en: string | null
+  [key: string]: unknown
+}
+
 export async function buscarPersonasDisponiblesParaRelacion(
   bp_id: string,
   query: string,
@@ -592,48 +609,50 @@ export async function buscarPersonasDisponiblesParaRelacion(
 ) {
   const supabase = await createClient()
 
-  // 1. Get existing relationship IDs for this bp
-  const { data: relacionesExistentes } = await supabase
-    .rpc('obtener_relaciones_bp', {
-      p_bp_id: bp_id,
-      p_solo_vigentes: true
-    })
+  // 1. Obtener IDs relacionados para excluir (yo mismo + relaciones existentes)
+  // Usamos vn_relaciones_actores para identificar quiénes ya tienen un vínculo
+  const { data: relaciones } = await supabase
+    .from('vn_relaciones_actores')
+    .select('bp_origen_id, bp_destino_id')
+    .or(`bp_origen_id.eq.${bp_id},bp_destino_id.eq.${bp_id}`)
+    .is('eliminado_en', null)
+    .is('fecha_fin', null)
 
-  // Extract all related bp_ids (both origen and destino)
-  const bpIdsRelacionados = new Set<string>()
-  relacionesExistentes?.forEach((rel: any) => {
-    bpIdsRelacionados.add(rel.bp_origen_id)
-    bpIdsRelacionados.add(rel.bp_destino_id)
+  const idsExcluidos = new Set<string>([bp_id])
+  relaciones?.forEach(rel => {
+    idsExcluidos.add(rel.bp_origen_id)
+    idsExcluidos.add(rel.bp_destino_id)
   })
 
-  // 2. Search personas using the optimized view
+  // 2. Buscar en dm_actores filtrando por tipo_actor = persona
+  // No excluimos de la query para poder mostrar "Ya vinculado" en la UI
   const { data, error } = await supabase
-    .from('v_actores_org')
-    .select('*')
+    .from('dm_actores')
+    .select('id, codigo_bp, num_documento, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, telefono_principal')
     .eq('organizacion_id', organizacion_id)
     .eq('tipo_actor', 'persona')
     .is('eliminado_en', null)
-    .or(`codigo.ilike.%${query}%, nombre.ilike.%${query}%, identificacion.ilike.%${query}%`)
-    .limit(50)
+    .or(`num_documento.ilike.%${query}%,primer_nombre.ilike.%${query}%,segundo_nombre.ilike.%${query}%,primer_apellido.ilike.%${query}%,segundo_apellido.ilike.%${query}%`)
+    .limit(20)
 
   if (error) {
-    console.error('Error searching persons:', error)
+    console.error('Error searching available persons:', error)
     return { success: false, data: [] }
   }
 
-  // 3. Transform and filter out persons already related
-  const disponibles = data
-    ?.filter((actor: any) => !bpIdsRelacionados.has(actor.id))
-    .map((actor: any) => ({
+  // 3. Mapear resultados a la estructura esperada por el Combobox
+  const disponibles = (data || [])
+    .filter(actor => actor.id !== bp_id) // Excluirse a sí mismo siempre
+    .map((actor) => ({
       id: actor.id,
-      codigo_bp: actor.codigo,
-      nombre_completo: actor.nombre,
-      identificacion: actor.identificacion,
-      email_principal: actor.email_principal,
+      codigo_bp: actor.codigo_bp,
+      nombre_completo: `${actor.primer_nombre} ${actor.segundo_nombre || ''} ${actor.primer_apellido} ${actor.segundo_apellido || ''}`.replace(/\s+/g, ' ').trim(),
+      identificacion: actor.num_documento,
       telefono: actor.telefono_principal,
       tipo_actor: 'persona',
-      foto_url: actor.foto_url // Note: We might need to ensure this is in the view if needed
-    })) || []
+      foto_url: null,
+      already_linked: idsExcluidos.has(actor.id)
+    }))
 
   return {
     success: true,

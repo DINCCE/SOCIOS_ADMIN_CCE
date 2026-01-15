@@ -29,15 +29,11 @@ describe('Admin Members Actions', () => {
       vi.mocked(createClient).mockResolvedValue(mockSupabase as any)
       vi.mocked(mockSupabase.from).mockReturnValue(mockSupabase as any)
       vi.mocked(mockSupabase.insert).mockReturnValue(mockSupabase as any)
-      vi.mocked(mockSupabase.eq).mockResolvedValue({
-        data: null,
-        error: null,
-      })
 
       const data = {
         organization_id: generateTestOrganizationId(),
         user_id: 'user-123',
-        role_id: 'role-123',
+        role: 'admin' as const,
       }
 
       const result = await addMember(data)
@@ -50,8 +46,7 @@ describe('Admin Members Actions', () => {
       const mockSupabase = createMockClientWithData(null, { message: 'Insert failed' })
       vi.mocked(createClient).mockResolvedValue(mockSupabase as any)
       vi.mocked(mockSupabase.from).mockReturnValue(mockSupabase as any)
-      vi.mocked(mockSupabase.insert).mockReturnValue(mockSupabase as any)
-      vi.mocked(mockSupabase.eq).mockResolvedValue({
+      vi.mocked(mockSupabase.insert).mockResolvedValue({
         data: null,
         error: { message: 'Insert failed' },
       })
@@ -59,7 +54,7 @@ describe('Admin Members Actions', () => {
       const result = await addMember({
         organization_id: generateTestOrganizationId(),
         user_id: 'user-123',
-        role_id: 'role-123',
+        role: 'admin' as const,
       })
 
       expect(result.success).toBe(false)
@@ -77,7 +72,7 @@ describe('Admin Members Actions', () => {
         error: null,
       })
 
-      const result = await updateMemberRole('member-123', 'role-456')
+      const result = await updateMemberRole('user-123', 'org-123', 'analyst')
 
       expect(result.success).toBe(true)
       expect(revalidatePath).toHaveBeenCalled()
@@ -93,7 +88,7 @@ describe('Admin Members Actions', () => {
         error: { message: 'Update failed' },
       })
 
-      const result = await updateMemberRole('member-123', 'role-456')
+      const result = await updateMemberRole('user-123', 'org-123', 'analyst')
 
       expect(result.success).toBe(false)
     })
@@ -110,7 +105,7 @@ describe('Admin Members Actions', () => {
         error: null,
       })
 
-      const result = await removeMember('member-123')
+      const result = await removeMember('user-123', 'org-123')
 
       expect(result.success).toBe(true)
       expect(revalidatePath).toHaveBeenCalled()
@@ -126,7 +121,7 @@ describe('Admin Members Actions', () => {
         error: { message: 'Delete failed' },
       })
 
-      const result = await removeMember('member-123')
+      const result = await removeMember('user-123', 'org-123')
 
       expect(result.success).toBe(false)
     })

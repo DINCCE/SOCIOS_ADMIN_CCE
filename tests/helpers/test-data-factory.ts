@@ -39,7 +39,7 @@ export function createTestPersonFormValues(overrides: Partial<PersonFormValues> 
     numero_documento: '1234567890',
     email_principal: 'juan.perez@example.com',
     telefono_principal: '+57 300 123 4567',
-    fecha_nacimiento: '1990-01-15',
+    fecha_nacimiento: new Date('1990-01-15'),
     genero: 'masculino',
     estado_civil: 'soltero',
     nacionalidad: 'CO',

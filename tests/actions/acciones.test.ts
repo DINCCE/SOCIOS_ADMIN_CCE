@@ -43,10 +43,9 @@ describe('Acciones Actions', () => {
       })
 
       const data = {
-        organization_id: generateTestOrganizationId(),
+        organizacion_id: generateTestOrganizationId(),
         codigo_accion: 'ACC-000001',
-        tipo_accion: 'ORDINARIA',
-        valor_nominal: 1000000,
+        estado: 'disponible',
       }
 
       const result = await crearAccion(data)
@@ -64,10 +63,9 @@ describe('Acciones Actions', () => {
       })
 
       const result = await crearAccion({
-        organization_id: generateTestOrganizationId(),
+        organizacion_id: generateTestOrganizationId(),
         codigo_accion: 'ACC-000001',
-        tipo_accion: 'ORDINARIA',
-        valor_nominal: 1000000,
+        estado: 'disponible',
       })
 
       expect(result.success).toBe(false)
@@ -86,7 +84,7 @@ describe('Acciones Actions', () => {
         error: null,
       })
 
-      const result = await actualizarAccion('acc-123', { valor_nominal: 2000000 })
+      const result = await actualizarAccion('acc-123', { estado: 'asignada' })
 
       expect(result.success).toBe(true)
       expect(revalidatePath).toHaveBeenCalled()
@@ -100,7 +98,7 @@ describe('Acciones Actions', () => {
         error: { message: 'Update failed' },
       })
 
-      const result = await actualizarAccion('acc-123', { valor_nominal: 2000000 })
+      const result = await actualizarAccion('acc-123', { estado: 'asignada' })
 
       expect(result.success).toBe(false)
     })
@@ -194,7 +192,8 @@ describe('Acciones Actions', () => {
 
       const data = {
         accion_id: 'acc-123',
-        bp_id: 'bp-123',
+        persona_id: 'bp-123',
+        tipo_asignacion: 'dueño' as const,
         fecha_inicio: '2020-01-01',
       }
 
@@ -214,7 +213,8 @@ describe('Acciones Actions', () => {
 
       const result = await crearAsignacion({
         accion_id: 'acc-123',
-        bp_id: 'bp-123',
+        persona_id: 'bp-123',
+        tipo_asignacion: 'dueño' as const,
         fecha_inicio: '2020-01-01',
       })
 
@@ -234,7 +234,10 @@ describe('Acciones Actions', () => {
         error: null,
       })
 
-      const result = await transferirAccion('asig-123', 'bp-456')
+      const result = await transferirAccion({
+        accion_id: 'asig-123',
+        nuevo_dueno_id: 'bp-456',
+      })
 
       expect(result.success).toBe(true)
       expect(revalidatePath).toHaveBeenCalled()
@@ -248,7 +251,10 @@ describe('Acciones Actions', () => {
         error: { message: 'Transfer failed' },
       })
 
-      const result = await transferirAccion('asig-123', 'bp-456')
+      const result = await transferirAccion({
+        accion_id: 'asig-123',
+        nuevo_dueno_id: 'bp-456',
+      })
 
       expect(result.success).toBe(false)
     })
@@ -266,7 +272,7 @@ describe('Acciones Actions', () => {
         error: null,
       })
 
-      const result = await finalizarAsignacion('asig-123', '2024-01-01')
+      const result = await finalizarAsignacion('asig-123')
 
       expect(result.success).toBe(true)
       expect(revalidatePath).toHaveBeenCalled()

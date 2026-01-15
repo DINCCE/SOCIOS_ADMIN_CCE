@@ -44,11 +44,11 @@ const COLUMN_CONFIG: Record<
   EstadoTarea,
   { label: string; color: string; isNegative: boolean }
 > = {
-  pendiente: { label: 'Pendiente', color: 'bg-blue-50 border-blue-200', isNegative: false },
-  en_progreso: { label: 'En Progreso', color: 'bg-yellow-50 border-yellow-200', isNegative: false },
-  bloqueada: { label: 'Bloqueada', color: 'bg-orange-50 border-orange-200', isNegative: false },
-  hecha: { label: 'Hecha', color: 'bg-green-50 border-green-200', isNegative: false },
-  cancelada: { label: 'Cancelada', color: 'bg-muted/30 border-muted/50', isNegative: true },
+  Pendiente: { label: 'Pendiente', color: 'bg-blue-50 border-blue-200', isNegative: false },
+  'En Progreso': { label: 'En Progreso', color: 'bg-yellow-50 border-yellow-200', isNegative: false },
+  Pausada: { label: 'Pausada', color: 'bg-orange-50 border-orange-200', isNegative: false },
+  Terminada: { label: 'Terminada', color: 'bg-green-50 border-green-200', isNegative: false },
+  Cancelada: { label: 'Cancelada', color: 'bg-muted/30 border-muted/50', isNegative: true },
 }
 
 export function TareasBoard() {

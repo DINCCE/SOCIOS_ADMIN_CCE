@@ -55,6 +55,14 @@ interface NewOportunidadSheetProps {
     onSuccess?: (oportunidad_id: string) => void
 }
 
+interface ActorSearchResult {
+    id: string
+    nombre: string
+    codigo: string
+    tipo_actor: 'persona' | 'empresa'
+    [key: string]: unknown
+}
+
 export function NewOportunidadSheet({ open: controlledOpen, onOpenChange, onSuccess }: NewOportunidadSheetProps) {
     const [internalOpen, setInternalOpen] = useState(false)
     const [isPending, setIsPending] = useState(false)
@@ -64,9 +72,9 @@ export function NewOportunidadSheet({ open: controlledOpen, onOpenChange, onSucc
     // Search states for solicitante
     const [solicitanteSearchQuery, setSolicitanteSearchQuery] = useState("")
     const [solicitanteComboboxOpen, setSolicitanteComboboxOpen] = useState(false)
-    const [solicitanteSearchResults, setSolicitanteSearchResults] = useState<any[]>([])
+    const [solicitanteSearchResults, setSolicitanteSearchResults] = useState<ActorSearchResult[]>([])
     const [isSearchingSolicitante, setIsSearchingSolicitante] = useState(false)
-    const [selectedSolicitante, setSelectedSolicitante] = useState<any | null>(null)
+    const [selectedSolicitante, setSelectedSolicitante] = useState<ActorSearchResult | null>(null)
 
     // Tags state
     const [tags, setTags] = useState<string[]>([])
@@ -262,7 +270,7 @@ export function NewOportunidadSheet({ open: controlledOpen, onOpenChange, onSucc
     }
 
     // Get display name for actor from unified view
-    const getActorDisplayName = (actor: any) => {
+    const getActorDisplayName = (actor: ActorSearchResult) => {
         const type = actor.tipo_actor === "empresa" ? "[Empresa]" : "[Persona]"
         const name = actor.nombre || actor.codigo
         return `${actor.codigo} - ${name} ${type}`

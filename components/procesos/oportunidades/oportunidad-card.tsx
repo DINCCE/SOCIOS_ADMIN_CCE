@@ -17,11 +17,11 @@ const ESTADO_CONFIG: Record<
   EstadoOportunidad,
   { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
 > = {
-  abierta: { label: 'Abierta', variant: 'default' },
-  en_proceso: { label: 'En Proceso', variant: 'secondary' },
-  ganada: { label: 'Ganada', variant: 'default' },
-  perdida: { label: 'Perdida', variant: 'destructive' },
-  cancelada: { label: 'Cancelada', variant: 'outline' },
+  Nueva: { label: 'Nueva', variant: 'default' },
+  'En Progreso': { label: 'En Progreso', variant: 'secondary' },
+  Ganada: { label: 'Ganada', variant: 'default' },
+  Pérdida: { label: 'Pérdida', variant: 'destructive' },
+  Descartada: { label: 'Descartada', variant: 'outline' },
 }
 
 export function OportunidadCard({ oportunidad, isDragging }: OportunidadCardProps) {

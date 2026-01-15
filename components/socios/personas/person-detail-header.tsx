@@ -34,19 +34,21 @@ export function PersonDetailHeader({ persona }: PersonDetailHeaderProps) {
                     <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
                             <h1 className="text-xl font-bold tracking-tight">{persona.nombre_completo}</h1>
-                            <Badge
-                                variant={persona.estado === "activo" ? "status-active" : persona.estado === "suspendido" ? "status-destructive" : "status-warning"}
-                                showDot
-                            >
-                                {persona.estado.charAt(0).toUpperCase() + persona.estado.slice(1)}
-                            </Badge>
+                            {persona.estado && (
+                                <Badge
+                                    variant={persona.estado === "activo" ? "status-active" : persona.estado === "bloqueado" ? "status-destructive" : "status-warning"}
+                                    showDot
+                                >
+                                    {persona.estado.charAt(0).toUpperCase() + persona.estado.slice(1)}
+                                </Badge>
+                            )}
                             <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground/60 px-2 ml-2 border-l">
                                 <span className="font-semibold text-foreground/80 uppercase tracking-wider text-[10px]">Titular</span>
                             </div>
                         </div>
                         <p className="text-sm text-muted-foreground flex items-center gap-2">
                             <span className="font-medium text-muted-foreground/60">ID Socio:</span>
-                            <span className="font-semibold">{persona.codigo}</span>
+                            <span className="font-semibold">{persona.codigo || persona.codigo_bp}</span>
                         </p>
                     </div>
                 </div>

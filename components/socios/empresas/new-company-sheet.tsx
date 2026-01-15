@@ -27,6 +27,7 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
 import {
     Select,
     SelectContent,
@@ -58,6 +59,7 @@ export function NewCompanySheet({ open: controlledOpen, onOpenChange, onSuccess 
         resolver: zodResolver(companySchema),
         defaultValues: {
             razon_social: "",
+            nombre_comercial: "",
             nit: "",
             tipo_sociedad: "SAS",
             email_principal: "",
@@ -79,11 +81,6 @@ export function NewCompanySheet({ open: controlledOpen, onOpenChange, onSuccess 
             }
 
             toast.success("Empresa creada correctamente. Completa su perfil ahora.")
-
-            // Show warnings if any
-            if (result.warnings && result.warnings.length > 0) {
-                result.warnings.forEach((warning: string) => toast.warning(warning))
-            }
 
             form.reset()
             setOpen(false)
@@ -146,12 +143,15 @@ export function NewCompanySheet({ open: controlledOpen, onOpenChange, onSuccess 
                                 <FormField
                                     control={form.control}
                                     name="razon_social"
-                                    render={({ field }) => (
+                                    render={({ field, fieldState }) => (
                                         <FormItem>
                                             <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Razón Social</FormLabel>
                                             <FormControl>
                                                 <Input
-                                                    className="h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20"
+                                                    className={cn(
+                                                        "h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20",
+                                                        fieldState.invalid && "border-destructive focus-visible:ring-destructive"
+                                                    )}
                                                     placeholder="Empresa Ejemplo S.A.S."
                                                     {...field}
                                                 />
@@ -163,13 +163,37 @@ export function NewCompanySheet({ open: controlledOpen, onOpenChange, onSuccess 
 
                                 <FormField
                                     control={form.control}
+                                    name="nombre_comercial"
+                                    render={({ field, fieldState }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Nombre Comercial (Opcional)</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    className={cn(
+                                                        "h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20",
+                                                        fieldState.invalid && "border-destructive focus-visible:ring-destructive"
+                                                    )}
+                                                    placeholder="Ej: MiEmpresa"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage className="text-[10px]" />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
                                     name="nit"
-                                    render={({ field }) => (
+                                    render={({ field, fieldState }) => (
                                         <FormItem>
                                             <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">NIT</FormLabel>
                                             <FormControl>
                                                 <Input
-                                                    className="h-11 bg-muted/30 border-muted-foreground/20 font-mono tracking-widest focus-visible:ring-primary/20"
+                                                    className={cn(
+                                                        "h-11 bg-muted/30 border-muted-foreground/20 font-mono tracking-widest focus-visible:ring-primary/20",
+                                                        fieldState.invalid && "border-destructive focus-visible:ring-destructive"
+                                                    )}
                                                     placeholder="900123456"
                                                     {...field}
                                                 />
@@ -182,12 +206,15 @@ export function NewCompanySheet({ open: controlledOpen, onOpenChange, onSuccess 
                                 <FormField
                                     control={form.control}
                                     name="tipo_sociedad"
-                                    render={({ field }) => (
+                                    render={({ field, fieldState }) => (
                                         <FormItem>
                                             <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Tipo de Sociedad</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl>
-                                                    <SelectTrigger className="h-11 bg-muted/30 border-muted-foreground/20 focus:ring-primary/20">
+                                                    <SelectTrigger className={cn(
+                                                        "h-11 bg-muted/30 border-muted-foreground/20 focus:ring-primary/20",
+                                                        fieldState.invalid && "border-destructive focus-visible:ring-destructive"
+                                                    )}>
                                                         <SelectValue placeholder="Seleccione..." />
                                                     </SelectTrigger>
                                                 </FormControl>
@@ -224,12 +251,15 @@ export function NewCompanySheet({ open: controlledOpen, onOpenChange, onSuccess 
                                     <FormField
                                         control={form.control}
                                         name="email_principal"
-                                        render={({ field }) => (
+                                        render={({ field, fieldState }) => (
                                             <FormItem>
                                                 <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Correo Electrónico</FormLabel>
                                                 <FormControl>
                                                     <Input
-                                                        className="h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20"
+                                                        className={cn(
+                                                            "h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20",
+                                                            fieldState.invalid && "border-destructive focus-visible:ring-destructive"
+                                                        )}
                                                         type="email"
                                                         placeholder="admin@empresa.com"
                                                         {...field}
@@ -239,24 +269,14 @@ export function NewCompanySheet({ open: controlledOpen, onOpenChange, onSuccess 
                                             </FormItem>
                                         )}
                                     />
-                                    <FormField
-                                        control={form.control}
-                                        name="telefono_principal"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Teléfono Principal</FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        className="h-11 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20"
-                                                        type="tel"
-                                                        placeholder="601..."
-                                                        {...field}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage className="text-[10px]" />
-                                            </FormItem>
-                                        )}
-                                    />
+                                    <div className="flex-1">
+                                        <PhoneInput
+                                            name="telefono_principal"
+                                            label="Teléfono Principal"
+                                            defaultCountry="CO"
+                                            className="bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </form>

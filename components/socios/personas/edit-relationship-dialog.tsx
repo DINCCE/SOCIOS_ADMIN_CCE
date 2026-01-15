@@ -35,7 +35,7 @@ import { Button } from "@/components/ui/button"
 import { editarTipoParentesco } from "@/app/actions/relaciones"
 
 const editRelationshipSchema = z.object({
-  tipo_parentesco: z.enum(["esposo_a", "hijo_a", "padre_madre", "hermano_a", "otro"]),
+  tipo_parentesco: z.enum(["esposo_a", "hijo_a", "padre", "madre", "hermano_a", "suegro", "suegra", "otro"]),
 })
 
 type EditRelationshipFormValues = z.infer<typeof editRelationshipSchema>
@@ -113,8 +113,11 @@ export function EditRelationshipDialog({
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="esposo_a">Cónyuge</SelectItem>
+                      <SelectItem value="padre">Padre</SelectItem>
+                      <SelectItem value="madre">Madre</SelectItem>
                       <SelectItem value="hijo_a">Hijo/a</SelectItem>
-                      <SelectItem value="padre_madre">Padre/Madre</SelectItem>
+                      <SelectItem value="suegro">Suegro</SelectItem>
+                      <SelectItem value="suegra">Suegra</SelectItem>
                       <SelectItem value="hermano_a">Hermano/a</SelectItem>
                       <SelectItem value="otro">Otro</SelectItem>
                     </SelectContent>

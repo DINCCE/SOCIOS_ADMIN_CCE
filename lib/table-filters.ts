@@ -21,6 +21,12 @@ export interface FilterOption {
   icon?: React.ComponentType<{ className?: string }>
 }
 
+interface TaggableItem {
+  tags?: string[] | null
+  sector_industria?: string | null
+  [key: string]: unknown // Allow other properties
+}
+
 // Opciones de filtro para Personas - Estado
 // Valores según dm_actor_estado: activo, inactivo, bloqueado
 export const personasEstadoOptions: FilterOption[] = [
@@ -41,7 +47,7 @@ export const personasTipoDocOptions: FilterOption[] = [
 ]
 
 // Tags son dinámicos - se extraen de los datos en runtime
-export const getPersonaTagsOptions = (data: any[]): FilterOption[] => {
+export const getPersonaTagsOptions = (data: TaggableItem[]): FilterOption[] => {
   const uniqueTags = new Set<string>()
   data.forEach((item) => {
     (item.tags || []).forEach((tag: string) => uniqueTags.add(tag))
@@ -83,7 +89,7 @@ export const empresasTipoSociedadOptions: FilterOption[] = [
 ]
 
 // Tags dinámicos para Empresas
-export const getEmpresaTagsOptions = (data: any[]): FilterOption[] => {
+export const getEmpresaTagsOptions = (data: TaggableItem[]): FilterOption[] => {
   const uniqueTags = new Set<string>()
   data.forEach((item) => {
     (item.tags || []).forEach((tag: string) => uniqueTags.add(tag))
@@ -124,7 +130,7 @@ export const empresasEmpleadosOptions: FilterOption[] = [
 ]
 
 // Sector dinámico para Empresas (extraído de los datos)
-export const getEmpresaSectorOptions = (data: any[]): FilterOption[] => {
+export const getEmpresaSectorOptions = (data: TaggableItem[]): FilterOption[] => {
   const uniqueSectores = new Set<string>()
   data.forEach((item) => {
     if (item.sector_industria) {
@@ -155,7 +161,7 @@ export const oportunidadesTipoOptions: FilterOption[] = [
 ]
 
 // Tags dinámicos para Oportunidades
-export const getOportunidadTagsOptions = (data: any[]): FilterOption[] => {
+export const getOportunidadTagsOptions = (data: TaggableItem[]): FilterOption[] => {
   const uniqueTags = new Set<string>()
   data.forEach((item) => {
     (item.tags || []).forEach((tag: string) => uniqueTags.add(tag))
@@ -184,7 +190,7 @@ export const tareasEstadoOptions: FilterOption[] = [
 ]
 
 // Tags dinámicos para Tareas
-export const getTareaTagsOptions = (data: any[]): FilterOption[] => {
+export const getTareaTagsOptions = (data: TaggableItem[]): FilterOption[] => {
   const uniqueTags = new Set<string>()
   data.forEach((item) => {
     (item.tags || []).forEach((tag: string) => uniqueTags.add(tag))

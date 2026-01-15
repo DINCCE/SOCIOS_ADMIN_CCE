@@ -38,11 +38,11 @@ const COLUMN_CONFIG: Record<
   EstadoOportunidad,
   { label: string; color: string; isNegative: boolean }
 > = {
-  abierta: { label: 'Abierta', color: 'bg-blue-50 border-blue-200', isNegative: false },
-  en_proceso: { label: 'En Proceso', color: 'bg-yellow-50 border-yellow-200', isNegative: false },
-  ganada: { label: 'Ganada', color: 'bg-green-50 border-green-200', isNegative: false },
-  perdida: { label: 'Perdida', color: 'bg-muted/30 border-muted/50', isNegative: true },
-  cancelada: { label: 'Cancelada', color: 'bg-muted/30 border-muted/50', isNegative: true },
+  Nueva: { label: 'Nueva', color: 'bg-blue-50 border-blue-200', isNegative: false },
+  'En Progreso': { label: 'En Progreso', color: 'bg-yellow-50 border-yellow-200', isNegative: false },
+  Ganada: { label: 'Ganada', color: 'bg-green-50 border-green-200', isNegative: false },
+  Pérdida: { label: 'Pérdida', color: 'bg-muted/30 border-muted/50', isNegative: true },
+  Descartada: { label: 'Descartada', color: 'bg-muted/30 border-muted/50', isNegative: true },
 }
 
 export function OportunidadesBoard() {

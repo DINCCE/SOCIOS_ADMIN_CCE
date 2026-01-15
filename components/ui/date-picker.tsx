@@ -35,7 +35,15 @@ interface DatePickerProps {
 }
 
 // Custom dropdown component using shadcn Select
-function CustomDropdown({ options, value, onChange, "aria-label": ariaLabel }: any) {
+interface CustomDropdownProps {
+    options?: { value: string | number; label: string; disabled?: boolean }[]
+    value?: string | number | readonly string[]
+    onChange?: React.ChangeEventHandler<HTMLSelectElement>
+    "aria-label"?: string
+    [key: string]: unknown // Allow other props passed by DayPicker
+}
+
+function CustomDropdown({ options, value, onChange, "aria-label": ariaLabel }: CustomDropdownProps) {
     const handleValueChange = (newValue: string) => {
         if (onChange) {
             const syntheticEvent = {
@@ -52,7 +60,7 @@ function CustomDropdown({ options, value, onChange, "aria-label": ariaLabel }: a
             </SelectTrigger>
             <SelectContent>
                 <SelectGroup>
-                    {options?.map((option: any) => (
+                    {options?.map((option) => (
                         <SelectItem
                             key={option.value}
                             value={option.value.toString()}

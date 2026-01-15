@@ -155,7 +155,7 @@ export function OportunidadesPageClient() {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-  })
+  }) as any
 
   if (!hasMounted || isLoading) {
     return (

@@ -2,17 +2,15 @@ import { z } from "zod"
 
 export const oportunidadSchema = z.object({
     // Required fields
-    tipo: z.enum(["Solicitud Retiro", "Solicitud Ingreso"], {
-        required_error: "El tipo de oportunidad es obligatorio",
-    }),
-    solicitante_id: z.string().uuid("Solicitante inválido"),
+    tipo: z.enum(["Solicitud Retiro", "Solicitud Ingreso"]),
+    solicitante_id: z.string().uuid(),
 
     // Optional fields
     codigo: z.string().optional(), // Auto-generated server-side
-    responsable_id: z.string().uuid("Responsable inválido").optional().or(z.literal("")),
-    monto_estimado: z.coerce.number().optional().or(z.literal(0)),
+    responsable_id: z.string().uuid().optional().or(z.literal("")),
+    monto_estimado: z.number().optional(),
     notas: z.string().optional().or(z.literal("")),
-    atributos: z.record(z.unknown()).optional().default({}),
+    atributos: z.record(z.string(), z.unknown()).optional(),
 })
 
 export type OportunidadFormValues = z.infer<typeof oportunidadSchema>

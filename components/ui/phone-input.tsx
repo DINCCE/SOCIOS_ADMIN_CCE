@@ -144,7 +144,7 @@ export function PhoneInputControlled({
       <PhoneInputBase
         international={international}
         withCountryCallingCode={international}
-        defaultCountry={defaultCountry}
+        defaultCountry={defaultCountry as "CO" | "US" | "ES" | undefined}
         countryCallingCodeEditable={countryCallingCodeEditable}
         value={value}
         onChange={onChange}

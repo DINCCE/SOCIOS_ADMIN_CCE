@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { DataId } from "@/components/ui/data-id"
 import { CopyableCell } from "@/components/ui/copyable-cell"
 import { IdentityCell } from "@/components/ui/identity-cell"
+import { NullCell } from "@/components/ui/null-cell"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,30 +37,30 @@ const ESTADO_CONFIG: Record<
   EstadoTarea,
   { label: string; dotClassName: string }
 > = {
-  pendiente: { label: 'Pendiente', dotClassName: 'bg-status-neutral' },
-  en_progreso: { label: 'En Progreso', dotClassName: 'bg-status-warning' },
-  terminada: { label: 'Terminada', dotClassName: 'bg-status-positive' },
-  pausada: { label: 'Pausada', dotClassName: 'bg-status-negative' },
-  cancelada: { label: 'Cancelada', dotClassName: 'bg-status-negative' },
+  Pendiente: { label: 'Pendiente', dotClassName: 'bg-status-neutral' },
+  'En Progreso': { label: 'En Progreso', dotClassName: 'bg-status-warning' },
+  Terminada: { label: 'Terminada', dotClassName: 'bg-status-positive' },
+  Pausada: { label: 'Pausada', dotClassName: 'bg-status-negative' },
+  Cancelada: { label: 'Cancelada', dotClassName: 'bg-status-negative' },
 }
 
 const PRIORIDAD_CONFIG: Record<
   PrioridadTarea,
   { label: string; dotClassName: string }
 > = {
-  critica: {
-    label: 'Crítica',
+  Urgente: {
+    label: 'Urgente',
     dotClassName: 'bg-status-negative',
   },
-  alta: {
+  Alta: {
     label: 'Alta',
     dotClassName: 'bg-status-negative',
   },
-  media: {
+  Media: {
     label: 'Media',
     dotClassName: 'bg-status-warning',
   },
-  baja: {
+  Baja: {
     label: 'Baja',
     dotClassName: 'bg-status-neutral',
   },
@@ -276,7 +277,7 @@ export const columns: ColumnDef<TareaView>[] = [
     header: ({ column }) => <DataTableColumnHeader column={column} title="Oportunidad" />,
     cell: ({ row }) => {
       const codigo = row.original.oportunidad_codigo
-      return codigo ? <CopyableCell value={codigo} /> : <span>-</span>
+      return codigo ? <CopyableCell value={codigo} /> : <NullCell />
     },
     meta: { size: 130 },
   },
@@ -285,7 +286,7 @@ export const columns: ColumnDef<TareaView>[] = [
     header: ({ column }) => <DataTableColumnHeader column={column} title="Solicitante" />,
     cell: ({ row }) => {
       const codigo = row.original.relacionado_codigo_bp
-      return codigo ? <CopyableCell value={codigo} /> : <span>-</span>
+      return codigo ? <CopyableCell value={codigo} /> : <NullCell />
     },
     meta: { size: 130 },
   },
@@ -305,7 +306,7 @@ export const columns: ColumnDef<TareaView>[] = [
     cell: ({ row }) => {
       const tags = row.original.tags
       if (!tags || tags.length === 0) {
-        return <span className="text-muted-foreground text-xs">-</span>
+        return <NullCell />
       }
 
       return (

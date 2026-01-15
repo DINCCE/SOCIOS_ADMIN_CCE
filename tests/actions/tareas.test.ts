@@ -40,7 +40,7 @@ describe('Tareas Actions', () => {
         organizacion_id: generateTestOrganizationId(),
         titulo: 'Test Task',
         descripcion: 'Test description',
-        prioridad: 'alta',
+        prioridad: 'alta' as const,
       }
 
       const result = await crearTarea(data)
@@ -61,7 +61,7 @@ describe('Tareas Actions', () => {
         organizacion_id: generateTestOrganizationId(),
         titulo: 'Test Task',
         descripcion: 'Test description',
-        prioridad: 'alta',
+        prioridad: 'alta' as const,
       })
 
       expect(result.success).toBe(false)
@@ -82,7 +82,7 @@ describe('Tareas Actions', () => {
 
       const result = await actualizarTarea('task-123', {
         titulo: 'Updated Task',
-        estado: 'en_progreso',
+        estado: 'En Progreso',
       })
 
       expect(result.success).toBe(true)
@@ -99,7 +99,7 @@ describe('Tareas Actions', () => {
 
       const result = await actualizarTarea('task-123', {
         titulo: 'Updated Task',
-        estado: 'en_progreso',
+        estado: 'En Progreso',
       })
 
       expect(result.success).toBe(false)

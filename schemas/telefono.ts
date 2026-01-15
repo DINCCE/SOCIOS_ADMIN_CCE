@@ -10,57 +10,49 @@ import { isValidPhoneNumber, parsePhoneNumber } from "libphonenumber-js"
  * - Empty string → null (for IS NULL check)
  * - Valid input → E.164 format (+573001234567)
  */
+
+// Custom refinement for phone validation
+const isValidE164Phone = (value: string | null): boolean => {
+  if (!value) return true
+  try {
+    return isValidPhoneNumber(value)
+  } catch {
+    return false
+  }
+}
+
+const matchesDbPattern = (value: string | null): boolean => {
+  if (!value) return true
+  const dbPattern = /^\+[1-9][0-9]{6,14}$/
+  return dbPattern.test(value)
+}
+
+const normalizeToE164 = (value: string | null): string | null => {
+  if (!value) return null
+  try {
+    const phoneNumber = parsePhoneNumber(value)
+    return phoneNumber.number
+  } catch {
+    return value
+  }
+}
+
 export const phoneSchema = z
   .string()
-  .optional()
   .nullable()
-  .transform((value) => {
-    // Transform empty string to null for database IS NULL check
-    if (!value || value.trim() === "") {
-      return null
-    }
-    return value
+  .optional()
+  .transform((val) => {
+    // Transform empty string to null
+    if (!val || val.trim() === "") return null
+    return val
   })
-  .refine(
-    (value) => {
-      // Allow null (empty field)
-      if (!value) return true
-
-      // Validate E.164 format with libphonenumber-js
-      try {
-        return isValidPhoneNumber(value)
-      } catch {
-        return false
-      }
-    },
-    {
-      message: "Formato de teléfono inválido. Use formato internacional (+57 300 123 4567)",
-    }
-  )
-  .refine(
-    (value) => {
-      // Allow null
-      if (!value) return true
-
-      // Validate against database regex: ^\+[1-9][0-9]{6,14}$
-      const dbPattern = /^\+[1-9][0-9]{6,14}$/
-      return dbPattern.test(value)
-    },
-    {
-      message: "El teléfono debe tener entre 7 y 15 dígitos incluyendo el código de país (+57)",
-    }
-  )
-  .transform((value) => {
-    // Normalize to E.164 format
-    if (!value) return null
-
-    try {
-      const phoneNumber = parsePhoneNumber(value)
-      return phoneNumber.number // Returns E.164 format
-    } catch {
-      return value
-    }
-  }) as z.ZodType<string | null, z.ZodTypeDef, string | null | undefined>
+  .refine(isValidE164Phone, {
+    message: "Formato de teléfono inválido. Use formato internacional (+57 300 123 4567)",
+  })
+  .refine(matchesDbPattern, {
+    message: "El teléfono debe tener entre 7 y 15 dígitos incluyendo el código de país (+57)",
+  })
+  .transform(normalizeToE164)
 
 /**
  * Helper to create a phone field schema with optional label

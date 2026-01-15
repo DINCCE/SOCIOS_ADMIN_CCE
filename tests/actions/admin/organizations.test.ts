@@ -37,16 +37,16 @@ describe('Admin Organizations Actions', () => {
 
       const data = {
         nombre: 'Test Organization',
-        nit: '900123456-1',
-        direccion: 'Calle 123',
-        ciudad: 'Bogotá',
-        pais: 'Colombia',
+        slug: 'test-org',
+        direccion: { ciudad: 'Bogotá', pais: 'Colombia' },
       }
 
       const result = await createOrganization(data)
 
       expect(result.success).toBe(true)
-      expect(result.data).toBeDefined()
+      if (result.success) {
+        expect(result.organization_id).toBeDefined()
+      }
       expect(revalidatePath).toHaveBeenCalled()
     })
 
@@ -63,7 +63,7 @@ describe('Admin Organizations Actions', () => {
 
       const result = await createOrganization({
         nombre: 'Test Organization',
-        nit: '900123456-1',
+        slug: 'test-org',
       })
 
       expect(result.success).toBe(false)

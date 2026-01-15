@@ -134,7 +134,12 @@ export const columns: ColumnDef<DocumentoComercialView>[] = [
   {
     accessorKey: 'codigo',
     header: ({ column }) => <DataTableColumnHeader column={column} title="# Solicitud" className="text-left" />,
-    cell: ({ row }) => <span>{formatDocumentId(row.getValue('codigo'))}</span>,
+    cell: ({ row }) => (
+      <CopyableCell
+        value={row.getValue('codigo')}
+        label={formatDocumentId(row.getValue('codigo'))}
+      />
+    ),
     meta: { size: 140 },
   },
   {

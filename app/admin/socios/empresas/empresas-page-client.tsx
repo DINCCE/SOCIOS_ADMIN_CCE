@@ -106,7 +106,30 @@ export function EmpresasPageClient() {
       }
 
       // Transform to EmpresaList format
-      const transformed = data?.map((actor: any) => {
+      interface RawEmpresa {
+        id: string
+        codigo_bp: string
+        num_documento: string
+        digito_verificacion: string | null
+        razon_social: string | null
+        nombre_comercial: string | null
+        email_principal: string | null
+        telefono_principal: string | null
+        estado_actor: string
+        organizacion_id: string
+        es_socio: boolean
+        es_cliente: boolean
+        es_proveedor: boolean
+        eliminado_en: string | null
+        perfil_profesional_corporativo: Record<string, any> | null
+        nat_fiscal: string | null
+        regimen_tributario: string | null
+        creado_en: string
+        actualizado_en: string
+        tipo_actor: string
+      }
+
+      const transformed = (data as unknown as RawEmpresa[])?.map((actor) => {
         const perfilProfesional = actor.perfil_profesional_corporativo || {}
         return {
           id: actor.id,
@@ -231,7 +254,7 @@ export function EmpresasPageClient() {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-  })
+  }) as any
 
   if (!hasMounted || isLoading) {
     return (
@@ -349,7 +372,7 @@ export function EmpresasPageClient() {
                 selectedCount={table.getFilteredSelectedRowModel().rows.length}
                 totalCount={table.getFilteredRowModel().rows.length}
                 onExport={() => {
-                  const selectedRows = table.getFilteredSelectedRowModel().rows.map(row => row.original)
+                  const selectedRows = table.getFilteredSelectedRowModel().rows.map((row: any) => row.original)
                   console.log('Export', selectedRows)
                 }}
                 onChangeStatus={() => {

@@ -1,3 +1,7 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import Link from "next/link"
 import { Mail, Phone, MapPin, Calendar, Globe, Linkedin, Instagram, Facebook, Twitter, Cake } from "lucide-react"
 import { Persona } from "@/features/socios/types/socios-schema"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -6,6 +10,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { format, differenceInDays } from "date-fns"
 import { es } from "date-fns/locale"
+
+import { obtenerRelaciones, EnrichedRelationship } from "@/app/actions/relaciones"
 
 interface PersonIdentityPanelProps {
     persona: Persona
@@ -53,6 +59,26 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
         } catch (e) {
             return null;
         }
+    }
+
+    const [relaciones, setRelaciones] = useState<EnrichedRelationship[]>([])
+    const [loadingRels, setLoadingRels] = useState(true)
+
+    useEffect(() => {
+        const loadRels = async () => {
+            setLoadingRels(true)
+            const result = await obtenerRelaciones(persona.id, true)
+            if (result.success && result.data) {
+                // Filtrar solo familiares
+                setRelaciones(result.data.filter(r => r.tipo_relacion === 'familiar'))
+            }
+            setLoadingRels(false)
+        }
+        loadRels()
+    }, [persona.id])
+
+    const getInitials = (name: string) => {
+        return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
     }
 
     const getBirthdayCountdown = (birthDate: Date) => {
@@ -233,32 +259,56 @@ export function PersonIdentityPanel({ persona }: PersonIdentityPanelProps) {
 
                 <Separator className="bg-border/40" />
 
-                {/* Grupo Familiar - Compact Sidebar version */}
+                {/* Grupo Familiar - Real Data Sidebar version */}
                 <div className="space-y-3">
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Grupo Familiar</p>
                     <div className="space-y-1.5">
-                        {/* Member 1 */}
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2 min-w-0">
-                                <div className="h-6 w-6 shrink-0 rounded-full bg-muted border border-border flex items-center justify-center text-[8px] font-bold text-muted-foreground">ML</div>
-                                <span className="text-xs font-medium text-foreground truncate max-w-[140px]">María López</span>
+                        {loadingRels ? (
+                            <div className="space-y-2 animate-pulse">
+                                <div className="h-6 bg-muted rounded w-3/4"></div>
+                                <div className="h-6 bg-muted rounded w-full"></div>
                             </div>
-                            <Badge className="text-[9px] px-1.5 py-0 h-4 font-normal bg-muted text-muted-foreground rounded-sm border-none shadow-none">CÓNYUGE</Badge>
-                        </div>
+                        ) : relaciones.length > 0 ? (
+                            <>
+                                {relaciones.slice(0, 5).map((rel) => {
+                                    const isOrigen = rel.bp_origen_id === persona.id
+                                    const relativeId = isOrigen ? rel.bp_destino_id : rel.bp_origen_id
+                                    const relativeName = isOrigen ? rel.destino_nombre_completo : rel.origen_nombre_completo
+                                    const relativeRole = isOrigen ? rel.rol_destino : rel.rol_origen
 
-                        {/* Member 2 */}
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2 min-w-0">
-                                <div className="h-6 w-6 shrink-0 rounded-full bg-muted border border-border flex items-center justify-center text-[8px] font-bold text-muted-foreground">CP</div>
-                                <span className="text-xs font-medium text-foreground truncate max-w-[140px]">Camilo Pérez</span>
-                            </div>
-                            <Badge className="text-[9px] px-1.5 py-0 h-4 font-normal bg-muted text-muted-foreground rounded-sm border-none shadow-none">HIJO</Badge>
-                        </div>
+                                    return (
+                                        <div key={rel.id} className="flex items-center justify-between gap-3">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <div className="h-6 w-6 shrink-0 rounded-full bg-muted border border-border flex items-center justify-center text-[8px] font-bold text-muted-foreground">
+                                                    {getInitials(relativeName)}
+                                                </div>
+                                                <Link
+                                                    href={`/admin/socios/personas/${relativeId}`}
+                                                    className="text-xs font-medium text-foreground truncate max-w-[140px] hover:text-primary hover:underline transition-colors"
+                                                >
+                                                    {relativeName}
+                                                </Link>
+                                            </div>
+                                            <Badge className="text-[9px] px-1.5 py-0 h-4 font-normal bg-muted text-muted-foreground rounded-sm border-none shadow-none uppercase">
+                                                {relativeRole}
+                                            </Badge>
+                                        </div>
+                                    )
+                                })}
 
-                        {/* gestion / ver mas */}
-                        <button className="text-[10px] text-primary hover:underline font-medium mt-1 cursor-pointer transition-colors text-left leading-tight">
-                            Gestionar relaciones (+2 más...)
-                        </button>
+                                <Link
+                                    href="?tab=family"
+                                    className="block text-[10px] text-primary hover:underline font-medium mt-1 transition-colors text-left leading-tight"
+                                >
+                                    {relaciones.length > 5
+                                        ? `Gestionar relaciones (+${relaciones.length - 5} más...)`
+                                        : "Gestionar relaciones"
+                                    }
+                                </Link>
+                            </>
+                        ) : (
+                            <p className="text-xs italic text-muted-foreground pl-1">Sin familiares vinculados</p>
+                        )}
                     </div>
                 </div>
 
