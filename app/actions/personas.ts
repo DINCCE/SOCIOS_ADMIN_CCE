@@ -536,33 +536,51 @@ export async function updatePersonaSecurity(
 export async function softDeletePersona(id: string) {
   const supabase = await createClient()
 
-  // 1. Soft delete personas record
-  const { error: personaError } = await supabase
-    .from('dm_actores')
-    .update({ eliminado_en: new Date().toISOString() })
-    .eq('id', id)
+  // Get authenticated user
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-  if (personaError) {
-    console.error('Error soft deleting persona:', personaError)
+  if (userError || !user) {
+    console.error('Error getting user:', userError)
     return {
       success: false,
-      message: `Error al eliminar persona: ${personaError.message}`,
-      error: personaError
+      message: 'Usuario no autenticado'
     }
   }
 
-  // 2. Soft delete corresponding business_partners record
-  const { error: bpError } = await supabase
+  // First, get the organizacion_id from the persona
+  const { data: persona, error: fetchError } = await supabase
     .from('dm_actores')
-    .update({ eliminado_en: new Date().toISOString() })
+    .select('organizacion_id')
     .eq('id', id)
+    .single()
 
-  if (bpError) {
-    console.error('Error soft deleting business_partner:', bpError)
+  if (fetchError) {
+    console.error('Error fetching persona:', fetchError)
     return {
       success: false,
-      message: `Error al eliminar business partner: ${bpError.message}`,
-      error: bpError
+      message: `Error al obtener persona: ${fetchError.message}`,
+      error: fetchError
+    }
+  }
+
+  if (!persona) {
+    return {
+      success: false,
+      message: 'Persona no encontrada'
+    }
+  }
+
+  // Use RPC function to soft delete with proper RLS bypass
+  const { error: deleteError } = await supabase.rpc('soft_delete_actor', {
+    p_actor_id: id
+  })
+
+  if (deleteError) {
+    console.error('Error soft deleting persona:', deleteError)
+    return {
+      success: false,
+      message: `Error al eliminar persona: ${deleteError.message}`,
+      error: deleteError
     }
   }
 

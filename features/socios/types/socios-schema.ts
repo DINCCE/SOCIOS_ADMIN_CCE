@@ -33,6 +33,7 @@ export const personaListSchema = z.object({
   eliminado_en: z.string().nullable(),
   // Optional: These may be added to view later via JOINs
   foto_url: z.string().nullable().optional(),
+  tags: z.array(z.string()).default([]),
 })
 
 export type PersonaList = z.infer<typeof personaListSchema>

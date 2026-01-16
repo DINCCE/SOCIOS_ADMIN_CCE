@@ -15,6 +15,7 @@ export type ColorScheme =
   | 'mandarina'
   | 'twitter'
   | 'country'
+  | 'country-ii'
   | 'yingyang'
 
 interface ColorSchemeContextType {
@@ -30,7 +31,7 @@ export function ColorSchemeProvider({ children }: { children: React.ReactNode })
     // Load from localStorage on mount
     React.useEffect(() => {
         const savedScheme = localStorage.getItem('color-scheme') as ColorScheme
-        if (savedScheme && ['default', 'capuccino', 'materia-oscura', 'claude', 'doom-64', 'grafito', 'minimal', 'neo-brutal', 'jardin', 'mandarina', 'twitter', 'country', 'yingyang'].includes(savedScheme)) {
+        if (savedScheme && ['default', 'capuccino', 'materia-oscura', 'claude', 'doom-64', 'grafito', 'minimal', 'neo-brutal', 'jardin', 'mandarina', 'twitter', 'country', 'country-ii', 'yingyang'].includes(savedScheme)) {
             setColorScheme(savedScheme)
             document.documentElement.setAttribute('data-theme', savedScheme)
         }

@@ -20,7 +20,7 @@ interface DataIdProps {
  *
  * @example
  * ```tsx
- * <DataId copyable>BP-2024-001</DataId>
+ * <DataId copyable>ACT-00000001</DataId>
  * <DataId copyable>900123456-7</DataId>
  * <DataId>550e8400-e29b-41d4-a716-446655440000</DataId>
  * ```

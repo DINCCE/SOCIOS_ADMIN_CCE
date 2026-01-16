@@ -57,7 +57,7 @@ export function LoginForm({
       }
 
       notifySuccess({ title: 'Sesión iniciada correctamente' })
-      router.push('/admin')
+      router.push('/org-check')
       router.refresh()
     } catch (error) {
       notifyError({

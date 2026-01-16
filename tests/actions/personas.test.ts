@@ -61,7 +61,7 @@ describe('Personas Actions', () => {
       // Assert
       expect(result.success).toBe(true)
       expect(result.bp_id).toBe(generateTestPersonaId())
-      expect(result.codigo_bp).toBe('BP-000001')
+      expect(result.codigo_bp).toBe('ACT-00000001')
       expect(result.message).toBe('Persona creada exitosamente')
       expect(createClient).toHaveBeenCalled()
       expect(mockSupabase.from).toHaveBeenCalledWith('organizations')
@@ -177,7 +177,7 @@ describe('Personas Actions', () => {
       // Assert
       expect(result.success).toBe(true)
       expect(result.bp_id).toBe(generateTestPersonaId())
-      expect(result.codigo_bp).toBe('BP-000001')
+      expect(result.codigo_bp).toBe('ACT-00000001')
       expect(revalidatePath).toHaveBeenCalledWith('/admin/socios/personas')
     })
 

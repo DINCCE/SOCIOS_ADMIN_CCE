@@ -23,6 +23,7 @@ const colorOptions = [
   { value: 'mandarina', label: 'Mandarina' },
   { value: 'twitter', label: 'Twitter' },
   { value: 'country', label: 'Country' },
+  { value: 'country-ii', label: 'Country II' },
   { value: 'yingyang', label: 'YingYang' },
 ]
 

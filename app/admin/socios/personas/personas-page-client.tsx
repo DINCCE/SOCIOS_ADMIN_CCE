@@ -15,7 +15,8 @@ import {
 import { AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { toggleTagsForActores, createAndAssignTag } from '@/app/actions/tags'
 
 import { PageShell } from '@/components/shell/page-shell'
 import { PageHeader } from '@/components/shell/page-header'
@@ -29,21 +30,33 @@ import { DataTableViewOptions } from '@/features/socios/components/data-table-vi
 import { DataTablePagination } from '@/features/socios/components/data-table-pagination'
 import { DataTableFacetedFilter } from '@/features/socios/components/data-table-faceted-filter'
 import { DataTableResetFilters } from '@/features/socios/components/data-table-reset-filters'
-import { FloatingActionBar } from '@/components/ui/floating-action-bar'
+import { FloatingActionCapsule } from '@/components/ui/floating-action-capsule'
 import { Separator } from '@/components/ui/separator'
+import { Button } from '@/components/ui/button'
+import { DataTableExportDialog } from '@/components/ui/data-table-export-dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import type { PersonaList } from '@/features/socios/types/socios-schema'
 import { columns } from '@/features/socios/personas/columns'
-import { personasEstadoOptions } from '@/lib/table-filters'
+import { personasEstadoOptions, getPersonaTagsOptions } from '@/lib/table-filters'
+import { useDataExport } from '@/lib/hooks/use-data-export'
+import { useNotify } from '@/lib/hooks/use-notify'
+import { Download, Trash2 } from 'lucide-react'
+import { softDeletePersona } from '@/app/actions/personas'
 
 export function PersonasPageClient() {
   const router = useRouter()
+  const queryClient = useQueryClient()
+  const { exportData } = useDataExport()
+  const { notifySuccess, notifyError } = useNotify()
   const [hasMounted, setHasMounted] = React.useState(false)
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [globalSearch, setGlobalSearch] = React.useState("")
+  const [showSelectionExport, setShowSelectionExport] = React.useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false)
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
     codigo: false,
-    tags: false, // Tags column hidden since dm_actores doesn't have a tags field
+    tags: true, // Mostrar columna de etiquetas
     // Campos no disponibles en v_actores_org (ocultos temporalmente):
     // tipo_documento, genero, fecha_nacimiento, nacionalidad, tipo_sangre,
     // eps, ocupacion, fecha_socio, estado_vital, whatsapp, organizacion_nombre
@@ -57,7 +70,7 @@ export function PersonasPageClient() {
       const supabase = createClient()
       const { data, error: queryError } = await supabase
         .from('dm_actores')
-        .select('id, codigo_bp, primer_nombre, primer_apellido, num_documento, email_principal, telefono_principal, estado_actor, organizacion_id, es_socio, es_cliente, es_proveedor, eliminado_en')
+        .select('id, codigo_bp, primer_nombre, primer_apellido, num_documento, email_principal, telefono_principal, estado_actor, organizacion_id, es_socio, es_cliente, es_proveedor, eliminado_en, tags')
         .eq('tipo_actor', 'persona')
         .is('eliminado_en', null)
         .order('primer_apellido', { ascending: true })
@@ -83,6 +96,7 @@ export function PersonasPageClient() {
         es_proveedor: boolean
         eliminado_en: string | null
         tipo_actor: string
+        tags: string[] | null
       }
 
       const transformed = (data as unknown as RawPersona[])?.map((actor) => ({
@@ -99,6 +113,7 @@ export function PersonasPageClient() {
         es_cliente: actor.es_cliente,
         es_proveedor: actor.es_proveedor,
         eliminado_en: actor.eliminado_en,
+        tags: actor.tags || [],
         foto_url: null, // Not in selected fields
       })) || []
 
@@ -131,6 +146,113 @@ export function PersonasPageClient() {
       return false
     })
   }, [initialData, globalSearch])
+
+  // Obtener todas las etiquetas únicas disponibles
+  const availableTags = React.useMemo(() => {
+    const tagsSet = new Set<string>()
+    initialData.forEach((persona) => {
+      if (persona.tags) {
+        persona.tags.forEach((tag) => tagsSet.add(tag))
+      }
+    })
+    return Array.from(tagsSet).sort()
+  }, [initialData])
+
+  // Column mapping for export dialog
+  const exportColumns = React.useMemo(() => {
+    return columns
+      .map((col: any) => {
+        const id = col.id || col.accessorKey || ''
+        let label = id
+
+        // Extract label from header
+        if (typeof col.header === 'string') {
+          label = col.header
+        } else if (col.header?.props?.children) {
+          // Handle complex headers like components
+          label = String(col.header.props.children || id)
+        }
+
+        return { id, label }
+      })
+      .filter((col: any) => col.id && col.id !== 'select' && col.id !== 'actions')
+  }, [columns])
+
+  // Export handler
+  const handleExport = ({ format, selectedColumns }: { format: 'csv' | 'xlsx'; selectedColumns: string[] }) => {
+    exportData(filteredData, {
+      format,
+      columns: exportColumns,
+      selectedColumns,
+      filename: `personas-${Date.now()}`
+    })
+  }
+
+  // Selection export handler
+  const handleExportSelection = ({ format, selectedColumns }: { format: 'csv' | 'xlsx'; selectedColumns: string[] }) => {
+    // Get only selected rows from table
+    const selectedRows = table.getSelectedRowModel().rows.map(row => row.original)
+
+    exportData(selectedRows, {
+      format,
+      columns: exportColumns,
+      selectedColumns,
+      filename: `seleccion_personas_${Date.now()}`
+    })
+
+    setShowSelectionExport(false)
+  }
+
+  // Delete handler with confirmation
+  const handleDelete = async () => {
+    const selectedIds = table.getFilteredSelectedRowModel().rows.map(row => row.original.id)
+    const selectedCount = selectedIds.length
+
+    try {
+      // Delete all selected records
+      let successCount = 0
+      let errorCount = 0
+
+      for (const id of selectedIds) {
+        const result = await softDeletePersona(id)
+        if (result.success) {
+          successCount++
+        } else {
+          errorCount++
+          console.error('Error deleting persona:', result.message)
+        }
+      }
+
+      // Clear selection and refresh data
+      setRowSelection({})
+      await queryClient.invalidateQueries({ queryKey: ['personas'] })
+      setShowDeleteConfirm(false)
+
+      // Show appropriate notification
+      if (errorCount === 0) {
+        notifySuccess({
+          title: `${successCount} ${successCount === 1 ? 'persona eliminada' : 'personas eliminadas'} correctamente`
+        })
+      } else if (successCount === 0) {
+        notifyError({
+          title: 'Error al eliminar',
+          description: `No se pudieron eliminar las personas. ${errorCount > 1 ? 'Intente nuevamente.' : ''}`
+        })
+      } else {
+        notifyError({
+          title: 'Eliminación parcial',
+          description: `${successCount} de ${selectedCount} personas eliminadas. ${errorCount} errores.`
+        })
+      }
+    } catch (error) {
+      console.error('Error in batch delete:', error)
+      notifyError({
+        title: 'Error al eliminar',
+        description: 'Error al eliminar las personas. Intente nuevamente.'
+      })
+      setShowDeleteConfirm(false)
+    }
+  }
 
   // Handle mount state
   React.useEffect(() => {
@@ -232,15 +354,17 @@ export function PersonasPageClient() {
               title="Estado"
               options={personasEstadoOptions}
             />
+            {availableTags.length > 0 && (
+              <DataTableFacetedFilter
+                column={table.getColumn("tags")}
+                title="Etiquetas"
+                options={getPersonaTagsOptions(initialData)}
+              />
+            )}
             {/* DataTableFacetedFilter
               column={table.getColumn("tipo_documento")}
               title="Tipo Doc."
               options={personasTipoDocOptions}
-            */}
-            {/* DataTableFacetedFilter
-              column={table.getColumn("tags")}
-              title="Etiquetas"
-              options={getPersonaTagsOptions(initialData)}
             */}
             {table.getState().columnFilters.length > 0 && (
               <>
@@ -250,7 +374,25 @@ export function PersonasPageClient() {
             )}
           </>
         }
-        right={<DataTableViewOptions table={table} />}
+        right={
+          <>
+            <DataTableExportDialog
+              trigger={
+                <Button variant="outline" size="sm" className="h-8 gap-2">
+                  <Download className="h-4 w-4" />
+                  <span>Exportar</span>
+                </Button>
+              }
+              title="Exportar Personas"
+              description="Selecciona el formato y columnas a exportar"
+              columns={exportColumns}
+              totalRows={filteredData.length}
+              isLoading={isLoading}
+              onExport={handleExport}
+            />
+            <DataTableViewOptions table={table} />
+          </>
+        }
       />
 
       {/* Content */}
@@ -266,27 +408,79 @@ export function PersonasPageClient() {
             <DataTablePagination table={table} />
           </div>
 
-          {/* Floating Action Bar */}
+          {/* Floating Action Capsule */}
           <AnimatePresence>
             {table.getFilteredSelectedRowModel().rows.length > 0 && (
-              <FloatingActionBar
+              <FloatingActionCapsule
                 selectedCount={table.getFilteredSelectedRowModel().rows.length}
+                selectedIds={table.getFilteredSelectedRowModel().rows.map(row => row.original.id)}
                 totalCount={table.getFilteredRowModel().rows.length}
-                onExport={() => {
-                  const selectedRows = table.getFilteredSelectedRowModel().rows.map(row => row.original)
-                  console.log('Export', selectedRows)
+                availableTags={availableTags}
+                selectedRowsTags={table.getFilteredSelectedRowModel().rows.map(row => (row.original as PersonaList).tags || [])}
+                onClearSelection={() => setRowSelection({})}
+                onExport={() => setShowSelectionExport(true)}
+                onToggleTag={async (tag: string, add: boolean) => {
+                  const selectedIds = table.getFilteredSelectedRowModel().rows.map(row => row.original.id)
+                  const result = await toggleTagsForActores(selectedIds, tag, add)
+                  if (!result.success) {
+                    console.error('Error toggling tag:', result.message)
+                  }
+                  // Refrescar datos invalidando query
+                  await queryClient.invalidateQueries({ queryKey: ['personas'] })
                 }}
-                onChangeStatus={() => {
-                  console.log('Change status')
+                onCreateTag={async (tag: string) => {
+                  const selectedIds = table.getFilteredSelectedRowModel().rows.map(row => row.original.id)
+                  const result = await createAndAssignTag(selectedIds, tag)
+                  if (!result.success) {
+                    console.error('Error creating tag:', result.message)
+                  }
+                  // Refrescar datos invalidando query
+                  await queryClient.invalidateQueries({ queryKey: ['personas'] })
                 }}
-                onDelete={() => {
-                  console.log('Delete')
-                }}
+                onDelete={() => setShowDeleteConfirm(true)}
               />
             )}
           </AnimatePresence>
         </div>
       </PageContent>
+
+      {/* Selection Export Dialog */}
+      <DataTableExportDialog
+        open={showSelectionExport}
+        onOpenChange={setShowSelectionExport}
+        title="Exportar Selección"
+        description={`Se exportarán ${table.getSelectedRowModel().rows.length} registros seleccionados`}
+        columns={exportColumns}
+        totalRows={table.getSelectedRowModel().rows.length}
+        isLoading={isLoading}
+        onExport={handleExportSelection}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Eliminar {table.getFilteredSelectedRowModel().rows.length} {table.getFilteredSelectedRowModel().rows.length === 1 ? 'registro' : 'registros'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción establecerá la marca de soft delete. Los registros ya no aparecerán en la lista pero se conservarán en la base de datos.
+              <br /><br />
+              <strong>¿Está seguro de que desea continuar?</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageShell>
   )
 }

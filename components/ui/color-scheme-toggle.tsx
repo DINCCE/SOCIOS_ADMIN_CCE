@@ -74,6 +74,9 @@ export function ColorSchemeToggle() {
                 <DropdownMenuItem onClick={() => setColorScheme('country')}>
                     Country {colorScheme === 'country' && '✓'}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setColorScheme('country-ii')}>
+                    Country II {colorScheme === 'country-ii' && '✓'}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setColorScheme('yingyang')}>
                     YingYang {colorScheme === 'yingyang' && '✓'}
                 </DropdownMenuItem>

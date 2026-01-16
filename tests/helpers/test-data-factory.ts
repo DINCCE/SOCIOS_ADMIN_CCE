@@ -93,7 +93,7 @@ export function createTestBusinessPartner(overrides: Record<string, unknown> = {
     id: generateTestPersonaId(),
     organization_id: generateTestOrganizationId(),
     tipo: 'PERSONA',
-    codigo_bp: 'BP-000001',
+    codigo_bp: 'ACT-00000001',
     estado: 'ACTIVO',
     email_principal: 'test@example.com',
     telefono_principal: '+57 300 123 4567',
@@ -108,7 +108,7 @@ export function createTestPersonaRPCResponse(overrides: Record<string, unknown> 
   return {
     success: true,
     bp_id: generateTestPersonaId(),
-    codigo_bp: 'BP-000001',
+    codigo_bp: 'ACT-00000001',
     message: 'Persona creada exitosamente',
     warnings: null,
     ...overrides,
@@ -122,7 +122,7 @@ export function createTestEmpresaRPCResponse(overrides: Record<string, unknown> 
   return {
     success: true,
     bp_id: generateTestEmpresaId(),
-    codigo_bp: 'BP-000002',
+    codigo_bp: 'ACT-00000002',
     message: 'Empresa creada exitosamente',
     warnings: null,
     ...overrides,

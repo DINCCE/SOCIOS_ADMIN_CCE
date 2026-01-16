@@ -50,7 +50,7 @@ describe('Empresas Actions', () => {
       vi.mocked(mockSupabase.single).mockResolvedValue({
         data: {
           id: generateTestEmpresaId(),
-          codigo_bp: 'BP-000001',
+          codigo_bp: 'ACT-00000001',
         },
         error: null,
       })

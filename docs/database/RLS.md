@@ -344,11 +344,10 @@ Todas las tablas siguen estos patrones:
 
 | Política | Comando | Rol | Condición |
 |----------|---------|-----|-----------|
-| config_organizaciones_select | SELECT | authenticated | Miembro de la org |
-| config_organizaciones_select_filtered | SELECT | authenticated | Puede ver membresía |
-| config_organizaciones_insert | INSERT | public | Usuario autenticado |
-| config_organizaciones_update | UPDATE | authenticated | Owner o Admin |
-| config_organizaciones_delete | DELETE | authenticated | Solo owner |
+| config_organizaciones_select | SELECT | authenticated | Soft delete + can_user_v2 |
+| config_organizaciones_insert | INSERT | authenticated | can_user_v2 |
+| config_organizaciones_update | UPDATE | authenticated | Soft delete + can_user_v2 |
+| config_organizaciones_delete | DELETE | authenticated | can_user_v2 |
 
 **Ejemplo de política SELECT**:
 ```sql
@@ -356,13 +355,11 @@ CREATE POLICY config_organizaciones_select ON config_organizaciones
   FOR SELECT TO authenticated
   USING (
     eliminado_en IS NULL
-    AND EXISTS (
-      SELECT 1 FROM config_organizacion_miembros m
-      WHERE m.organization_id = config_organizaciones.id
-        AND m.user_id = auth.uid()
-    )
+    AND can_user_v2('config_organizaciones', 'select', id)
   );
 ```
+
+**Nota**: Todas las políticas de config_organizaciones usan `can_user_v2()` para verificar permisos desde [config_roles_permisos](config_roles_permisos), manteniendo consistencia con las tablas de negocio.
 
 ---
 
@@ -372,53 +369,49 @@ CREATE POLICY config_organizaciones_select ON config_organizaciones
 
 | Política | Comando | Rol | Condición |
 |----------|---------|-----|-----------|
-| config_organizacion_miembros_select_visible | SELECT | authenticated | Ver propios miembros o ser admin |
-| config_organizacion_miembros_update_own_preferences | UPDATE | authenticated | Solo su propio registro |
-| (Otras políticas) | - | - | Solo owners/admins |
+| config_organizacion_miembros_select | SELECT | authenticated | Soft delete + can_user_v2 |
+| config_organizacion_miembros_insert | INSERT | authenticated | can_user_v2 |
+| config_organizacion_miembros_update | UPDATE | authenticated | Soft delete + can_user_v2 |
+| config_organizacion_miembros_delete | DELETE | authenticated | Soft delete + can_user_v2 |
 
-**Ejemplo de visibility**:
+**Ejemplo de política SELECT**:
+
 ```sql
-CREATE POLICY config_organizacion_miembros_select_visible
-  ON config_organizacion_miembros FOR SELECT TO authenticated
+CREATE POLICY config_organizacion_miembros_select ON config_organizacion_miembros
+  FOR SELECT TO authenticated
   USING (
     eliminado_en IS NULL
-    AND (
-      user_id = auth.uid()  -- Ver su propio registro
-      OR EXISTS (
-        SELECT 1 FROM config_organizacion_miembros om2
-        WHERE om2.organization_id = config_organizacion_miembros.organization_id
-          AND om2.user_id = auth.uid()
-          AND om2.eliminado_en IS NULL
-          AND om2.role IN ('owner', 'admin')
-      )
-    )
+    AND can_user_v2('config_organizacion_miembros', 'select', organization_id)
   );
 ```
+
+**Nota**: Todas las políticas usan `can_user_v2()` para verificar permisos desde [config_roles_permisos](config_roles_permisos).
 
 ---
 
 #### config_roles y config_roles_permisos
 
-**Restricción**: Solo owners y admins pueden modificar estas tablas.
+**Restricción**: Solo owners y admins pueden modificar estas tablas (según permisos en config_roles_permisos).
 
-**Políticas típicas**:
-```sql
--- SELECT: Filtrar roles visibles
-CREATE POLICY config_roles_select_org_filtered
-  ON config_roles FOR SELECT TO authenticated
-  USING (role IN ('owner', 'admin', 'member', 'viewer'));
+**Políticas config_roles**:
 
--- INSERT/UPDATE/DELETE: Solo owners/admins
-CREATE POLICY config_roles_update
-  ON config_roles FOR UPDATE TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM config_organizacion_miembros om
-      WHERE om.user_id = auth.uid()
-        AND om.role IN ('owner', 'admin')
-    )
-  );
-```
+| Política | Comando | Rol | Condición |
+|----------|---------|-----|-----------|
+| config_roles_select | SELECT | authenticated | Soft delete + permiso basado en rol |
+| config_roles_insert | INSERT | authenticated | Permiso basado en rol |
+| config_roles_update | UPDATE | authenticated | Soft delete + permiso basado en rol |
+| config_roles_delete | DELETE | authenticated | Permiso basado en rol |
+
+**Políticas config_roles_permisos**:
+
+| Política | Comando | Rol | Condición |
+|----------|---------|-----|-----------|
+| config_roles_permisos_select | SELECT | authenticated | Soft delete + permiso basado en rol |
+| config_roles_permisos_insert | INSERT | authenticated | Permiso basado en rol |
+| config_roles_permisos_update | UPDATE | authenticated | Soft delete + permiso basado en rol |
+| config_roles_permisos_delete | DELETE | authenticated | Permiso basado en rol |
+
+**Nota**: Estas tablas no tienen `organizacion_id`. Las políticas verifican si el usuario tiene el permiso requerido en CUALQUIER organización usando una subquery sobre [config_roles_permisos](config_roles_permisos).
 
 ---
 
@@ -426,15 +419,35 @@ CREATE POLICY config_roles_update
 
 **Políticas**:
 
-| Política | Comando | Rol | Condición |
-|----------|---------|-----|-----------|
-| config_ciudades_select | SELECT | public | Solo soft delete |
+| Política                       | Comando | Rol           | Condición                     |
+|--------------------------------|---------|---------------|-------------------------------|
+| config_ciudades_select         | SELECT  | authenticated | Soft delete filter            |
+| config_ciudades_insert         | INSERT  | authenticated | Owner de cualquier org         |
+| config_ciudades_update         | UPDATE  | authenticated | Owner de cualquier org         |
+| config_ciudades_delete         | DELETE  | authenticated | Owner de cualquier org         |
+
+**Modelo RBAC**: Configuración global sin `organizacion_id`. Según [config_roles_permisos](#3-matriz-de-permisos), SOLO usuarios con rol de `owner` en cualquier organización pueden modificar ciudades. Los roles `admin`, `analyst` y `auditor` NO tienen permisos para esta tabla.
 
 ```sql
+-- SELECT: Solo soft delete (acceso público)
 CREATE POLICY config_ciudades_select ON config_ciudades
-  FOR SELECT TO public
+  FOR SELECT TO authenticated
   USING (eliminado_en IS NULL);
+
+-- INSERT/UPDATE/DELETE: Solo owners
+CREATE POLICY config_ciudades_insert ON config_ciudades
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM config_organizacion_miembros m
+      WHERE m.user_id = auth.uid()
+        AND m.eliminado_en IS NULL
+        AND m.role = 'owner'
+    )
+  );
 ```
+
+**Nota**: Corregido en migración `202501151_fix_config_rls_policies.sql`. Anteriormente permitía `admin` y `owner`, ahora solo `owner` según config_roles_permisos.
 
 ---
 
@@ -476,19 +489,39 @@ CREATE POLICY dm_actores_select ON dm_actores
 
 **Recurso**: `asignaciones_acciones`
 
-**Políticas**: Similar a dm_acciones, pero usa resource name `asignaciones_acciones`
+**Políticas**:
+
+| Política | Comando | Condición |
+|----------|---------|-----------|
+| vn_asociados_select | SELECT | can_user_v2('asignaciones_acciones', 'select', org) |
+| vn_asociados_insert | INSERT | can_user_v2('asignaciones_acciones', 'insert', org) |
+| vn_asociados_update | UPDATE | can_user_v2('asignaciones_acciones', 'update', org) |
+| vn_asociados_delete | DELETE | can_user_v2('asignaciones_acciones', 'delete', org) |
+
+**Nota**: Todas las políticas usan `can_user_v2()` con el recurso `asignaciones_acciones`.
 
 ---
 
 #### vn_relaciones_actores
 
-**Recurso**: `bp_relaciones`
+**Recurso**: `vn_relaciones_actores`
 
 **Políticas**:
+
+| Política | Comando | Condición |
+|----------|---------|-----------|
+| vn_relaciones_actores_select | SELECT | Soft delete + can_user_v2 |
+| vn_relaciones_actores_insert | INSERT | can_user_v2 |
+| vn_relaciones_actores_update | UPDATE | can_user_v2 |
+| vn_relaciones_actores_delete | DELETE | can_user_v2 |
+
 ```sql
 CREATE POLICY vn_relaciones_actores_select ON vn_relaciones_actores
   FOR SELECT TO authenticated
-  USING (can_user_v2('bp_relaciones', 'select', organizacion_id));
+  USING (
+    eliminado_en IS NULL
+    AND can_user_v2('vn_relaciones_actores', 'select', organizacion_id)
+  );
 ```
 
 ---

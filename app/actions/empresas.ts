@@ -255,11 +255,35 @@ export async function actualizarEmpresa(
 export async function softDeleteEmpresa(id: string) {
   const supabase = await createClient()
 
-  // Soft delete empresa record (dm_actores)
+  // First, get the organizacion_id from the empresa
+  const { data: empresa, error: fetchError } = await supabase
+    .from('dm_actores')
+    .select('organizacion_id')
+    .eq('id', id)
+    .single()
+
+  if (fetchError) {
+    console.error('Error fetching empresa:', fetchError)
+    return {
+      success: false,
+      message: `Error al obtener empresa: ${fetchError.message}`,
+      error: fetchError
+    }
+  }
+
+  if (!empresa) {
+    return {
+      success: false,
+      message: 'Empresa no encontrada'
+    }
+  }
+
+  // Soft delete with organizacion_id filter for RLS compliance
   const { error } = await supabase
     .from('dm_actores')
     .update({ eliminado_en: new Date().toISOString() })
     .eq('id', id)
+    .eq('organizacion_id', empresa.organizacion_id)
 
   if (error) {
     console.error('Error soft deleting empresa:', error)

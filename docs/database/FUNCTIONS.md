@@ -314,6 +314,61 @@ FROM tr_tareas t;
 
 ## 2. Funciones de Negocio
 
+### soft_delete_actor()
+
+Realiza soft delete de actores (personas o empresas) con verificación de permisos y bypass de RLS.
+
+**Firma**:
+```sql
+soft_delete_actor(p_actor_id uuid)
+RETURNS jsonb
+```
+
+**Parámetros**:
+- `p_actor_id`: UUID del actor a eliminar
+
+**Retorna**: Objeto JSONB con:
+- `success`: Boolean indicando si la operación fue exitosa
+- `message`: Mensaje descriptivo del resultado
+
+**Modo de seguridad**: `SECURITY DEFINER`
+
+**Propósito**: Soluciona el problema de `auth.uid()` retornando `NULL` en Server Actions. Esta función tiene privilegios elevados para bypass RLS pero verifica permisos manualmente.
+
+**Ejemplo de uso**:
+```typescript
+// Desde Server Action
+const { data, error } = await supabase.rpc('soft_delete_actor', {
+  p_actor_id: 'actor_uuid'
+})
+
+// Respuesta exitosa
+{ success: true, message: 'Actor eliminado correctamente' }
+
+// Respuesta con error
+{ success: false, message: 'No tienes permisos para eliminar este actor' }
+```
+
+**Lógica interna**:
+1. Obtiene el usuario autenticado con `auth.uid()`
+2. Obtiene la `organizacion_id` del actor
+3. Verifica permisos usando `can_user_v2('dm_actores', 'update', organizacion_id)`
+4. Si tiene permisos, ejecuta el soft delete (set `eliminado_en = NOW()`, `eliminado_por = user_id`)
+5. Retorna resultado JSONB
+
+**Ventajas**:
+- Bypass RLS con `SECURITY DEFINER`
+- Verifica permisos manualmente (seguro)
+- Funciona correctamente desde Server Actions
+- Retorna estructura JSONB consistente para manejo de errores
+
+**Casos de error**:
+- `Usuario no autenticado`: Cuando `auth.uid()` es NULL
+- `Actor no encontrado o ya eliminado`: Cuando el actor no existe o ya tiene `eliminado_en` set
+- `No tienes permisos`: Cuando `can_user_v2()` retorna false
+
+---
+
 ### generar_siguiente_subcodigo()
 
 Genera el siguiente subcódigo para asignaciones de acciones. Implementa la lógica de negocio para códigos de asignación.
@@ -408,7 +463,7 @@ RETURNS jsonb
     {
       "tipo_asignacion": "dueño",
       "nombre_actor": "Juan Pérez",
-      "codigo_actor": "BP-001",
+      "codigo_actor": "ACT-00000001",
       "fecha_inicio": "2024-01-01"
     }
   ]
@@ -1156,6 +1211,7 @@ Funciones internas del diccionario de búsqueda full text de PostgreSQL (no usar
 | **Seguridad** | `user_role_in_org_v2` | Obtener rol en organización |
 | **Utilidad** | `get_user_email` | Obtener email de usuario |
 | **Utilidad** | `get_enum_values` | Obtener valores de un ENUM |
+| **Negocio** | `soft_delete_actor` | Soft delete de actores con bypass RLS |
 | **Negocio** | `generar_siguiente_subcodigo` | Generar subcódigo de asignación |
 | **Negocio** | `rpc_accion_disponibilidad` | Verificar disponibilidad de acción |
 | **Validación** | `dm_actores_documento_existe` | Verificar duplicado de documento |
