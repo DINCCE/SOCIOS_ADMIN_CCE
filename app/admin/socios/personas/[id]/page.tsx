@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
+import { PageShell, PageDetailLayout, PageDetailSidebar, PageDetailMain } from "@/components/shell"
 import { PersonDetailHeader } from "@/components/socios/personas/person-detail-header"
 import { PersonIdentityPanel } from "@/components/socios/personas/person-identity-panel"
 import { PersonTabsContent } from "@/components/socios/personas/person-tabs-content"
@@ -91,26 +92,21 @@ export default async function PersonDetailPage({ params }: PersonPageProps) {
     }
 
     return (
-        <div className="flex flex-col h-full bg-background">
-            {/* 1. Header Area - Fixed at top */}
-            <div className="bg-background px-6 py-4">
+        <PageShell>
+            {/* Header area with custom PersonDetailHeader */}
+            <div className="px-6 py-4 shrink-0 border-b border-border/60">
                 <PersonDetailHeader persona={persona} />
             </div>
 
-            {/* 2. Main Layout: Flex Container */}
-            <div className="flex flex-1 overflow-hidden">
-                {/* Left Sidebar: Identity (Fixed width) */}
-                <aside className="w-[300px] shrink-0 border-r border-border bg-background overflow-y-auto hidden md:block">
-                    <div className="p-4">
-                        <PersonIdentityPanel persona={persona} />
-                    </div>
-                </aside>
-
-                {/* Main Content Area: Tabs & Grid (Flexible) */}
-                <main className="flex-1 overflow-y-auto p-4 scroll-smooth">
+            {/* Two-column layout with ScrollArea */}
+            <PageDetailLayout>
+                <PageDetailSidebar>
+                    <PersonIdentityPanel persona={persona} />
+                </PageDetailSidebar>
+                <PageDetailMain>
                     <PersonTabsContent persona={persona} />
-                </main>
-            </div>
-        </div>
+                </PageDetailMain>
+            </PageDetailLayout>
+        </PageShell>
     )
 }

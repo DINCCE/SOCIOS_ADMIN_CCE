@@ -1,637 +1,782 @@
-# Database Tables
+# Database Tables Documentation
 
-This document describes all tables in the database schema.
+This document provides a comprehensive overview of all tables in the database, their structure, relationships, and purpose.
 
 ## Table of Contents
 
-- [Auth Schema](#auth-schema)
-- [Storage Schema](#storage-schema)
-- [Public Schema](#public-schema)
-  - [Configuration Tables](#configuration-tables)
-  - [Master Data Tables](#master-data-tables)
-  - [Transactional Tables](#transactional-tables)
-  - [Views](#views)
-
----
-
-## Auth Schema
-
-### `auth.users`
-
-Stores user login data within a secure schema.
-
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| id | uuid | | No | Primary key |
-| instance_id | uuid | | Yes | Instance identifier |
-| aud | varchar | | Yes | Audit type |
-| role | varchar | | Yes | User role |
-| email | varchar | | Yes | User email |
-| encrypted_password | varchar | | Yes | Encrypted password |
-| email_confirmed_at | timestamptz | | Yes | Email confirmation timestamp |
-| invited_at | timestamptz | | Yes | Invitation timestamp |
-| confirmation_token | varchar | | Yes | Confirmation token |
-| confirmation_sent_at | timestamptz | | Yes | Confirmation sent timestamp |
-| recovery_token | varchar | | Yes | Recovery token |
-| recovery_sent_at | timestamptz | | Yes | Recovery sent timestamp |
-| phone | text | NULL::varchar | Yes | Phone number (unique) |
-| phone_confirmed_at | timestamptz | | Yes | Phone confirmation timestamp |
-| last_sign_in_at | timestamptz | | Yes | Last sign in timestamp |
-| raw_app_meta_data | jsonb | | Yes | Application metadata |
-| raw_user_meta_data | jsonb | | Yes | User metadata |
-| is_super_admin | boolean | | Yes | Super admin flag |
-| created_at | timestamptz | | Yes | Creation timestamp |
-| updated_at | timestamptz | | Yes | Update timestamp |
-| deleted_at | timestamptz | | Yes | Soft delete timestamp |
-| is_anonymous | boolean | false | No | Anonymous user flag |
-| is_sso_user | boolean | false | No | SSO user flag |
-
-**Primary Key:** id
-
-**Indexes:**
-- phone (unique)
-
----
-
-### `auth.refresh_tokens`
-
-Store of tokens used to refresh JWT tokens once they expire.
-
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| id | bigint | nextval() | No | Primary key |
-| instance_id | uuid | | Yes | Instance identifier |
-| token | varchar | | Yes | Refresh token (unique) |
-| user_id | varchar | | Yes | User reference |
-| revoked | boolean | | Yes | Revoked flag |
-| created_at | timestamptz | | Yes | Creation timestamp |
-| updated_at | timestamptz | | Yes | Update timestamp |
-| parent | varchar | | Yes | Parent token |
-| session_id | uuid | | Yes | Session reference |
-
-**Primary Key:** id
-
-**Foreign Keys:**
-- session_id → auth.sessions.id
-
----
-
-### `auth.sessions`
-
-Stores session data associated to a user.
-
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| id | uuid | | No | Primary key |
-| user_id | uuid | | No | User reference |
-| created_at | timestamptz | | Yes | Creation timestamp |
-| updated_at | timestamptz | | Yes | Update timestamp |
-| factor_id | uuid | | Yes | MFA factor reference |
-| aal | aal_level | | Yes | Authenticator assurance level |
-| not_after | timestamptz | | Yes | Session expiration timestamp |
-| refreshed_at | timestamp | | Yes | Refresh timestamp |
-| user_agent | text | | Yes | User agent string |
-| ip | inet | | Yes | IP address |
-| tag | text | | Yes | Session tag |
-| oauth_client_id | uuid | | Yes | OAuth client reference |
-| refresh_token_hmac_key | text | | Yes | HMAC key for signing refresh tokens |
-| refresh_token_counter | bigint | | Yes | Last issued refresh token ID |
-| scopes | text | | Yes | OAuth scopes |
-
-**Primary Key:** id
-
-**Foreign Keys:**
-- user_id → auth.users.id
-- oauth_client_id → auth.oauth_clients.id
-
----
-
-## Storage Schema
-
-### `storage.buckets`
-
-Storage buckets configuration.
-
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| id | text | | No | Primary key |
-| name | text | | No | Bucket name (unique) |
-| owner | uuid | | Yes | Deprecated owner field |
-| created_at | timestamptz | now() | Yes | Creation timestamp |
-| updated_at | timestamptz | now() | Yes | Update timestamp |
-| public | boolean | false | Yes | Public access flag |
-| avif_autodetection | boolean | false | Yes | AVIF autodetection flag |
-| file_size_limit | bigint | | Yes | Max file size |
-| allowed_mime_types | text[] | | Yes | Allowed MIME types |
-| owner_id | text | | Yes | Owner identifier |
-| type | buckettype | STANDARD | No | Bucket type (STANDARD, ANALYTICS, VECTOR) |
-
-**Primary Key:** id
-
----
-
-### `storage.objects`
-
-Storage objects (files).
-
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| id | uuid | gen_random_uuid() | No | Primary key |
-| bucket_id | text | | Yes | Bucket reference |
-| name | text | | Yes | Object name |
-| owner | uuid | | Yes | Deprecated owner field |
-| created_at | timestamptz | now() | Yes | Creation timestamp |
-| updated_at | timestamptz | now() | Yes | Update timestamp |
-| last_accessed_at | timestamptz | now() | Yes | Last access timestamp |
-| metadata | jsonb | | Yes | Object metadata |
-| path_tokens | text[] | string_to_array() | Yes (generated) | Path tokens |
-| version | text | | Yes | Object version |
-| owner_id | text | | Yes | Owner identifier |
-| user_metadata | jsonb | | Yes | User metadata |
-| level | integer | | Yes | Object depth level |
-
-**Primary Key:** id
-
-**Foreign Keys:**
-- bucket_id → storage.buckets.id
+- [Public Schema Tables](#public-schema)
+- [Auth Schema Tables](#auth-schema)
+- [Storage Schema Tables](#storage-schema)
 
 ---
 
 ## Public Schema
 
-### Configuration Tables
+### Configuration Tables (`config_*`)
 
 #### `config_organizaciones`
 
-Tabla de organizaciones que implementa el sistema multi-tenancy y jerarquía estructural.
+**Purpose:** Implements multi-tenancy and hierarchical organization structure.
 
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| id | uuid | gen_random_uuid() | No | Identificador único (PK) |
-| nombre | text | | No | Nombre legal o descriptivo |
-| slug | text | | No | Identificador único para URLs (unique) |
-| tipo | config_organizacion_tipo | club | Yes | club, asociacion, federacion, fundacion, otro |
-| organizacion_padre_id | uuid | | Yes | Referencia a organización superior |
-| email | text | | Yes | Email institucional |
-| telefono | text | | Yes | Teléfono principal |
-| website | text | | Yes | Sitio web oficial |
-| direccion | jsonb | {} | Yes | Dirección en JSONB |
-| configuracion | jsonb | {} | Yes | Configuración técnica JSONB |
-| creado_en | timestamptz | now() | No | Fecha de creación |
-| actualizado_en | timestamptz | now() | No | Fecha de actualización |
-| creado_por | uuid | auth.uid() | Yes | Usuario que creó |
-| actualizado_por | uuid | | Yes | Usuario que actualizó |
-| eliminado_por | uuid | | Yes | Usuario que eliminó |
-| eliminado_en | timestamptz | | Yes | Soft delete timestamp |
+**Columns:**
 
-**Primary Key:** id
+| Column | Type | Attributes | Description |
+|--------|------|------------|-------------|
+| `id` | uuid | PK, Default: `gen_random_uuid()` | Unique identifier of the organization |
+| `nombre` | text | NOT NULL | Legal or descriptive name of the organization |
+| `slug` | text | UNIQUE | Unique identifier for URLs and quick selection |
+| `tipo` | enum | Default: 'club' | Classification: club, asociacion, federacion, fundacion, otro |
+| `organizacion_padre_id` | uuid | FK → `config_organizaciones.id` | Reference to parent organization in hierarchy |
+| `email` | text | Nullable, Email validation | Institutional email of the organization |
+| `telefono` | text | Nullable | Main contact phone |
+| `website` | text | Nullable | Official website |
+| `direccion` | jsonb | Default: '{}' | JSONB object with country, city, address_linea1, etc. |
+| `configuracion` | jsonb | Default: '{}' | Technical and functional configuration (JSONB) |
+| `creado_en` | timestamptz | Default: `now()` | Creation timestamp |
+| `actualizado_en` | timestamptz | Default: `now()` | Last update timestamp |
+| `creado_por` | uuid | FK → `auth.users.id` | User who created the record |
+| `actualizado_por` | uuid | FK → `auth.users.id` | User who last updated the record |
+| `eliminado_por` | uuid | FK → `auth.users.id` | User who soft deleted the record |
+| `eliminado_en` | timestamptz | Nullable | Soft delete timestamp |
 
-**Foreign Keys:**
-- organizacion_padre_id → config_organizaciones.id (self-reference)
-- creado_por → auth.users.id
-- actualizado_por → auth.users.id
-- eliminado_por → auth.users.id
+**Enums:**
+- `config_organizacion_tipo`: 'club', 'asociacion', 'federacion', 'fundacion', 'otro'
+
+**RLS:** Enabled
+**Row Count:** 1
 
 ---
 
 #### `config_organizacion_miembros`
 
-Organization members with multi-tenant RBAC.
+**Purpose:** Manages organization members and their roles.
 
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| user_id | uuid | | No | User reference (PK part 1) |
-| organization_id | uuid | | No | Organization reference (PK part 2) |
-| role | text | | No | User role |
-| created_at | timestamptz | now() | No | Membership creation timestamp |
-| created_by | uuid | | Yes | User who created membership |
-| atributos | jsonb | '{"ui": {"theme": "system"}}' | Yes | User preferences JSONB |
-| nombres | text | | Yes | Member first names |
-| apellidos | text | | Yes | Member last names |
-| telefono | text | | Yes | Contact phone |
-| cargo | text | | Yes | Job title |
-| nombre_completo | text | | Yes | Full name |
-| eliminado_en | timestamptz | | Yes | Soft delete timestamp |
-| eliminado_por | uuid | | Yes | User who soft deleted |
-| creado_en | timestamptz | now() | Yes | Creation timestamp |
-| actualizado_en | timestamptz | now() | Yes | Update timestamp |
-| creado_por | uuid | auth.uid() | Yes | Creator user |
-| actualizado_por | uuid | | Yes | Updater user |
+**Columns:**
 
-**Primary Key:** (user_id, organization_id)
+| Column | Type | Attributes | Description |
+|--------|------|------------|-------------|
+| `user_id` | uuid | PK, FK → `auth.users.id` | User identifier |
+| `organization_id` | uuid | PK, FK → `config_organizaciones.id` | Organization identifier |
+| `role` | text | NOT NULL | User role within the organization |
+| `created_at` | timestamptz | Default: `now()` | Creation timestamp |
+| `created_by` | uuid | FK → `auth.users.id` | User who created the membership |
+| `atributos` | jsonb | Default: '{"ui": {"theme": "system"}}' | User preferences (UI theme, etc.) |
+| `nombres` | text | Nullable | Member's first names |
+| `apellidos` | text | Nullable | Member's last names |
+| `telefono` | text | Nullable | Contact phone number |
+| `cargo` | text | Nullable | Job title |
+| `nombre_completo` | text | Nullable | Full name (calculated in application) |
+| `eliminado_en` | timestamptz | Nullable | Soft delete timestamp |
+| `eliminado_por` | uuid | FK → `auth.users.id` | User who soft deleted |
+| `creado_en` | timestamptz | Default: `now()` | Membership creation timestamp |
+| `actualizado_en` | timestamptz | Default: `now()` | Last update timestamp |
+| `creado_por` | uuid | FK → `auth.users.id` | User who created membership |
+| `actualizado_por` | uuid | FK → `auth.users.id` | User who updated membership |
 
-**Foreign Keys:**
-- user_id → auth.users.id
-- organization_id → config_organizaciones.id
-- created_by → auth.users.id
-- actualizado_por → auth.users.id
-- eliminado_por → auth.users.id
-- creado_por → auth.users.id
+**Primary Key:** (`user_id`, `organization_id`)
+**RLS:** Enabled
+**Row Count:** 1
 
 ---
 
 #### `config_roles`
 
-Role definitions.
+**Purpose:** Defines available roles in the system.
 
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| role | text | | No | Role name (PK) |
-| eliminado_en | timestamptz | | Yes | Soft delete timestamp |
-| eliminado_por | uuid | | Yes | User who soft deleted |
-| creado_en | timestamptz | now() | Yes | Creation timestamp |
-| actualizado_en | timestamptz | now() | Yes | Update timestamp |
-| creado_por | uuid | auth.uid() | Yes | Creator user |
-| actualizado_por | uuid | | Yes | Updater user |
+**Columns:**
 
-**Primary Key:** role
+| Column | Type | Attributes | Description |
+|--------|------|------------|-------------|
+| `role` | text | PK | Role name/identifier |
+| `eliminado_en` | timestamptz | Nullable | Soft delete timestamp |
+| `eliminado_por` | uuid | FK → `auth.users.id` | User who soft deleted |
+| `creado_en` | timestamptz | Default: `now()` | Creation timestamp |
+| `actualizado_en` | timestamptz | Default: `now()` | Last update timestamp |
+| `creado_por` | uuid | FK → `auth.users.id` | User who created the role |
+| `actualizado_por` | uuid | FK → `auth.users.id` | User who updated the role |
 
-**Foreign Keys:**
-- eliminado_por → auth.users.id
-- actualizado_por → auth.users.id
-- creado_por → auth.users.id
+**RLS:** Enabled
+**Row Count:** 4
+
+**Roles:** owner, admin, analyst, auditor
 
 ---
 
 #### `config_roles_permisos`
 
-Role permissions. Solo los owners tienen acceso a tablas config_*. Admin/Analyst/Auditor solo acceden a tablas de negocio (dm_*, tr_*, vn_*).
+**Purpose:** Defines permissions for each role on resources and actions.
 
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| role | text | | No | Role reference (PK part 1) |
-| resource | text | | No | Resource name (PK part 2) |
-| action | text | | No | Action name (PK part 3) |
-| allow | boolean | true | No | Permission granted |
-| eliminado_en | timestamptz | | Yes | Soft delete timestamp |
-| eliminado_por | uuid | | Yes | User who soft deleted |
-| creado_en | timestamptz | now() | Yes | Creation timestamp |
-| actualizado_en | timestamptz | now() | Yes | Update timestamp |
-| creado_por | uuid | auth.uid() | Yes | Creator user |
-| actualizado_por | uuid | | Yes | Updater user |
+**Columns:**
 
-**Primary Key:** (role, resource, action)
+| Column | Type | Attributes | Description |
+|--------|------|------------|-------------|
+| `role` | text | PK, FK → `config_roles.role` | Role name |
+| `resource` | text | PK | Resource being accessed |
+| `action` | text | PK | Action being performed |
+| `allow` | boolean | Default: `true` | Whether to allow the action |
+| `eliminado_en` | timestamptz | Nullable | Soft delete timestamp |
+| `eliminado_por` | uuid | FK → `auth.users.id` | User who soft deleted |
+| `creado_en` | timestamptz | Default: `now()` | Creation timestamp |
+| `actualizado_en` | timestamptz | Default: `now()` | Last update timestamp |
+| `creado_por` | uuid | FK → `auth.users.id` | User who created permission |
+| `actualizado_por` | uuid | FK → `auth.users.id` | User who updated permission |
 
-**Foreign Keys:**
-- role → config_roles.role
-- eliminado_por → auth.users.id
-- actualizado_por → auth.users.id
-- creado_por → auth.users.id
+**Primary Key:** (`role`, `resource`, `action`)
+**RLS:** Enabled
+**Row Count:** 92
+
+**Note:** Only owners have access to `config_*` tables. Admin/Analyst/Auditor only access business tables (`dm_*`, `tr_*`, `vn_*`).
 
 ---
 
 #### `config_ciudades`
 
-Catálogo de ciudades y ubicaciones geográficas.
+**Purpose:** Geographic catalog of cities and locations.
 
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| id | uuid | gen_random_uuid() | No | Identificador único (PK) |
-| country_code | text | | No | Código de país |
-| country_name | text | | No | Nombre del país |
-| state_name | text | | No | Nombre del estado/provincia |
-| city_name | text | | No | Nombre de la ciudad |
-| city_code | text | | Yes | Código de ciudad |
-| search_text | text | | No | Texto para búsquedas |
-| eliminado_en | timestamptz | | Yes | Soft delete timestamp |
-| eliminado_por | uuid | | Yes | Usuario que eliminó |
-| creado_en | timestamptz | now() | Yes | Fecha de creación |
-| actualizado_en | timestamptz | now() | Yes | Fecha de actualización |
-| creado_por | uuid | auth.uid() | Yes | Usuario que creó |
-| actualizado_por | uuid | | Yes | Usuario que actualizó |
+**Columns:**
 
-**Primary Key:** id
+| Column | Type | Attributes | Description |
+|--------|------|------------|-------------|
+| `id` | uuid | PK, Default: `gen_random_uuid()` | Unique city identifier |
+| `country_code` | text | NOT NULL | ISO country code |
+| `country_name` | text | NOT NULL | Country name |
+| `state_name` | text | NOT NULL | State/province name |
+| `city_name` | text | NOT NULL | City name |
+| `city_code` | text | Nullable | City code |
+| `search_text` | text | NOT NULL | Search-friendly text |
+| `eliminado_en` | timestamptz | Nullable | Soft delete timestamp |
+| `eliminado_por` | uuid | FK → `auth.users.id` | User who soft deleted |
+| `creado_en` | timestamptz | Default: `now()` | Creation timestamp |
+| `actualizado_en` | timestamptz | Default: `now()` | Last update timestamp |
+| `creado_por` | uuid | FK → `auth.users.id` | User who created record |
+| `actualizado_por` | uuid | FK → `auth.users.id` | User who updated record |
 
-**Foreign Keys:**
-- creado_por → auth.users.id
-- actualizado_por → auth.users.id
-- eliminado_por → auth.users.id
+**RLS:** Enabled
+**Row Count:** 1367
 
 ---
 
-### Master Data Tables (dm_*)
+### Master Data Tables (`dm_*`)
 
 #### `dm_actores`
 
-Entidad base (Actor) del patrón Class Table Inheritance (CTI). Agrupa campos comunes de personas y empresas.
+**Purpose:** Base entity for Business Partners implementing Class Table Inheritance (CTI). Supports both persons and companies.
 
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| id | uuid | gen_random_uuid() | No | Identificador único (PK) |
-| codigo_bp | text | auto | No | Código único ACT-00000001 (unique) |
-| organizacion_id | uuid | | No | Organización (multi-tenancy) |
-| tipo_actor | tipo_actor_enum | persona | No | Tipo: persona o empresa |
-| nat_fiscal | dm_actor_naturaleza_fiscal | | Yes | Naturaleza: natural o jurídica |
-| tipo_documento | dm_actor_tipo_documento | | Yes | CC, CE, PA, TI, RC, PEP, PPT, NIT |
-| regimen_tributario | dm_actor_regimen_tributario | | Yes | Régimen tributario |
-| num_documento | text | | Yes | Número de documento único |
-| digito_verificacion | smallint | | Yes | Dígito de verificación NIT |
-| email_facturacion | text | | Yes | Email para facturación electrónica |
-| razon_social | text | | Yes | Nombre legal (empresas) |
-| nombre_comercial | text | | Yes | Nombre de marca |
-| primer_nombre | text | | Yes | Primer nombre |
-| segundo_nombre | text | | Yes | Segundo nombre |
-| primer_apellido | text | | Yes | Primer apellido |
-| segundo_apellido | text | | Yes | Segundo apellido |
-| email_principal | text | | Yes | Email de acceso |
-| email_secundario | text | | Yes | Email de respaldo |
-| telefono_principal | text | | Yes | Celular principal |
-| telefono_secundario | text | | Yes | Línea alterna |
-| direccion_fisica | text | | Yes | Dirección física |
-| ciudad_id | uuid | | Yes | Ciudad de ubicación |
-| es_socio | boolean | false | No | Indica si es socio |
-| es_cliente | boolean | false | No | Indica si es cliente |
-| es_proveedor | boolean | false | No | Indica si es proveedor |
-| estado_actor | dm_actor_estado | activo | No | Estado: activo, inactivo, bloqueado |
-| genero_actor | dm_actor_genero | | Yes | Género: masculino, femenino, otro, no aplica |
-| fecha_nacimiento | date | | Yes | Fecha de nacimiento |
-| estado_civil | dm_actor_estado_civil | | Yes | Soltero, casado, unión libre, divorciado, viudo |
-| perfil_identidad | jsonb | {} | No | Datos de identidad |
-| perfil_profesional_corporativo | jsonb | {} | No | Datos profesionales |
-| perfil_salud | jsonb | {} | No | Datos de salud |
-| perfil_contacto | jsonb | {} | No | Contactos de emergencia |
-| perfil_intereses | jsonb | {} | No | Intereses personales |
-| perfil_preferencias | jsonb | {} | No | Preferencias de servicio |
-| perfil_redes | jsonb | {} | No | Redes sociales |
-| perfil_compliance | jsonb | {} | No | Cumplimiento legal |
-| perfil_referencias | jsonb | {} | No | Referencias |
-| tags | text[] | | Yes | Etiquetas |
-| creado_en | timestamptz | now() | No | Fecha de creación |
-| creado_por | uuid | auth.uid() | Yes | Usuario que creó |
-| actualizado_en | timestamptz | now() | No | Fecha de actualización |
-| actualizado_por | uuid | | Yes | Usuario que actualizó |
-| eliminado_en | timestamptz | | Yes | Soft delete timestamp |
-| eliminado_por | uuid | | Yes | Usuario que eliminó |
+**Columns:**
 
-**Primary Key:** id
+| Column | Type | Attributes | Description |
+|--------|------|------------|-------------|
+| `id` | uuid | PK, Default: `gen_random_uuid()` | Shared business identifier |
+| `codigo_bp` | text | UNIQUE, Auto: `ACT-XXXXXXXX` | Unique auto-generated code |
+| `organizacion_id` | uuid | FK → `config_organizaciones.id` | Organization ID |
+| `creado_en` | timestamptz | Default: `now()` | Creation timestamp |
+| `creado_por` | uuid | FK → `auth.users.id` | Creator user ID |
+| `actualizado_en` | timestamptz | Default: `now()` | Last update timestamp |
+| `actualizado_por` | uuid | FK → `auth.users.id` | Updater user ID |
+| `eliminado_en` | timestamptz | Nullable | Soft delete timestamp |
+| `eliminado_por` | uuid | FK → `auth.users.id` | Deleter user ID |
+| **Identity** | | | |
+| `tipo_actor` | enum | Default: 'persona' | Actor type: persona, empresa |
+| `nat_fiscal` | enum | Nullable | Fiscal nature: natural, jurídica |
+| `tipo_documento` | enum | Nullable | Document type: CC, CE, PA, TI, RC, PEP, PPT, NIT |
+| `regimen_tributario` | enum | Nullable | Tax regime |
+| `num_documento` | text | Nullable | Identification number |
+| `digito_verificacion` | smallint | Nullable | Verification digit for NITs |
+| `email_facturacion` | text | Nullable, Email validation | Billing email |
+| **Company Data** | | | |
+| `razon_social` | text | Nullable | Legal name for companies |
+| `nombre_comercial` | text | Nullable | Trade/brand name |
+| **Person Data** | | | |
+| `primer_nombre` | text | Nullable | First name |
+| `segundo_nombre` | text | Nullable | Second name |
+| `primer_apellido` | text | Nullable | First surname |
+| `segundo_apellido` | text | Nullable | Second surname |
+| **Contact** | | | |
+| `email_principal` | text | Nullable, Email validation | Primary email |
+| `email_secundario` | text | Nullable, Email validation | Secondary email |
+| `telefono_principal` | text | Nullable, Phone regex | Main phone |
+| `telefono_secundario` | text | Nullable, Phone regex | Secondary phone |
+| `direccion_fisica` | text | Nullable | Physical address |
+| `ciudad_id` | uuid | FK → `config_ciudades.id` | City reference |
+| **Classifications** | | | |
+| `es_socio` | boolean | Default: `false` | Is a partner/member |
+| `es_cliente` | boolean | Default: `false` | Is a customer |
+| `es_proveedor` | boolean | Default: `false` | Is a supplier |
+| `estado_actor` | enum | Default: 'activo' | Status: activo, inactivo, bloqueado |
+| **Person Attributes** | | | |
+| `genero_actor` | enum | Nullable | Gender: masculino, femenino, otro, no aplica |
+| `fecha_nacimiento` | date | Nullable | Birth date |
+| `estado_civil` | enum | Nullable | Civil status |
+| **Profiles (JSONB)** | | | |
+| `perfil_identidad` | jsonb | Default: '{}' | Identity info (expedition dates, nationality) |
+| `perfil_profesional_corporativo` | jsonb | Default: '{}' | Professional/corporate data |
+| `perfil_salud` | jsonb | Default: '{}' | Health and safety information |
+| `perfil_contacto` | jsonb | Default: '{}' | Emergency and administrative contacts |
+| `perfil_intereses` | jsonb | Default: '{}' | Interests and preferences |
+| `perfil_preferencias` | jsonb | Default: '{}' | Service preferences |
+| `perfil_redes` | jsonb | Default: '{}' | Social media and digital presence |
+| `perfil_compliance` | jsonb | Default: '{}' | Compliance and risk assessment |
+| `perfil_referencias` | jsonb | Default: '{}' | References and validations |
+| **Other** | | | |
+| `tags` | text[] | Nullable | Search tags |
+| `nombre_completo` | text | Generated | Computed full name |
 
-**Foreign Keys:**
-- organizacion_id → config_organizaciones.id
-- ciudad_id → config_ciudades.id
-- creado_por → auth.users.id
-- actualizado_por → auth.users.id
-- eliminado_por → auth.users.id
+**Enums:**
+- `tipo_actor_enum`: 'persona', 'empresa'
+- `dm_actor_naturaleza_fiscal`: 'natural', 'jurídica'
+- `dm_actor_tipo_documento`: 'CC', 'CE', 'PA', 'TI', 'RC', 'PEP', 'PPT', 'NIT'
+- `dm_actor_regimen_tributario`: 'responsable de iva', 'no responsable de iva', 'regimen simple tributacion', 'gran contribuyente', 'no sujeta a impuesto'
+- `dm_actor_estado`: 'activo', 'inactivo', 'bloqueado'
+- `dm_actor_genero`: 'masculino', 'femenino', 'otro', 'no aplica'
+- `dm_actor_estado_civil`: 'soltero', 'casado', 'union libre', 'divorciado', 'viudo'
+
+**RLS:** Enabled
+**Row Count:** 17
+
+**Relationships:**
+- Referenced by: `vn_relaciones_actores` (bp_origen_id, bp_destino_id)
+- Referenced by: `vn_asociados` (asociado_id)
+- Referenced by: `tr_tareas` (actor_relacionado_id)
+- Referenced by: `tr_doc_comercial` (solicitante_id, pagador_id)
 
 ---
 
 #### `dm_acciones`
 
-Tabla maestra de acciones del club (títulos de valor). No contiene dueños directamente.
+**Purpose:** Master table for club shares/shares (financial titles). Does not contain owner information directly.
 
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| id | uuid | gen_random_uuid() | No | Identificador único (PK) |
-| organizacion_id | uuid | | No | Organización |
-| codigo_accion | text | | No | Código de 4 dígitos (unique) |
-| estado | dm_accion_estado | disponible | No | disponible, asignada, arrendada, bloqueada, inactiva |
-| creado_en | timestamptz | now() | Yes | Fecha de creación |
-| creado_por | uuid | auth.uid() | Yes | Usuario que creó |
-| actualizado_en | timestamptz | now() | Yes | Fecha de actualización |
-| actualizado_por | uuid | | Yes | Usuario que actualizó |
-| eliminado_en | timestamptz | | Yes | Soft delete timestamp |
-| eliminado_por | uuid | | Yes | Usuario que eliminó |
+**Columns:**
 
-**Primary Key:** id
+| Column | Type | Attributes | Description |
+|--------|------|------------|-------------|
+| `id` | uuid | PK, Default: `gen_random_uuid()` | Unique identifier |
+| `organizacion_id` | uuid | FK → `config_organizaciones.id` | Organization ID |
+| `codigo_accion` | text | UNIQUE, 4 digits | Unique 4-digit numeric code |
+| `estado` | enum | Default: 'disponible' | Status: disponible, asignada, arrendada, bloqueada, inactiva |
+| `creado_en` | timestamptz | Default: `now()` | Creation timestamp |
+| `creado_por` | uuid | FK → `auth.users.id` | Creator user ID |
+| `actualizado_en` | timestamptz | Default: `now()` | Last update timestamp |
+| `actualizado_por` | uuid | FK → `auth.users.id` | Updater user ID |
+| `eliminado_en` | timestamptz | Nullable | Soft delete timestamp |
+| `eliminado_por` | uuid | FK → `auth.users.id` | Deleter user ID |
 
-**Foreign Keys:**
-- organizacion_id → config_organizaciones.id
-- creado_por → auth.users.id
-- actualizado_por → auth.users.id
-- eliminado_por → auth.users.id
+**Enums:**
+- `dm_accion_estado`: 'disponible', 'asignada', 'arrendada', 'bloqueada', 'inactiva'
 
----
+**RLS:** Enabled
+**Row Count:** 25
 
-### Transactional Tables (tr_*)
-
-#### `tr_doc_comercial`
-
-Oportunidades, ofertas y pedidos con estructura comercial completa.
-
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| id | uuid | gen_random_uuid() | No | Identificador único (PK) |
-| codigo | text | auto | No | Código único DOC-00000001 |
-| fecha_doc | date | CURRENT_DATE | No | Fecha del documento |
-| fecha_venc_doc | date | | Yes | Fecha de vencimiento |
-| tipo | tr_doc_comercial_tipo | oportunidad | No | oportunidad, oferta, pedido_venta, reserva |
-| sub_tipo | tr_doc_comercial_subtipo | | Yes | sol_ingreso, sol_retiro, oferta_eventos, pedido_eventos |
-| estado | tr_doc_comercial_estados | Nueva | No | Nueva, En Progreso, Ganada, Pérdida, Descartada |
-| titulo | text | | Yes | Título del documento |
-| organizacion_id | uuid | | No | Organización |
-| asociado_id | uuid | | Yes | Asociado relacionado |
-| solicitante_id | uuid | | No | Solicitante (actor) |
-| pagador_id | uuid | | Yes | Pagador (actor) |
-| responsable_id | uuid | | No | Responsable (usuario) |
-| documento_origen_id | uuid | | Yes | Documento de origen (self-reference) |
-| items | jsonb | [] | No | Ítems del documento |
-| moneda_iso | config_moneda | COP | Yes | Moneda (ISO 4217) |
-| valor_neto | numeric | 0 | No | Subtotal antes de impuestos |
-| valor_descuento | numeric | 0 | No | Total descuentos |
-| valor_impuestos | numeric | 0 | No | Total impuestos |
-| valor_total | numeric | 0 | No | Valor final a pagar |
-| monto_estimado | numeric | | Yes | Monto estimado (legacy) |
-| notas | text | | Yes | Notas adicionales |
-| tags | text[] | | Yes | Etiquetas |
-| atributos | jsonb | {} | No | Atributos adicionales |
-| creado_en | timestamptz | now() | No | Fecha de creación |
-| creado_por | uuid | auth.uid() | Yes | Usuario que creó |
-| actualizado_en | timestamptz | now() | No | Fecha de actualización |
-| actualizado_por | uuid | | Yes | Usuario que actualizó |
-| eliminado_en | timestamptz | | Yes | Soft delete timestamp |
-| eliminado_por | uuid | | Yes | Usuario que eliminó |
-
-**Primary Key:** id
-
-**Foreign Keys:**
-- organizacion_id → config_organizaciones.id
-- asociado_id → vn_asociados.id
-- solicitante_id → dm_actores.id
-- pagador_id → dm_actores.id
-- responsable_id → auth.users.id
-- documento_origen_id → tr_doc_comercial.id (self-reference)
-- creado_por → auth.users.id
-- actualizado_por → auth.users.id
-- eliminado_por → auth.users.id
+**Relationships:**
+- Referenced by: `vn_asociados` (accion_id)
 
 ---
 
-#### `tr_tareas`
-
-Task management for opportunities and business processes.
-
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| id | uuid | gen_random_uuid() | No | Identificador único (PK) |
-| codigo_tarea | text | auto | Yes | Código TSK-00000001 (unique) |
-| titulo | text | | No | Título de la tarea |
-| descripcion | text | | Yes | Descripción |
-| prioridad | tr_tareas_prioridad | Media | No | Baja, Media, Alta, Urgente |
-| estado | tr_tareas_estado | Pendiente | No | Pendiente, En Progreso, Terminada, Pausada, Cancelada |
-| fecha_vencimiento | date | | Yes | Fecha de vencimiento |
-| organizacion_id | uuid | | No | Organización |
-| oportunidad_id | uuid | | Yes | Oportunidad relacionada |
-| relacionado_con_bp | uuid | | Yes | Business partner relacionado |
-| asignado_a | uuid | | No | Usuario asignado |
-| tags | text[] | | Yes | Etiquetas |
-| creado_en | timestamptz | now() | No | Fecha de creación |
-| creado_por | uuid | auth.uid() | Yes | Usuario que creó |
-| actualizado_en | timestamptz | now() | No | Fecha de actualización |
-| actualizado_por | uuid | | Yes | Usuario que actualizó |
-| eliminado_en | timestamptz | | Yes | Soft delete timestamp |
-| eliminado_por | uuid | | Yes | Usuario que eliminó |
-
-**Primary Key:** id
-
-**Foreign Keys:**
-- organizacion_id → config_organizaciones.id
-- oportunidad_id → tr_doc_comercial.id
-- relacionado_con_bp → dm_actores.id
-- asignado_a → auth.users.id
-- creado_por → auth.users.id
-- actualizado_por → auth.users.id
-- eliminado_por → auth.users.id
-
----
-
-### Views (vn_*)
+### Relationship Tables (`vn_*`)
 
 #### `vn_relaciones_actores`
 
-Gestiona los vínculos (laborales, familiares, comerciales) entre socios de negocio.
+**Purpose:** Manages relationships (laboral, family, commercial) between business partners.
 
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| id | uuid | gen_random_uuid() | No | Identificador único (PK) |
-| organizacion_id | uuid | | No | Organización |
-| bp_origen_id | uuid | | No | Actor que inicia la relación |
-| bp_destino_id | uuid | | No | Actor que recibe la relación |
-| tipo_relacion | dm_actores_tipo_relacion | | No | familiar, laboral, referencia, membresia, comercial, otra |
-| rol_origen | vn_relacion_actores_rol | | No | cónyuge, padre, madre, hijo/a, suegro, suegra, hermano/a, otro, yerno, nuera |
-| rol_destino | vn_relacion_actores_rol | | No | cónyuge, padre, madre, hijo/a, suegro, suegra, hermano/a, otro, yerno, nuera |
-| atributos | jsonb | {} | No | Atributos adicionales |
-| fecha_inicio | date | | Yes | Fecha de inicio |
-| fecha_fin | date | | Yes | Fecha de fin |
-| es_actual | boolean | (fecha_fin IS NULL) | Yes (generated) | true si no tiene fecha_fin |
-| es_bidireccional | boolean | false | No | Indica si es bidireccional |
-| notas | text | | Yes | Notas adicionales |
-| creado_en | timestamptz | now() | No | Fecha de creación |
-| actualizado_en | timestamptz | now() | No | Fecha de actualización |
-| eliminado_en | timestamptz | | Yes | Soft delete timestamp |
-| creado_por | uuid | auth.uid() | Yes | Usuario que creó |
-| actualizado_por | uuid | | Yes | Usuario que actualizó |
-| eliminado_por | uuid | | Yes | Usuario que eliminó |
+**Columns:**
 
-**Primary Key:** id
+| Column | Type | Attributes | Description |
+|--------|------|------------|-------------|
+| `id` | uuid | PK, Default: `gen_random_uuid()` | Unique identifier |
+| `organizacion_id` | uuid | FK → `config_organizaciones.id` | Organization ID |
+| `bp_origen_id` | uuid | FK → `dm_actores.id` | Origin actor (Child, Employee, etc.) |
+| `bp_destino_id` | uuid | FK → `dm_actores.id` | Destination actor (Parent, Company, etc.) |
+| `tipo_relacion` | enum | NOT NULL | Type: familiar, laboral, referencia, membresía, comercial, otra |
+| `rol_origen` | enum | NOT NULL | Origin role: cónyuge, padre, madre, hijo/a, suegro, suegra, hermano/a, otro, yerno, nuera |
+| `rol_destino` | enum | NOT NULL | Destination role (same enum as rol_origen) |
+| `atributos` | jsonb | Default: '{}' | Additional attributes |
+| `fecha_inicio` | date | Nullable | Relationship start date |
+| `fecha_fin` | date | Nullable | Relationship end date |
+| `es_actual` | boolean | Generated | Computed: true if fecha_fin IS NULL |
+| `es_bidireccional` | boolean | Default: `false` | Query from both directions |
+| `notas` | text | Nullable | Notes |
+| `creado_en` | timestamptz | Default: `now()` | Creation timestamp |
+| `actualizado_en` | timestamptz | Default: `now()` | Last update timestamp |
+| `eliminado_en` | timestamptz | Nullable | Soft delete timestamp |
+| `creado_por` | uuid | FK → `auth.users.id` | Creator user ID |
+| `actualizado_por` | uuid | FK → `auth.users.id` | Updater user ID |
+| `eliminado_por` | uuid | FK → `auth.users.id` | Deleter user ID |
 
-**Foreign Keys:**
-- organizacion_id → config_organizaciones.id
-- bp_origen_id → dm_actores.id
-- bp_destino_id → dm_actores.id
-- creado_por → auth.users.id
-- actualizado_por → auth.users.id
-- eliminado_por → auth.users.id
+**Enums:**
+- `dm_actores_tipo_relacion`: 'familiar', 'laboral', 'referencia', 'membresía', 'comercial', 'otra'
+- `vn_relacion_actores_rol`: 'cónyuge', 'padre', 'madre', 'hijo/a', 'suegro', 'suegra', 'hermano/a', 'otro', 'yerno', 'nuera'
+
+**RLS:** Enabled
+**Row Count:** 1
 
 ---
 
 #### `vn_asociados`
 
-Asignaciones de acciones a business partners con historial temporal.
+**Purpose:** Assignments of shares to business partners with temporal history. Supports owners, holders, and beneficiaries.
 
-| Column | Type | Default | Nullable | Description |
-|--------|------|---------|----------|-------------|
-| id | uuid | gen_random_uuid() | No | Identificador único (PK) |
-| accion_id | uuid | | No | Acción asignada |
-| asociado_id | uuid | | No | Business partner |
-| subcodigo | text | | No | Subcódigo de 2 dígitos |
-| codigo_completo | text | | No | Código completo (acción + subcódigo) |
-| tipo_vinculo | vn_asociados_tipo_vinculo | | Yes | propietario, titular, beneficiario, intermediario |
-| modalidad | vn_asociados_modalidad | | Yes | propiedad, comodato, asignacion_corp, convenio |
-| plan_comercial | vn_asociados_plan_comercial | | Yes | regular, plan dorado, joven ejecutivo, honorifico |
-| asignacion_padre_id | uuid | | Yes | Asignación padre (jerarquía) |
-| fecha_inicio | date | CURRENT_DATE | No | Fecha de inicio |
-| fecha_fin | date | | Yes | Fecha de fin |
-| es_vigente | boolean | (fecha_fin IS NULL) | Yes (generated) | true si está vigente |
-| organizacion_id | uuid | | No | Organización |
-| notas | text | | Yes | Notas adicionales |
-| atributos | jsonb | {} | Yes | Atributos JSONB |
-| creado_en | timestamptz | now() | No | Fecha de creación |
-| creado_por | uuid | auth.uid() | Yes | Usuario que creó |
-| actualizado_en | timestamptz | now() | No | Fecha de actualización |
-| actualizado_por | uuid | | Yes | Usuario que actualizó |
-| eliminado_en | timestamptz | | Yes | Soft delete timestamp |
-| eliminado_por | uuid | | Yes | Usuario que eliminó |
+**Columns:**
 
-**Primary Key:** id
+| Column | Type | Attributes | Description |
+|--------|------|------------|-------------|
+| `id` | uuid | PK, Default: `gen_random_uuid()` | Unique assignment identifier |
+| `accion_id` | uuid | FK → `dm_acciones.id` | Share (title) reference |
+| `asociado_id` | uuid | FK → `dm_actores.id` | Business partner reference |
+| `subcodigo` | text | 2 digits | Subcode: 00=owner, 01=holder, 02+=beneficiaries |
+| `codigo_completo` | text | NOT NULL | Full code: codigo_accion + subcode (e.g., 439801) |
+| `fecha_inicio` | date | Default: `CURRENT_DATE` | Start date |
+| `fecha_fin` | date | Nullable | End date (NULL = active) |
+| `es_vigente` | boolean | Generated | Computed: true if fecha_fin IS NULL |
+| `organizacion_id` | uuid | FK → `config_organizaciones.id` | Organization ID |
+| `notas` | text | Nullable | Notes |
+| `atributos` | jsonb | Default: '{}' | Custom metadata |
+| `creado_en` | timestamptz | Default: `now()` | Creation timestamp |
+| `creado_por` | uuid | FK → `auth.users.id` | Creator user ID |
+| `actualizado_en` | timestamptz | Default: `now()` | Last update timestamp |
+| `actualizado_por` | uuid | FK → `auth.users.id` | Updater user ID |
+| `eliminado_en` | timestamptz | Nullable | Soft delete timestamp |
+| `eliminado_por` | uuid | FK → `auth.users.id` | Deleter user ID |
+| `tipo_vinculo` | enum | Nullable | Link type: propietario, titular, beneficiario, intermediario |
+| `modalidad` | enum | Nullable | Modality: propiedad, comodato, asignacion_corp, convenio |
+| `plan_comercial` | enum | Nullable | Plan: regular, plan dorado, joven ejecutivo, honorifico |
+| `asignacion_padre_id` | uuid | FK → `vn_asociados.id` | Parent assignment ID |
 
-**Foreign Keys:**
-- accion_id → dm_acciones.id
-- asociado_id → dm_actores.id
-- organizacion_id → config_organizaciones.id
-- asignacion_padre_id → vn_asociados.id (self-reference)
-- creado_por → auth.users.id
-- actualizado_por → auth.users.id
-- eliminado_por → auth.users.id
+**Enums:**
+- `vn_asociados_tipo_vinculo`: 'propietario', 'titular', 'beneficiario', 'intermediario'
+- `vn_asociados_modalidad`: 'propiedad', 'comodato', 'asignacion_corp', 'convenio'
+- `vn_asociados_plan_comercial`: 'regular', 'plan dorado', 'joven ejecutivo', 'honorifico'
 
----
+**RLS:** Enabled
+**Row Count:** 1
 
-## Enum Types
-
-### Configuration Enums
-
-- `config_organizacion_tipo`: club, asociacion, federacion, fundacion, otro
-- `config_moneda`: COP, MXN, ARS, BRL, CLP, PEN, USD, EUR, GBP, CAD, JPY, CHF, AUD, NZD, CNY, INR, KRW, SGD, HKD, SEK, NOK, DKK, PLN, TRY, ZAR, RUB, AED, SAR, ILS, CZK, HUF, RON, BGN, HRK, MYR, THB, IDR, PHP, VND, TWD, ISK
-
-### Actor Enums (dm_actor_*)
-
-- `tipo_actor_enum`: persona, empresa
-- `dm_actor_naturaleza_fiscal`: natural, jurídica
-- `dm_actor_tipo_documento`: CC, CE, PA, TI, RC, PEP, PPT, NIT
-- `dm_actor_regimen_tributario`: responsable de iva, no responsable de iva, regimen simple tributacion, gran contribuyente, no sujeta a impuesto
-- `dm_actor_estado`: activo, inactivo, bloqueado
-- `dm_actor_genero`: masculino, femenino, otro, no aplica
-- `dm_actor_estado_civil`: soltero, casado, union libre, divorciado, viudo
-- `dm_actores_tipo_relacion`: familiar, laboral, referencia, membresía, comercial, otra
-
-### Shares Enums (dm_accion, vn_asociados)
-
-- `dm_accion_estado`: disponible, asignada, arrendada, bloqueada, inactiva
-- `vn_asociados_tipo_vinculo`: propietario, titular, beneficiario, intermediario
-- `vn_asociados_modalidad`: propiedad, comodato, asignacion_corp, convenio
-- `vn_asociados_plan_comercial`: regular, plan dorado, joven ejecutivo, honorifico
-- `vn_relacion_actores_rol`: cónyuge, padre, madre, hijo/a, suegro, suegra, hermano/a, otro, yerno, nuera
-
-### Commercial Documents Enums (tr_doc_comercial)
-
-- `tr_doc_comercial_estados`: Nueva, En Progreso, Ganada, Pérdida, Descartada
-- `tr_doc_comercial_tipo`: oportunidad, oferta, pedido_venta, reserva
-- `tr_doc_comercial_subtipo`: sol_ingreso, sol_retiro, oferta_eventes, pedido_eventos
-
-### Tasks Enums (tr_tareas)
-
-- `tr_tareas_prioridad`: Baja, Media, Alta, Urgente
-- `tr_tareas_estado`: Pendiente, En Progreso, Terminada, Pausada, Cancelada
+**Relationships:**
+- Referenced by: `tr_doc_comercial` (asociado_id)
 
 ---
 
-## Sequences
+### Transaction Tables (`tr_*`)
 
-- `seq_dm_actores_codigo`: Generates actor codes (ACT-00000001)
-- `seq_tr_doc_comercial_codigo`: Generates document codes (DOC-00000001)
-- `seq_tr_tareas_codigo`: Generates task codes (TSK-00000001)
+#### `tr_doc_comercial`
+
+**Purpose:** Commercial opportunities and documents (sales opportunities, offers, sales orders, reservations).
+
+**Columns:**
+
+| Column | Type | Attributes | Description |
+|--------|------|------------|-------------|
+| `id` | uuid | PK, Default: `gen_random_uuid()` | Unique identifier |
+| `codigo` | text | UNIQUE, Auto: `DOC-XXXXXXXX` | Auto-generated code |
+| **Identity & Classification** | | | |
+| `tipo` | enum | Default: 'oportunidad' | Type: oportunidad, oferta, pedido_venta, reserva |
+| `sub_tipo` | enum | Nullable | Subtype: sol_ingreso, sol_retiro, oferta_eventos, pedido_eventos |
+| `estado` | enum | Default: 'Nueva' | State: Nueva, En Progreso, Ganada, Pérdida, Descartada |
+| `titulo` | text | Nullable | Document title |
+| `fecha_doc` | date | Default: `CURRENT_DATE` | Document date |
+| `fecha_venc_doc` | date | Nullable | Due date |
+| **Actors & Responsibilities** | | | |
+| `organizacion_id` | uuid | FK → `config_organizaciones.id` | Organization ID |
+| `asociado_id` | uuid | FK → `vn_asociados.id` | Associated member ID |
+| `solicitante_id` | uuid | FK → `dm_actores.id` | Applicant ID |
+| `pagador_id` | uuid | FK → `dm_actores.id` | Payer ID |
+| `responsable_id` | uuid | FK → `auth.users.id` | Responsible user ID |
+| **Financial Content** | | | |
+| `items` | jsonb | Default: '[]' | Line items (JSONB persistence) |
+| `moneda_iso` | enum | Default: 'COP' | Currency ISO code |
+| `valor_neto` | numeric | Default: `0` | Subtotal before taxes/discounts |
+| `valor_descuento` | numeric | Default: `0` | Total discounts |
+| `valor_impuestos` | numeric | Default: `0` | Total taxes |
+| `valor_total` | numeric | Default: `0` | Final amount |
+| `monto_estimado` | numeric | Nullable | Estimated amount (legacy) |
+| **Context & Extensions** | | | |
+| `documento_origen_id` | uuid | FK → `tr_doc_comercial.id` | Source document ID (self-reference) |
+| `notas` | text | Nullable | Notes |
+| `tags` | text[] | Default: `ARRAY[]::text[]` | Tags |
+| `atributos` | jsonb | Default: '{}' | Custom attributes |
+| **Audit** | | | |
+| `creado_en` | timestamptz | Default: `now()` | Creation timestamp |
+| `creado_por` | uuid | FK → `auth.users.id` | Creator user ID |
+| `actualizado_en` | timestamptz | Default: `now()` | Last update timestamp |
+| `actualizado_por` | uuid | FK → `auth.users.id` | Updater user ID |
+| `eliminado_en` | timestamptz | Nullable | Soft delete timestamp |
+| `eliminado_por` | uuid | FK → `auth.users.id` | Deleter user ID |
+
+**Enums:**
+- `tr_doc_comercial_tipo`: 'oportunidad', 'oferta', 'pedido_venta', 'reserva'
+- `tr_doc_comercial_subtipo`: 'sol_ingreso', 'sol_retiro', 'oferta_eventos', 'pedido_eventos'
+- `tr_doc_comercial_estados`: 'Nueva', 'En Progreso', 'Ganada', 'Pérdida', 'Descartada'
+- `config_moneda`: 'COP', 'MXN', 'ARS', 'BRL', 'CLP', 'PEN', 'USD', 'EUR', 'GBP', 'CAD', 'JPY', 'CHF', 'AUD', 'NZD', 'CNY', 'INR', 'KRW', 'SGD', 'HKD', 'SEK', 'NOK', 'DKK', 'PLN', 'TRY', 'ZAR', 'RUB', 'AED', 'SAR', 'ILS', 'CZK', 'HUF', 'RON', 'BGN', 'HRK', 'MYR', 'THB', 'IDR', 'PHP', 'VND', 'TWD', 'ISK'
+
+**RLS:** Enabled
+**Row Count:** 24
+
+**Logical Structure:**
+1. **Identity & Classification**: id, codigo, tipo, estado, fecha_doc, fecha_venc_doc
+2. **Actors & Responsibilities**: organizacion_id, asociado_id, solicitante_id, pagador_id, responsable_id
+3. **Financial Content**: items, moneda_iso, valor_neto, valor_descuento, valor_impuestos, valor_total
+4. **Context & Extensions**: documento_origen_id, notas, tags, atributos, monto_estimado
+5. **Audit & Control**: creado_en, creado_por, actualizado_en, actualizado_por, eliminado_en, eliminado_por
 
 ---
 
-## Generated Columns
+#### `tr_tareas`
 
-Several tables have generated (computed) columns:
+**Purpose:** Task management with assignments and relationships to opportunities.
 
-- `dm_actores.codigo_bp`: Auto-generated from sequence
-- `tr_doc_comercial.codigo`: Auto-generated from sequence
-- `tr_tareas.codigo_tarea`: Auto-generated from sequence
-- `vn_relaciones_actores.es_actual`: Computed as (fecha_fin IS NULL)
-- `vn_asociados.es_vigente`: Computed as (fecha_fin IS NULL)
-- `storage.objects.path_tokens`: Computed as string_to_array(name, '/')
+**Columns:**
+
+| Column | Type | Attributes | Description |
+|--------|------|------------|-------------|
+| `id` | uuid | PK, Default: `gen_random_uuid()` | Unique identifier |
+| `titulo` | text | NOT NULL | Task title |
+| `descripcion` | text | Nullable | Task description |
+| `prioridad` | enum | Default: 'Media' | Priority: Baja, Media, Alta, Urgente |
+| `estado` | enum | Default: 'Pendiente' | State: Pendiente, En Progreso, Terminada, Pausada, Cancelada |
+| `fecha_vencimiento` | date | Nullable | Due date |
+| `doc_comercial_id` | uuid | FK → `tr_doc_comercial.id` | Related opportunity ID |
+| `asignado_id` | uuid | FK → `auth.users.id` | Assigned user ID |
+| `organizacion_id` | uuid | FK → `config_organizaciones.id` | Organization ID |
+| `actor_relacionado_id` | uuid | FK → `dm_actores.id` | Related actor ID |
+| `tags` | text[] | Default: `ARRAY[]::text[]` | Tags |
+| `codigo_tarea` | text | UNIQUE, Auto: `TAR-XXXXXXXX` | Auto-generated task code |
+| `creado_en` | timestamptz | Default: `now()` | Creation timestamp |
+| `creado_por` | uuid | FK → `auth.users.id` | Creator user ID |
+| `actualizado_en` | timestamptz | Default: `now()` | Last update timestamp |
+| `actualizado_por` | uuid | FK → `auth.users.id` | Updater user ID |
+| `eliminado_en` | timestamptz | Nullable | Soft delete timestamp |
+| `eliminado_por` | uuid | FK → `auth.users.id` | Deleter user ID |
+
+**Enums:**
+- `tr_tareas_prioridad`: 'Baja', 'Media', 'Alta', 'Urgente'
+- `tr_tareas_estado`: 'Pendiente', 'En Progreso', 'Terminada', 'Pausada', 'Cancelada'
+
+**RLS:** Enabled
+**Row Count:** 36
 
 ---
 
-**Last updated:** 2026-01-15
+## Auth Schema
+
+### Core Tables
+
+#### `auth.users`
+
+**Purpose:** Stores user login data within a secure schema.
+
+**Key Columns:**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | uuid | PK, User identifier |
+| `email` | varchar | User email |
+| `encrypted_password` | varchar | Encrypted password |
+| `email_confirmed_at` | timestamptz | Email confirmation timestamp |
+| `phone` | text | Phone number (unique) |
+| `phone_confirmed_at` | timestamptz | Phone confirmation timestamp |
+| `last_sign_in_at` | timestamptz | Last login timestamp |
+| `raw_app_meta_data` | jsonb | Application metadata |
+| `raw_user_meta_data` | jsonb | User metadata |
+| `is_super_admin` | boolean | Super admin flag |
+| `created_at` | timestamptz | Creation timestamp |
+| `updated_at` | timestamptz | Update timestamp |
+| `deleted_at` | timestamptz | Soft delete timestamp |
+| `is_anonymous` | boolean | Anonymous user flag |
+| `is_sso_user` | boolean | SSO account flag |
+
+**RLS:** Enabled
+**Row Count:** 2
+
+**Relationships:** Referenced by all public schema tables with audit fields (`creado_por`, `actualizado_por`, `eliminado_por`).
+
+---
+
+#### `auth.identities`
+
+**Purpose:** Stores identities associated to a user (OAuth, SSO, etc.).
+
+**Key Columns:**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | uuid | PK |
+| `provider_id` | text | Provider-specific user ID |
+| `user_id` | uuid | FK → `auth.users.id` |
+| `identity_data` | jsonb | Provider identity data |
+| `provider` | text | Provider name |
+| `last_sign_in_at` | timestamptz | Last sign in timestamp |
+| `email` | text | Generated from identity_data |
+
+**RLS:** Enabled
+**Row Count:** 2
+
+---
+
+#### `auth.sessions`
+
+**Purpose:** Stores session data associated to a user.
+
+**Key Columns:**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | uuid | PK |
+| `user_id` | uuid | FK → `auth.users.id` |
+| `factor_id` | uuid | MFA factor ID |
+| `created_at` | timestamptz | Creation timestamp |
+| `updated_at` | timestamptz | Update timestamp |
+| `not_after` | timestamptz | Session expiration |
+| `aal` | aal_level | Authentication assurance level |
+| `user_agent` | text | User agent string |
+| `ip` | inet | IP address |
+
+**RLS:** Enabled
+**Row Count:** 94
+
+---
+
+#### `auth.refresh_tokens`
+
+**Purpose:** Store of tokens used to refresh JWT tokens once they expire.
+
+**Key Columns:**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | bigint | PK |
+| `token` | varchar | UNIQUE |
+| `user_id` | varchar | User reference |
+| `session_id` | uuid | FK → `auth.sessions.id` |
+| `revoked` | boolean | Revocation status |
+| `created_at` | timestamptz | Creation timestamp |
+| `updated_at` | timestamptz | Update timestamp |
+
+**RLS:** Enabled
+**Row Count:** 300
+
+---
+
+### MFA Tables
+
+#### `auth.mfa_factors`
+
+**Purpose:** Stores metadata about multi-factor authentication factors.
+
+**Enums:**
+- `factor_type`: 'totp', 'webauthn', 'phone'
+- `factor_status`: 'unverified', 'verified'
+
+---
+
+#### `auth.mfa_challenges`
+
+**Purpose:** Stores metadata about challenge requests made.
+
+---
+
+### SSO Tables
+
+#### `auth.sso_providers`
+
+**Purpose:** Manages SSO identity provider information.
+
+---
+
+#### `auth.sso_domains`
+
+**Purpose:** Manages SSO email address domain mapping to providers.
+
+---
+
+#### `auth.saml_providers`
+
+**Purpose:** Manages SAML Identity Provider connections.
+
+---
+
+### OAuth Tables
+
+#### `auth.oauth_clients`
+
+**Purpose:** OAuth client configuration.
+
+**Enums:**
+- `oauth_registration_type`: 'dynamic', 'manual'
+- `oauth_client_type`: 'public', 'confidential'
+
+---
+
+#### `auth.oauth_authorizations`
+
+**Purpose:** OAuth authorization codes.
+
+**Enums:**
+- `oauth_response_type`: 'code'
+- `oauth_authorization_status`: 'pending', 'approved', 'denied', 'expired'
+
+---
+
+#### `auth.oauth_consents`
+
+**Purpose:** OAuth consent grants.
+
+---
+
+### Other Auth Tables
+
+#### `auth.instances`
+Manages users across multiple sites.
+
+#### `auth.flow_state`
+Stores metadata for PKCE logins.
+
+#### `auth.one_time_tokens`
+Stores one-time tokens for email/phone changes, password recovery, etc.
+
+---
+
+## Storage Schema
+
+### Core Storage Tables
+
+#### `storage.buckets`
+
+**Purpose:** Storage buckets configuration.
+
+**Key Columns:**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | text | PK |
+| `name` | text | Bucket name |
+| `public` | boolean | Public access flag |
+| `file_size_limit` | bigint | Max file size |
+| `allowed_mime_types` | text[] | Allowed MIME types |
+| `owner_id` | text | Bucket owner |
+| `type` | buckettype | Type: STANDARD, ANALYTICS, VECTOR |
+
+**Enums:**
+- `buckettype`: 'STANDARD', 'ANALYTICS', 'VECTOR'
+
+**RLS:** Enabled
+**Row Count:** 0
+
+---
+
+#### `storage.objects`
+
+**Purpose:** Storage objects (files) metadata.
+
+**Key Columns:**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | uuid | PK |
+| `bucket_id` | text | FK → `storage.buckets.id` |
+| `name` | text | Object path/name |
+| `metadata` | jsonb | Object metadata |
+| `owner_id` | text | Object owner |
+| `created_at` | timestamptz | Creation timestamp |
+| `updated_at` | timestamptz | Update timestamp |
+| `last_accessed_at` | timestamptz | Last access timestamp |
+
+**RLS:** Enabled
+**Row Count:** 0
+
+---
+
+#### `storage.migrations`
+
+**Purpose:** Storage schema migrations.
+
+**Row Count:** 50
+
+---
+
+### Multipart Upload Tables
+
+#### `storage.s3_multipart_uploads`
+
+**Purpose:** Manages multipart uploads for large files.
+
+---
+
+#### `storage.s3_multipart_uploads_parts`
+
+**Purpose:** Parts of multipart uploads.
+
+---
+
+### Other Storage Tables
+
+#### `storage.prefixes`
+Folder prefixes for organization.
+
+#### `storage.buckets_analytics`
+Analytics bucket configuration.
+
+#### `storage.buckets_vectors`
+Vector bucket configuration.
+
+#### `storage.vector_indexes`
+Vector index configuration.
+
+---
+
+## Migrations
+
+Total migrations: **72**
+
+Latest migration: `20260115185337` - "add_tags_to_dm_actores"
+
+Key migration groups:
+- Initial schema setup
+- Business partner (dm_actores) creation
+- Actions (dm_acciones) and assignments (vn_asociados)
+- Commercial documents (tr_doc_comercial)
+- Tasks (tr_tareas)
+- Relationships (vn_relaciones_actores)
+- Organization management
+- Role-based access control
+- Soft delete implementation
+- Audit triggers
+
+---
+
+## Common Patterns
+
+### Audit Fields
+
+Most tables in the public schema include these audit fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `creado_en` | timestamptz | Creation timestamp |
+| `creado_por` | uuid → `auth.users.id` | Creator user |
+| `actualizado_en` | timestamptz | Last update timestamp |
+| `actualizado_por` | uuid → `auth.users.id` | Last updater user |
+| `eliminado_en` | timestamptz | Soft delete timestamp |
+| `eliminado_por` | uuid → `auth.users.id` | Deleter user |
+
+### Naming Conventions
+
+- **config_**: Configuration/reference tables (roles, permissions, organizations, cities)
+- **dm_**: Master data/domain model tables (actors, actions)
+- **vn_**: Relationship/assignment tables (relaciones, asociados)
+- **tr_**: Transaction tables (doc_comercial, tareas)
+
+### Soft Delete
+
+All main business tables implement soft delete using `eliminado_en` timestamp. Records with non-null `eliminado_en` are filtered out by default.
+
+### Multi-Tenancy
+
+All business tables include `organizacion_id` for data isolation between organizations.
+
+---
+
+## RLS Policies
+
+Row Level Security is enabled on all tables. Policies restrict access based on:
+1. Organization membership (`config_organizacion_miembros`)
+2. User role (`config_roles_permisos`)
+3. Data ownership (organization_id, creado_por)
+
+Only table owners can modify `config_*` tables.
