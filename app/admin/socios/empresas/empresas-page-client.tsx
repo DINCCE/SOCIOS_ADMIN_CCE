@@ -109,7 +109,7 @@ export function EmpresasPageClient() {
       const supabase = createClient()
       const { data, error: queryError } = await supabase
         .from('v_actores_org')
-        .select('id, codigo_bp, num_documento, digito_verificacion, razon_social, nombre_comercial, email_principal, telefono_principal, estado_actor, organizacion_id, es_socio, es_cliente, es_proveedor, eliminado_en, perfil_profesional_corporativo, nat_fiscal, regimen_tributario, creado_en, actualizado_en, tags')
+        .select('id, codigo_bp, num_documento, digito_verificacion, razon_social, nombre_comercial, email_principal, telefono_principal, telefono_secundario, estado_actor, organizacion_slug, organizacion_nombre, es_socio, es_cliente, es_proveedor, eliminado_en, perfil_profesional_corporativo, nat_fiscal, regimen_tributario, creado_en, actualizado_en, tags')
         .eq('tipo_actor', 'empresa')
         .order('razon_social', { ascending: true })
 
@@ -122,14 +122,16 @@ export function EmpresasPageClient() {
       interface RawEmpresa {
         id: string
         codigo_bp: string
-        num_documento: string
-        digito_verificacion: string | null
+        num_documento: string | null
+        digito_verificacion: number | null
         razon_social: string | null
         nombre_comercial: string | null
         email_principal: string | null
         telefono_principal: string | null
+        telefono_secundario: string | null
         estado_actor: string
-        organizacion_id: string
+        organizacion_slug: string | null
+        organizacion_nombre: string | null
         es_socio: boolean
         es_cliente: boolean
         es_proveedor: boolean
@@ -138,8 +140,7 @@ export function EmpresasPageClient() {
         nat_fiscal: string | null
         regimen_tributario: string | null
         creado_en: string
-        actualizado_en: string
-        tipo_actor: string
+        actualizado_en: string | null
         tags: string[] | null
       }
 
@@ -147,23 +148,33 @@ export function EmpresasPageClient() {
         const perfilProfesional = actor.perfil_profesional_corporativo || {}
         return {
           id: actor.id,
-          codigo: actor.codigo_bp,
-          nit: actor.num_documento,
+          codigo_bp: actor.codigo_bp,
+          num_documento: actor.num_documento || '',
           digito_verificacion: actor.digito_verificacion || null,
-          razon_social: actor.razon_social || '',
+          razon_social: actor.razon_social || null,
           nombre_comercial: actor.nombre_comercial || null,
-          tipo_sociedad: actor.nat_fiscal || null,
-          fecha_constitucion: null, // Not in selected fields
-          ciudad_constitucion: null, // Not in selected fields
-          pais_constitucion: null, // Not in selected fields
-          numero_registro: null, // Not in selected fields
+          nat_fiscal: actor.nat_fiscal || null,
+          tipo_actor: 'empresa' as const,
+          estado_actor: actor.estado_actor as 'activo' | 'inactivo' | 'bloqueado',
+          email_principal: actor.email_principal || null,
+          telefono_principal: actor.telefono_principal || null,
+          telefono_secundario: actor.telefono_secundario || null,
+          organizacion_slug: actor.organizacion_slug || null,
+          organizacion_nombre: actor.organizacion_nombre || null,
+          es_socio: actor.es_socio,
+          es_cliente: actor.es_cliente,
+          es_proveedor: actor.es_proveedor,
+          eliminado_en: actor.eliminado_en,
+          fecha_constitucion: perfilProfesional.fecha_constitucion || null,
+          ciudad_constitucion: perfilProfesional.ciudad_constitucion || null,
+          pais_constitucion: perfilProfesional.pais_constitucion || null,
+          numero_registro: perfilProfesional.numero_registro || null,
           codigo_ciiu: perfilProfesional.codigo_ciiu || null,
           sector_industria: perfilProfesional.sector_industria || null,
-          actividad_economica: perfilProfesional.actividad_principal || null,
+          actividad_economica: perfilProfesional.actividad_economica || null,
           tamano_empresa: perfilProfesional.tamano_empresa || null,
-          representante_legal_id: null, // Not in selected fields
-          cargo_representante: null, // Not in selected fields
-          telefono_secundario: null, // Not in selected fields
+          representante_legal_id: perfilProfesional.representante_legal_id || null,
+          cargo_representante: perfilProfesional.cargo_representante || null,
           whatsapp: perfilProfesional.whatsapp || null,
           website: perfilProfesional.website || null,
           linkedin_url: perfilProfesional.linkedin_url || null,
@@ -173,21 +184,15 @@ export function EmpresasPageClient() {
           logo_url: perfilProfesional.logo_url || null,
           ingresos_anuales: perfilProfesional.ingresos_anuales || null,
           numero_empleados: perfilProfesional.numero_empleados || null,
-          atributos: null, // Not in selected fields
-          creado_en: actor.creado_en || new Date().toISOString(),
-          actualizado_en: actor.actualizado_en || new Date().toISOString(),
-          organizacion_id: actor.organizacion_id,
-          tipo_actor: actor.tipo_actor,
-          estado: actor.estado_actor,
-          email_principal: actor.email_principal,
-          telefono_principal: actor.telefono_principal,
-          bp_creado_en: actor.creado_en || new Date().toISOString(),
-          bp_actualizado_en: actor.actualizado_en || new Date().toISOString(),
-          eliminado_en: actor.eliminado_en,
-          organizacion_nombre: '', // Not in selected fields
+          creado_en: actor.creado_en,
+          creado_por_email: null, // Not in selected fields
+          creado_por_nombre: null, // Not in selected fields
+          actualizado_en: actor.actualizado_en,
+          actualizado_por_email: null, // Not in selected fields
+          actualizado_por_nombre: null, // Not in selected fields
           nit_completo: actor.digito_verificacion
             ? `${actor.num_documento}-${actor.digito_verificacion}`
-            : actor.num_documento,
+            : actor.num_documento || null,
           nombre_representante_legal: null, // Not in selected fields
           tags: actor.tags || [],
         }
@@ -207,8 +212,8 @@ export function EmpresasPageClient() {
       if (empresa.razon_social?.toLowerCase().includes(searchLower)) {
         return true
       }
-      // Buscar en NIT (campo 'nit' en EmpresaList)
-      if (empresa.nit?.toLowerCase().includes(searchLower)) {
+      // Buscar en número de documento
+      if (empresa.num_documento?.toLowerCase().includes(searchLower)) {
         return true
       }
       // Buscar en email principal
@@ -221,6 +226,10 @@ export function EmpresasPageClient() {
       }
       // Buscar en nombre comercial
       if (empresa.nombre_comercial?.toLowerCase().includes(searchLower)) {
+        return true
+      }
+      // Buscar en código BP
+      if (empresa.codigo_bp?.toLowerCase().includes(searchLower)) {
         return true
       }
       return false

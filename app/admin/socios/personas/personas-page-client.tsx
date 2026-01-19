@@ -69,52 +69,40 @@ export function PersonasPageClient() {
     queryFn: async () => {
       const supabase = createClient()
       const { data, error: queryError } = await supabase
-        .from('dm_actores')
-        .select('id, codigo_bp, primer_nombre, primer_apellido, num_documento, email_principal, telefono_principal, estado_actor, organizacion_id, es_socio, es_cliente, es_proveedor, eliminado_en, tags')
+        .from('v_actores_org')
+        .select('id, codigo_bp, nombre_completo, num_documento, tipo_actor, email_principal, telefono_principal, estado_actor, organizacion_slug, organizacion_nombre, es_socio, es_cliente, es_proveedor, eliminado_en, tags, creado_en, actualizado_en, creado_por_email, creado_por_nombre, actualizado_por_email, actualizado_por_nombre')
         .eq('tipo_actor', 'persona')
-        .is('eliminado_en', null)
-        .order('primer_apellido', { ascending: true })
+        .order('nombre_completo', { ascending: true })
 
       if (queryError) {
         console.error('Query error:', queryError)
         throw queryError
       }
 
-      // Transform to PersonaList format
-      interface RawPersona {
-        id: string
-        codigo_bp: string
-        primer_nombre: string | null
-        primer_apellido: string | null
-        num_documento: string
-        email_principal: string | null
-        telefono_principal: string | null
-        estado_actor: string
-        organizacion_id: string
-        es_socio: boolean
-        es_cliente: boolean
-        es_proveedor: boolean
-        eliminado_en: string | null
-        tipo_actor: string
-        tags: string[] | null
-      }
-
-      const transformed = (data as unknown as RawPersona[])?.map((actor) => ({
+      // Transform to PersonaList format - now matches view structure
+      const transformed = (data as any[])?.map((actor) => ({
         id: actor.id,
-        codigo: actor.codigo_bp,
-        nombre: `${actor.primer_nombre || ''} ${actor.primer_apellido || ''}`.trim(),
-        identificacion: actor.num_documento,
+        codigo_bp: actor.codigo_bp,
+        nombre_completo: actor.nombre_completo,
+        num_documento: actor.num_documento,
         tipo_actor: actor.tipo_actor,
-        email: actor.email_principal,
-        telefono: actor.telefono_principal,
-        estado: actor.estado_actor,
-        organizacion_id: actor.organizacion_id,
+        email_principal: actor.email_principal,
+        telefono_principal: actor.telefono_principal,
+        estado_actor: actor.estado_actor,
+        organizacion_slug: actor.organizacion_slug,
+        organizacion_nombre: actor.organizacion_nombre,
         es_socio: actor.es_socio,
         es_cliente: actor.es_cliente,
         es_proveedor: actor.es_proveedor,
         eliminado_en: actor.eliminado_en,
         tags: actor.tags || [],
-        foto_url: null, // Not in selected fields
+        foto_url: null, // Not in view
+        creado_en: actor.creado_en,
+        creado_por_email: actor.creado_por_email,
+        creado_por_nombre: actor.creado_por_nombre,
+        actualizado_en: actor.actualizado_en,
+        actualizado_por_email: actor.actualizado_por_email,
+        actualizado_por_nombre: actor.actualizado_por_nombre,
       })) || []
 
       return transformed as PersonaList[]
@@ -127,20 +115,24 @@ export function PersonasPageClient() {
 
     const searchLower = globalSearch.toLowerCase()
     return initialData.filter((persona) => {
-      // Buscar en nombre completo (campo 'nombre' en v_actores_org)
-      if (persona.nombre?.toLowerCase().includes(searchLower)) {
+      // Buscar en nombre completo
+      if (persona.nombre_completo?.toLowerCase().includes(searchLower)) {
         return true
       }
-      // Buscar en número de documento (campo 'identificacion' en v_actores_org)
-      if (persona.identificacion?.toLowerCase().includes(searchLower)) {
+      // Buscar en número de documento
+      if (persona.num_documento?.toLowerCase().includes(searchLower)) {
         return true
       }
-      // Buscar en email principal (campo 'email' en v_actores_org)
-      if (persona.email?.toLowerCase().includes(searchLower)) {
+      // Buscar en email principal
+      if (persona.email_principal?.toLowerCase().includes(searchLower)) {
         return true
       }
-      // Buscar en teléfono principal (campo 'telefono' en v_actores_org)
-      if (persona.telefono?.toLowerCase().includes(searchLower)) {
+      // Buscar en teléfono principal
+      if (persona.telefono_principal?.toLowerCase().includes(searchLower)) {
+        return true
+      }
+      // Buscar en código BP
+      if (persona.codigo_bp?.toLowerCase().includes(searchLower)) {
         return true
       }
       return false

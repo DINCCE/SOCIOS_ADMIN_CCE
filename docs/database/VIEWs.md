@@ -437,6 +437,321 @@ ORDER BY nombre_completo;
 
 ---
 
+### `v_doc_comercial_org`
+
+**Purpose:** Provides a complete, denormalized view of commercial documents (`tr_doc_comercial`) with all related information including organization, actors (solicitante, pagador, asociado), responsible user, and audit details. Filters out soft-deleted records.
+
+**Use Cases:**
+- Display commercial document information in UI tables
+- Query opportunities/offers/orders without manual JOINs
+- Show human-readable codes and names instead of UUIDs
+- Track audit information with user emails and names
+- Filter out soft-deleted records automatically
+
+**Structure:** 49 fields organized logically:
+
+| # | Field | Type | Description |
+|---|-------|------|-------------|
+| **ID Principal** |
+| 1 | `id` | uuid | Document ID (only UUID from main table) |
+| **Identificación** |
+| 2 | `codigo` | text | Document code (DOC-XXXXXXXX) |
+| 3 | `tipo` | enum | Document type: oportunidad, oferta, pedido_venta, reserva |
+| 4 | `sub_tipo` | enum | Subtype: sol_ingreso, sol_retiro, oferta_eventos, pedido_eventos |
+| 5 | `estado` | enum | State: Nueva, En Progreso, Ganada, Pérdida, Descartada |
+| 6 | `titulo` | text | Document title |
+| 7 | `fecha_doc` | date | Document date |
+| 8 | `fecha_venc_doc` | date | Due date |
+| **Información de la organización** |
+| 9 | `organizacion_slug` | text | Organization slug |
+| 10 | `organizacion_nombre` | text | Organization name |
+| **Información del asociado** |
+| 11 | `asociado_id` | uuid | Associated member ID (vn_asociados) |
+| 12 | `asociado_codigo_completo` | text | Associated member full code |
+| 13 | `asociado_tipo_vinculo` | enum | Link type: propietario, titular, beneficiario, intermediario |
+| 14 | `asociado_nombre_completo` | text | Associated member full name |
+| **Información del solicitante** |
+| 15 | `solicitante_id` | uuid | Applicant ID |
+| 16 | `solicitante_codigo_bp` | text | Applicant BP code |
+| 17 | `solicitante_nombre_completo` | text | Applicant full name |
+| 18 | `solicitante_tipo_actor` | enum | Applicant actor type: persona, empresa |
+| 19 | `solicitante_email_principal` | text | Applicant primary email |
+| **Información del pagador** |
+| 20 | `pagador_id` | uuid | Payer ID |
+| 21 | `pagador_codigo_bp` | text | Payer BP code |
+| 22 | `pagador_nombre_completo` | text | Payer full name |
+| 23 | `pagador_tipo_actor` | enum | Payer actor type: persona, empresa |
+| 24 | `pagador_email_principal` | text | Payer primary email |
+| **Información del responsable** |
+| 25 | `responsable_id` | uuid | Responsible user ID |
+| 26 | `responsable_nombre_completo` | text | Responsible user full name |
+| **Valores financieros** |
+| 27 | `moneda_iso` | enum | Currency ISO code |
+| 28 | `valor_neto` | numeric | Subtotal before taxes/discounts |
+| 29 | `valor_descuento` | numeric | Total discounts |
+| 30 | `valor_impuestos` | numeric | Total taxes |
+| 31 | `valor_total` | numeric | Final amount |
+| 32 | `monto_estimado` | numeric | Estimated amount (legacy) |
+| **Campos adicionales** |
+| 33 | `notas` | text | Notes |
+| 34 | `atributos` | jsonb | Custom attributes |
+| 35 | `tags` | text[] | Search tags |
+| 36 | `items` | jsonb | Line items (JSONB) |
+| 37 | `documento_origen_id` | uuid | Origin document ID (self-reference) |
+| **Auditoría** |
+| 38 | `creado_en` | timestamptz | Creation timestamp |
+| 39 | `creado_por_email` | text | Creator user email |
+| 40 | `creado_por_nombre` | text | Creator user name |
+| 41 | `actualizado_en` | timestamptz | Last update timestamp |
+| 42 | `actualizado_por_email` | text | Updater user email |
+| 43 | `actualizado_por_nombre` | text | Updater user name |
+| 44 | `eliminado_en` | timestamptz | Soft delete timestamp (filtered in WHERE) |
+| 45 | `eliminado_por_email` | text | Deleter user email |
+| 46 | `eliminado_por_nombre` | text | Deleter user name |
+
+**Joined Tables:**
+- `tr_doc_comercial` (main table)
+- `config_organizaciones` (organization information)
+- `vn_asociados` (associated member information)
+- `dm_actores` (solicitante, pagador, and asociado actor information - 3 JOINs)
+- `config_organizacion_miembros` (responsible user information)
+- `auth.users` (audit information: creator, updater, deleter)
+
+**Filter:** `WHERE eliminado_en IS NULL` (excludes soft-deleted records)
+
+**SQL Definition:**
+
+```sql
+CREATE VIEW public.v_doc_comercial_org AS
+SELECT
+  t.id,
+  t.codigo,
+  t.tipo,
+  t.sub_tipo,
+  t.estado,
+  t.titulo,
+  t.fecha_doc,
+  t.fecha_venc_doc,
+  org.slug AS organizacion_slug,
+  org.nombre AS organizacion_nombre,
+  t.asociado_id,
+  va.codigo_completo AS asociado_codigo_completo,
+  va.tipo_vinculo AS asociado_tipo_vinculo,
+  daso.nombre_completo AS asociado_nombre_completo,
+  t.solicitante_id,
+  daso1.codigo_bp AS solicitante_codigo_bp,
+  daso1.nombre_completo AS solicitante_nombre_completo,
+  daso1.tipo_actor AS solicitante_tipo_actor,
+  daso1.email_principal AS solicitante_email_principal,
+  t.pagador_id,
+  daso2.codigo_bp AS pagador_codigo_bp,
+  daso2.nombre_completo AS pagador_nombre_completo,
+  daso2.tipo_actor AS pagador_tipo_actor,
+  daso2.email_principal AS pagador_email_principal,
+  t.responsable_id,
+  m_responsable.nombre_completo AS responsable_nombre_completo,
+  t.moneda_iso,
+  t.valor_neto,
+  t.valor_descuento,
+  t.valor_impuestos,
+  t.valor_total,
+  t.monto_estimado,
+  t.notas,
+  t.atributos,
+  t.tags,
+  t.items,
+  t.documento_origen_id,
+  t.creado_en,
+  uc.email AS creado_por_email,
+  uc.raw_user_meta_data->>'name' AS creado_por_nombre,
+  t.actualizado_en,
+  ua.email AS actualizado_por_email,
+  ua.raw_user_meta_data->>'name' AS actualizado_por_nombre,
+  t.eliminado_en,
+  ue.email AS eliminado_por_email,
+  ue.raw_user_meta_data->>'name' AS eliminado_por_nombre
+FROM tr_doc_comercial t
+  LEFT JOIN config_organizaciones org ON org.id = t.organizacion_id
+  LEFT JOIN vn_asociados va ON va.id = t.asociado_id
+  LEFT JOIN dm_actores daso ON daso.id = va.asociado_id
+  LEFT JOIN dm_actores daso1 ON daso1.id = t.solicitante_id
+  LEFT JOIN dm_actores daso2 ON daso2.id = t.pagador_id
+  LEFT JOIN config_organizacion_miembros m_responsable ON m_responsable.user_id = t.responsable_id
+    AND m_responsable.organization_id = t.organizacion_id
+    AND m_responsable.eliminado_en IS NULL
+  LEFT JOIN auth.users uc ON uc.id = t.creado_por
+  LEFT JOIN auth.users ua ON ua.id = t.actualizado_por
+  LEFT JOIN auth.users ue ON ue.id = t.eliminado_por
+WHERE t.eliminado_en IS NULL;
+```
+
+**Example Query:**
+
+```sql
+-- Get all open opportunities with key relationships
+SELECT
+  codigo,
+  titulo,
+  estado,
+  organizacion_nombre,
+  solicitante_nombre_completo,
+  asociado_codigo_completo,
+  valor_total
+FROM v_doc_comercial_org
+WHERE tipo = 'oportunidad'
+  AND estado IN ('Nueva', 'En Progreso')
+ORDER BY fecha_doc DESC;
+```
+
+**Example Output:**
+
+| codigo | titulo | estado | organizacion_nombre | solicitante_nombre_completo | asociado_codigo_completo | valor_total |
+|---------|--------|--------|---------------------|----------------------------|---------------------------|-------------|
+| DOC-000001 | Venta de acción 1234 | Nueva | Club de Golf | Juan Pérez González | 123800 | 15000000 |
+| DOC-000002 | Oferta especial eventos | En Progreso | Club de Golf | Empresa XYZ S.A.S. | 123801 | 8500000 |
+
+---
+
+### `v_tareas_org`
+
+**Purpose:** Provides a complete, denormalized view of tasks (`tr_tareas`) with all related information including organization, related commercial document, related actor, assigned user, and audit details. Filters out soft-deleted records.
+
+**Use Cases:**
+- Display task information in UI tables
+- Query tasks without manual JOINs
+- Show human-readable codes and names instead of UUIDs
+- Track audit information with user emails and names
+- Filter out soft-deleted records automatically
+
+**Structure:** 34 fields organized logically:
+
+| # | Field | Type | Description |
+|---|-------|------|-------------|
+| **ID Principal** |
+| 1 | `id` | uuid | Task ID (only UUID from main table) |
+| **Identificación** |
+| 2 | `codigo_tarea` | text | Task code (TAR-XXXXXXXX) |
+| 3 | `titulo` | text | Task title |
+| 4 | `descripcion` | text | Task description |
+| 5 | `prioridad` | enum | Priority: Baja, Media, Alta, Urgente |
+| 6 | `estado` | enum | State: Pendiente, En Progreso, Terminada, Pausada, Cancelada |
+| 7 | `fecha_vencimiento` | date | Due date |
+| **Información de la organización** |
+| 8 | `organizacion_slug` | text | Organization slug |
+| 9 | `organizacion_nombre` | text | Organization name |
+| **Información del documento comercial** |
+| 10 | `doc_comercial_id` | uuid | Related commercial document ID |
+| 11 | `doc_comercial_codigo` | text | Document code |
+| 12 | `doc_comercial_tipo` | enum | Document type |
+| 13 | `doc_comercial_sub_tipo` | enum | Document subtype |
+| 14 | `doc_comercial_titulo` | text | Document title |
+| 15 | `doc_comercial_estado` | enum | Document state |
+| **Información del actor relacionado** |
+| 16 | `actor_relacionado_id` | uuid | Related actor ID |
+| 17 | `actor_relacionado_codigo_bp` | text | Actor BP code |
+| 18 | `actor_relacionado_nombre_completo` | text | Actor full name |
+| 19 | `actor_relacionado_tipo_actor` | enum | Actor type: persona, empresa |
+| **Información del usuario asignado** |
+| 20 | `asignado_id` | uuid | Assigned user ID |
+| 21 | `asignado_nombre_completo` | text | Assigned user full name |
+| **Campos adicionales** |
+| 22 | `tags` | text[] | Search tags |
+| **Auditoría** |
+| 23 | `creado_en` | timestamptz | Creation timestamp |
+| 24 | `creado_por_email` | text | Creator user email |
+| 25 | `creado_por_nombre` | text | Creator user name |
+| 26 | `actualizado_en` | timestamptz | Last update timestamp |
+| 27 | `actualizado_por_email` | text | Updater user email |
+| 28 | `actualizado_por_nombre` | text | Updater user name |
+| 29 | `eliminado_en` | timestamptz | Soft delete timestamp (filtered in WHERE) |
+| 30 | `eliminado_por_email` | text | Deleter user email |
+| 31 | `eliminado_por_nombre` | text | Deleter user name |
+
+**Joined Tables:**
+- `tr_tareas` (main table)
+- `config_organizaciones` (organization information)
+- `tr_doc_comercial` (related commercial document information)
+- `dm_actores` (related actor information)
+- `config_organizacion_miembros` (assigned user information)
+- `auth.users` (audit information: creator, updater, deleter)
+
+**Filter:** `WHERE eliminado_en IS NULL` (excludes soft-deleted records)
+
+**SQL Definition:**
+
+```sql
+CREATE VIEW public.v_tareas_org AS
+SELECT
+  t.id,
+  t.codigo_tarea,
+  t.titulo,
+  t.descripcion,
+  t.prioridad,
+  t.estado,
+  t.fecha_vencimiento,
+  org.slug AS organizacion_slug,
+  org.nombre AS organizacion_nombre,
+  t.doc_comercial_id,
+  dc.codigo AS doc_comercial_codigo,
+  dc.tipo AS doc_comercial_tipo,
+  dc.sub_tipo AS doc_comercial_sub_tipo,
+  dc.titulo AS doc_comercial_titulo,
+  dc.estado AS doc_comercial_estado,
+  t.actor_relacionado_id,
+  a.codigo_bp AS actor_relacionado_codigo_bp,
+  a.nombre_completo AS actor_relacionado_nombre_completo,
+  a.tipo_actor AS actor_relacionado_tipo_actor,
+  t.asignado_id,
+  om.nombre_completo AS asignado_nombre_completo,
+  t.tags,
+  t.creado_en,
+  uc.email AS creado_por_email,
+  uc.raw_user_meta_data->>'name' AS creado_por_nombre,
+  t.actualizado_en,
+  ua.email AS actualizado_por_email,
+  ua.raw_user_meta_data->>'name' AS actualizado_por_nombre,
+  t.eliminado_en,
+  ue.email AS eliminado_por_email,
+  ue.raw_user_meta_data->>'name' AS eliminado_por_nombre
+FROM tr_tareas t
+  LEFT JOIN config_organizaciones org ON org.id = t.organizacion_id
+  LEFT JOIN tr_doc_comercial dc ON dc.id = t.doc_comercial_id AND dc.eliminado_en IS NULL
+  LEFT JOIN dm_actores a ON a.id = t.actor_relacionado_id AND a.eliminado_en IS NULL
+  LEFT JOIN config_organizacion_miembros om ON om.user_id = t.asignado_id
+    AND om.organization_id = t.organizacion_id
+    AND om.eliminado_en IS NULL
+  LEFT JOIN auth.users uc ON uc.id = t.creado_por
+  LEFT JOIN auth.users ua ON ua.id = t.actualizado_por
+  LEFT JOIN auth.users ue ON ue.id = t.eliminado_por
+WHERE t.eliminado_en IS NULL;
+```
+
+**Example Query:**
+
+```sql
+-- Get all pending tasks with their assignments
+SELECT
+  codigo_tarea,
+  titulo,
+  prioridad,
+  estado,
+  asignado_nombre_completo,
+  actor_relacionado_nombre_completo,
+  fecha_vencimiento
+FROM v_tareas_org
+WHERE estado IN ('Pendiente', 'En Progreso')
+ORDER BY prioridad DESC, fecha_vencimiento ASC;
+```
+
+**Example Output:**
+
+| codigo_tarea | titulo | prioridad | estado | asignado_nombre_completo | actor_relacionado_nombre_completo | fecha_vencimiento |
+|--------------|--------|-----------|--------|-------------------------|----------------------------------|-------------------|
+| TAR-000001 | Contactar cliente | Alta | Pendiente | Admin Usuario | Juan Pérez González | 2025-01-25 |
+| TAR-000002 | Preparar documentación | Media | En Progreso | Admin Usuario | María Rodríguez | 2025-01-28 |
+
+---
+
 ## Design Principles
 
 When creating or updating views, follow these principles:
