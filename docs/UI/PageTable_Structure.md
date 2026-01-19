@@ -719,9 +719,9 @@ export function PageShell({ children, className }: PageShellProps) {
 
 **Layout:**
 - `flex-1` - Takes remaining vertical space
-- `overflow-y-auto` - ONLY scrollable container in the layout
-- `overflow-x-hidden` - Prevent horizontal scroll
-- `p-4` - Padding for content (replaces padding removed from admin layout)
+- `overflow-y-auto` - ONLY scrollable container in the layout (vertical scroll)
+- `overflow-x-auto` - Allows horizontal scroll for wide tables
+- `px-8 pb-8 pt-0` - Padding: horizontal and bottom, no top (connects to toolbar)
 - Header and Toolbar stay fixed above this area
 
 ---
@@ -829,6 +829,71 @@ This creates:
 - Semi-transparent background (95% opacity)
 - Subtle backdrop blur for depth
 - Proper z-index stacking
+
+### Responsive Behavior & Scroll Standards
+
+#### Breakpoint Support
+
+The application is designed to work seamlessly from **md (768px)** and up.
+
+| Breakpoint | Width | Behavior |
+| :--- | :--- | :--- |
+| **sm** | 640px | Header description visible (`hidden sm:block`) |
+| **md** | 768px | Minimum supported width - Search input adapts |
+| **lg** | 1024px | Search input expands (256px → 320px) |
+| **xl** | 1280px | Optimal desktop experience |
+| **2xl** | 1536px | Wide desktop displays |
+
+#### Responsive Search Input
+
+Global search input adapts to screen width:
+
+```tsx
+<div className="relative w-full md:w-64 lg:w-80">
+  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+  <Input placeholder="Buscar..." />
+</div>
+```
+
+**Behavior:**
+
+- **< 768px:** `w-full` - Takes full width on mobile/tablet
+- **768px - 1023px:** `md:w-64` (256px) - Compact on tablets
+- **≥ 1024px:** `lg:w-80` (320px) - Expanded on desktop
+
+#### Scroll Behavior
+
+**Vertical Scroll:**
+
+- **Container:** `PageContent` only (`overflow-y-auto`)
+- **Behavior:** Header and Toolbar stay fixed, only content scrolls
+- **Purpose:** Single scroll area prevents "double scroll" issues
+
+**Horizontal Scroll:**
+
+- **PageContent:** `overflow-x-auto` - Allows horizontal scroll for wide tables
+- **PageToolbar:** `overflow-x-auto` + `no-scrollbar` - Scrollable filters without visible scrollbar
+- **Table Container:** `overflow-hidden` - Table content scrolls within PageContent
+
+**Why horizontal scroll in PageContent?**
+
+- Tables with many columns need horizontal scroll
+- Maintains data accessibility without breaking layout
+- Users can scroll horizontally while header/toolbar stay fixed
+
+#### Minimum Width Requirements
+
+**Recommended minimum viewports:**
+
+- **Desktop/Tablet:** 768px (md breakpoint)
+- **Optimal:** 1024px (lg breakpoint)
+
+**At 768px (minimum supported):**
+
+- Search input: 256px wide
+- Filters: Scrollable horizontally
+- Content: ~688px usable width (768px - 80px padding)
+- Table columns: May require horizontal scroll
 
 ---
 

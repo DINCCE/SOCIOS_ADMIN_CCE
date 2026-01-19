@@ -149,7 +149,7 @@ export function AccionesPageClient() {
       <PageToolbar
         left={
           <>
-            <div className="relative w-64 lg:w-80">
+            <div className="relative w-full md:w-64 lg:w-80">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por código, organización..."
