@@ -32,7 +32,7 @@ interface PageToolbarProps {
 export function PageToolbar({ left, right, className }: PageToolbarProps) {
   return (
     <div className={cn(
-      "flex items-center justify-between gap-4 px-8 py-4 shrink-0",
+      "flex items-center justify-between gap-4 px-8 pt-8 pb-2 shrink-0",
       "bg-background/95 backdrop-blur-sm z-10",
       className
     )}>

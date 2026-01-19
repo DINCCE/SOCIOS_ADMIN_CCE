@@ -779,14 +779,42 @@ className="... px-8 ..." // No border-b
 2. **PageToolbar** - No border (visually part of header area)
 3. **DataTable** - Clean headers (flat, no shadow or border)
 
+### Spacing Strategy (Gestalt Proximity)
+
+**Principle:** Controls (Toolbar) should be visually grouped with the data they control (Table), not with the page title (Header).
+
+**Implementation:**
+
+- **Header→Toolbar:** Large gap (~32px) - Separates title from controls
+- **Toolbar→Content:** Minimal gap (~8px) - Groups controls with data
+
+**Visual Result:**
+
+```text
+┌─────────────────────────────────┐
+│  PageHeader (py-4 = 16px)      │ ← Title, actions
+├─────────────────────────────────┤
+│                                 │
+│  ← 32px breathing room          │ ← Increased gap
+│                                 │
+┌─────────────────────────────────┐
+│  PageToolbar (pt-8, pb-2)      │ ← Search, filters
+├─────────────────────────────────┤
+│  ← 8px (minimal gap)            │ ← Tight connection
+├─────────────────────────────────┤
+│  PageContent (pt-0)             │ ← Table data
+│                                 │
+└─────────────────────────────────┘
+```
+
 ### Component Spacing
 
-| Component | Horizontal Padding | Vertical Padding | Border |
-|-----------|-------------------|------------------|--------|
-| PageHeader | `px-8` | `py-4` | `border-b` ✅ |
-| PageToolbar | `px-8` | `py-4` | None ❌ |
-| PageContent | `p-8` | `p-8` | None ❌ |
-| DataTable Header | None | None | None ❌ (`border-b-0`) |
+| Component | Top Padding | Bottom Padding | Horizontal | Border |
+|-----------|-------------|----------------|------------|--------|
+| PageHeader | `py-4` (16px) | `py-4` (16px) | `px-8` | `border-b` ✅ |
+| PageToolbar | `pt-8` (32px) | `pb-2` (8px) | `px-8` | None ❌ |
+| PageContent | `pt-0` (0px) | `pb-8` (32px) | `px-8` | None ❌ |
+| DataTable Header | None | None | None | None ❌ (`border-b-0`) |
 
 ### Background & Effects
 
