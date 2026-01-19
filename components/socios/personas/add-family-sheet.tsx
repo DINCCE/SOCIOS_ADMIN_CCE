@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Loader2, Search, UserPlus } from "lucide-react"
 import { toast } from "sonner"
-import { useRouter } from "next/navigation"
 
 import { cn } from "@/lib/utils"
 
@@ -50,7 +49,7 @@ import { NewPersonSheet } from "./new-person-sheet"
 // Schema for validation
 const addFamilySchema = z.object({
     persona_id: z.string().min(1, "Selecciona una persona"),
-    relacion: z.enum(["esposo_a", "hijo_a", "padre", "madre", "hermano_a", "suegro", "suegra", "otro"]),
+    relacion: z.enum(["cónyuge", "padre", "madre", "hijo/a", "suegro", "suegra", "hermano/a", "otro", "yerno", "nuera"]),
 })
 
 type AddFamilyFormValues = z.infer<typeof addFamilySchema>
@@ -82,7 +81,6 @@ export function AddFamilySheet({ bp_origen_id, organizacion_id, onSuccess }: Add
     const [showNewPersonSheet, setShowNewPersonSheet] = useState(false)
     const [createdPersonaId, setCreatedPersonaId] = useState<string | null>(null)
     const [selectedPersona, setSelectedPersona] = useState<PersonaBuscada | null>(null)
-    const router = useRouter()
 
     const form = useForm<AddFamilyFormValues>({
         resolver: zodResolver(addFamilySchema),
@@ -375,14 +373,16 @@ export function AddFamilySheet({ bp_origen_id, organizacion_id, onSuccess }: Add
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="esposo_a">Cónyuge</SelectItem>
+                                                    <SelectItem value="cónyuge">Cónyuge</SelectItem>
                                                     <SelectItem value="padre">Padre</SelectItem>
                                                     <SelectItem value="madre">Madre</SelectItem>
-                                                    <SelectItem value="hijo_a">Hijo/a</SelectItem>
+                                                    <SelectItem value="hijo/a">Hijo/a</SelectItem>
                                                     <SelectItem value="suegro">Suegro</SelectItem>
                                                     <SelectItem value="suegra">Suegra</SelectItem>
-                                                    <SelectItem value="hermano_a">Hermano/a</SelectItem>
+                                                    <SelectItem value="hermano/a">Hermano/a</SelectItem>
                                                     <SelectItem value="otro">Otro</SelectItem>
+                                                    <SelectItem value="yerno">Yerno</SelectItem>
+                                                    <SelectItem value="nuera">Nuera</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage className="text-[10px]" />

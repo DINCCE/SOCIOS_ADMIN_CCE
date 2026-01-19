@@ -405,7 +405,7 @@ export async function obtenerRelaciones(
 export async function vincularFamiliar(data: {
   bp_origen_id: string
   bp_destino_id: string
-  tipo_parentesco: 'cónyuge' | 'hijo/a' | 'padre' | 'madre' | 'hermano_a' | 'suegro' | 'suegra' | 'yerno' | 'nuera' | 'otro'
+  tipo_parentesco: 'cónyuge' | 'hijo/a' | 'padre' | 'madre' | 'hermano/a' | 'suegro' | 'suegra' | 'yerno' | 'nuera' | 'otro'
   descripcion?: string
 }) {
   console.log('🔗 [vincularFamiliar] Iniciando vinculación:', data)
@@ -518,7 +518,7 @@ export async function vincularFamiliar(data: {
  */
 export async function editarTipoParentesco(
   relacion_id: string,
-  tipo_parentesco: 'cónyuge' | 'hijo/a' | 'padre' | 'madre' | 'hermano_a' | 'suegro' | 'suegra' | 'yerno' | 'nuera' | 'otro'
+  tipo_parentesco: 'cónyuge' | 'hijo/a' | 'padre' | 'madre' | 'hermano/a' | 'suegro' | 'suegra' | 'yerno' | 'nuera' | 'otro'
 ) {
   console.log(`✏️ [editarTipoParentesco] Editando relación ${relacion_id} a ${tipo_parentesco}`)
   const supabase = await createClient()
