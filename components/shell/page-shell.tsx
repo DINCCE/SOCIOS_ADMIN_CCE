@@ -6,16 +6,16 @@ interface PageShellProps {
 }
 
 /**
- * PageShell - Full-height container with sticky header/toolbar
+ * PageShell - Full-height flex container
  *
- * Calculates height as: calc(100vh - 96px)
- *   - 64px for admin layout header (SidebarTrigger + Breadcrumb)
- *   - 32px for layout padding (p-4: 16px top + 16px bottom)
+ * Uses h-screen for full viewport height.
+ * Header and Toolbar stay fixed at top via flexbox (no sticky positioning needed).
+ * PageContent is the only scrollable area.
  *
  * Layout structure:
- *   - Sticky header (fixed at top)
- *   - Sticky toolbar (below header)
- *   - Scrollable content (fills remaining space)
+ *   - Static header (fixed at top via flex order)
+ *   - Static toolbar (fixed below header via flex order)
+ *   - Scrollable content (flex-1, fills remaining space)
  *
  * @example
  * ```tsx
@@ -29,7 +29,7 @@ interface PageShellProps {
 export function PageShell({ children, className }: PageShellProps) {
   return (
     <div className={cn(
-      "flex flex-col h-[calc(100vh-96px)] bg-background overflow-hidden",
+      "flex h-screen w-full flex-col overflow-hidden bg-background",
       className
     )}>
       {children}

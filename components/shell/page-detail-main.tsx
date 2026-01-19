@@ -27,7 +27,7 @@ export function PageDetailMain({ children, className, ...props }: PageDetailMain
   return (
     <main
       className={cn(
-        "flex-1 min-w-0 bg-card/50 rounded-lg border h-full overflow-hidden",
+        "flex-1 min-w-0 h-full overflow-hidden",
         className
       )}
       {...props}

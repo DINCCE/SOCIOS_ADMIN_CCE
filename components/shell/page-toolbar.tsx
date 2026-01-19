@@ -32,8 +32,8 @@ interface PageToolbarProps {
 export function PageToolbar({ left, right, className }: PageToolbarProps) {
   return (
     <div className={cn(
-      "flex items-center justify-between gap-4 px-2 py-3 shrink-0",
-      "border-b border-border/60 bg-muted/5 z-10",
+      "flex items-center justify-between gap-4 px-8 py-4 shrink-0",
+      "bg-background/95 backdrop-blur-sm z-10",
       className
     )}>
       <div className="flex items-center gap-2 flex-1 min-w-0 overflow-x-auto no-scrollbar">

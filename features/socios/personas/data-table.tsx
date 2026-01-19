@@ -25,11 +25,13 @@ interface PersonasDataTableProps {
  * This component now receives a pre-configured table instance from the parent,
  * allowing the toolbar, pagination, and floating action bar to be managed externally.
  *
+ * Features sticky table headers that remain visible when scrolling.
+ *
  * @example
  * ```tsx
  * const table = useReactTable({ data, columns, ... })
  * return (
- *   <div className="overflow-hidden rounded-md border">
+ *   <div className="rounded-md border relative">
  *     <PersonasDataTable table={table} router={router} />
  *   </div>
  * )
@@ -38,9 +40,9 @@ interface PersonasDataTableProps {
 export function PersonasDataTable({ table, router }: PersonasDataTableProps) {
   return (
     <UITable>
-      <TableHeader>
+      <TableHeader className="sticky top-0 z-10 bg-background">
         {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow key={headerGroup.id}>
+          <TableRow key={headerGroup.id} className="hover:bg-transparent border-b-0">
             {headerGroup.headers.map((header) => {
               return (
                 <TableHead

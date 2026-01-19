@@ -8,8 +8,9 @@ interface PageContentProps {
 /**
  * PageContent - Scrollable content area
  *
- * Takes remaining height and enables overflow scrolling.
- * Header and Toolbar stay fixed, only this area scrolls.
+ * This is the ONLY scrollable container in the PageShell layout.
+ * Takes remaining height (flex-1) and enables vertical scrolling.
+ * Header and Toolbar stay fixed above this area.
  *
  * @example
  * ```tsx
@@ -21,7 +22,7 @@ interface PageContentProps {
  */
 export function PageContent({ children, className }: PageContentProps) {
   return (
-    <div className={cn("flex-1 overflow-y-auto px-2 py-4", className)}>
+    <div className={cn("flex-1 overflow-y-auto overflow-x-hidden p-8", className)}>
       {children}
     </div>
   )

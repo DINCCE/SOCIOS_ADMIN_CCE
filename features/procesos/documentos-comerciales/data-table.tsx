@@ -12,17 +12,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { Empresa } from "@/features/socios/types/socios-schema"
+import type { DocumentoComercialView } from "../oportunidades/columns"
 
-interface EmpresasDataTableProps {
-  table: Table<Empresa>
+interface DocumentosComercialesDataTableProps {
+  table: Table<DocumentoComercialView>
   router: ReturnType<typeof useRouter>
 }
 
 /**
- * EmpresasDataTable - Presentation component for empresas table
+ * DocumentosComercialesDataTable - Presentation component for documentos comerciales table
  *
- * This component now receives a pre-configured table instance from the parent,
+ * This component receives a pre-configured table instance from the parent,
  * allowing the toolbar, pagination, and floating action bar to be managed externally.
  *
  * Features sticky table headers that remain visible when scrolling.
@@ -32,12 +32,12 @@ interface EmpresasDataTableProps {
  * const table = useReactTable({ data, columns, ... })
  * return (
  *   <div className="rounded-md border relative">
- *     <EmpresasDataTable table={table} router={router} />
+ *     <DocumentosComercialesDataTable table={table} router={router} />
  *   </div>
  * )
  * ```
  */
-export function EmpresasDataTable({ table, router }: EmpresasDataTableProps) {
+export function DocumentosComercialesDataTable({ table, router }: DocumentosComercialesDataTableProps) {
   return (
     <UITable>
       <TableHeader className="sticky top-0 z-10 bg-background">
@@ -95,7 +95,8 @@ export function EmpresasDataTable({ table, router }: EmpresasDataTableProps) {
                 ) {
                   return
                 }
-                router.push(`/admin/socios/empresas/${(row.original as { id: string }).id}`)
+                // Navigate to documento comercial detail page (to be implemented)
+                router.push(`/admin/procesos/documentos-comerciales/${row.original.id}`)
               }}
             >
               {row.getVisibleCells().map((cell) => (

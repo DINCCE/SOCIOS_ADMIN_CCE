@@ -256,7 +256,7 @@ export function EntityPageClient() {
       <PageContent>
         <div className="space-y-4">
           {/* Table */}
-          <div className="overflow-hidden rounded-md border">
+          <div className="rounded-md border relative">
             <EntityDataTable table={table} router={router} />
           </div>
 
@@ -479,6 +479,10 @@ export const columns: ColumnDef<EntityList>[] = [
 
 Pure presentation component - receives a pre-configured table instance.
 
+**IMPORTANT:** Features **sticky table headers** that remain visible when scrolling through PageContent.
+
+**Style Note:** Headers have clean, flat appearance with no shadow or bottom border (`border-b-0`).
+
 ```tsx
 // features/{domain}/{entity}/data-table.tsx
 "use client"
@@ -486,6 +490,7 @@ Pure presentation component - receives a pre-configured table instance.
 import { flexRender, type Table } from "@tanstack/react-table"
 import type { useRouter } from "next/navigation"
 
+import { cn } from "@/lib/utils"
 import {
   Table as UITable,
   TableBody,
@@ -504,15 +509,19 @@ interface EntityDataTableProps {
 export function EntityDataTable({ table, router }: EntityDataTableProps) {
   return (
     <UITable>
-      <TableHeader>
+      {/* Clean sticky header: no shadow, no border */}
+      <TableHeader className="sticky top-0 z-10 bg-background">
         {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow key={headerGroup.id}>
+          <TableRow key={headerGroup.id} className="hover:bg-transparent border-b-0">
             {headerGroup.headers.map((header) => (
               <TableHead
                 key={header.id}
                 colSpan={header.colSpan}
                 style={{ width: header.getSize() }}
-                className="relative group whitespace-nowrap"
+                className={cn(
+                  "relative group whitespace-nowrap",
+                  header.column.getCanSort() && "cursor-pointer select-none"
+                )}
               >
                 {flexRender(header.column.columnDef.header, header.getContext())}
 
@@ -521,9 +530,11 @@ export function EntityDataTable({ table, router }: EntityDataTableProps) {
                   <div
                     onMouseDown={header.getResizeHandler()}
                     onTouchStart={header.getResizeHandler()}
-                    className="absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none
-                      bg-primary/20 opacity-0 group-hover:opacity-100
-                      {header.column.getIsResizing() && 'bg-primary opacity-100'}"
+                    className={cn(
+                      "absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none transition-opacity",
+                      "bg-primary/20 opacity-0 group-hover:opacity-100",
+                      header.column.getIsResizing() && "bg-primary opacity-100"
+                    )}
                   />
                 )}
               </TableHead>
@@ -577,10 +588,55 @@ export function EntityDataTable({ table, router }: EntityDataTableProps) {
 - **Column resizing** - Drag edge of column header to resize
 - **Row selection** - Checkbox in first column
 - **Empty state** - Friendly message when no data
+- **Sticky headers** - Table headers stay visible when scrolling (via `sticky top-0 z-10 bg-background`)
+- **Clean flat design** - No shadow or border on headers (`border-b-0`) for minimal appearance
 
 ---
 
-## 6. Shell Components
+## 6. Global Layout Architecture
+
+The application uses a **full-viewport flex layout** from root to content to eliminate scroll issues and white space.
+
+### Root Layout (`app/layout.tsx`)
+
+**File:** [app/layout.tsx](../../app/layout.tsx)
+
+```tsx
+<html className="h-screen w-screen overflow-hidden bg-background">
+  <body className="h-screen w-screen overflow-hidden">
+    <div className="flex h-screen w-screen flex-col overflow-hidden">
+      {children}
+    </div>
+  </body>
+</html>
+```
+
+**Purpose:** Ensures the entire app occupies exactly 100% of the viewport with no scroll on body/html.
+
+### Admin Layout (`app/admin/layout.tsx`)
+
+**File:** [app/admin/layout.tsx](../../app/admin/layout.tsx)
+
+```tsx
+<SidebarInset>
+  <header className="flex h-16 shrink-0 items-center gap-2">
+    {/* Breadcrumb */}
+  </header>
+  <div className="flex flex-1 flex-col overflow-hidden">
+    {children}
+  </div>
+</SidebarInset>
+```
+
+**Purpose:** Wrapper that fills remaining space (flex-1) and passes overflow control to child components.
+
+**Key Changes:**
+- Removed `gap-4` and `p-4` from wrapper div (padding now handled by PageContent)
+- Uses `overflow-hidden` to prevent unintended scrolling
+
+---
+
+## 7. Shell Components
 
 Located in [`components/shell/`](../../components/shell/).
 
@@ -591,16 +647,18 @@ Located in [`components/shell/`](../../components/shell/).
 ```tsx
 export function PageShell({ children, className }: PageShellProps) {
   return (
-    <div className="flex flex-col h-[calc(100vh-96px)] bg-background overflow-hidden">
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
       {children}
     </div>
   )
 }
 ```
 
-**Height calculation:** `100vh - 96px`
-- 64px for admin layout header
-- 32px for layout padding (p-4: 16px top + 16px bottom)
+**Key points:**
+- Uses `h-screen` for full viewport height (no calculation needed)
+- Flex column layout with `overflow-hidden` on container
+- Header and Toolbar stay fixed at top via flexbox (no sticky positioning)
+- PageContent is the only scrollable area (flex-1)
 
 ### PageHeader
 
@@ -621,6 +679,8 @@ export function PageShell({ children, className }: PageShellProps) {
 | `description` | `string` | Subtitle text |
 | `metadata` | `string` | Badge/count display (e.g., "128 total") |
 | `actions` | `ReactNode` | Action buttons (right side) |
+
+**Layout:** Static (default positioning) - stays fixed at top via flexbox order
 
 ### PageToolbar
 
@@ -644,6 +704,8 @@ export function PageShell({ children, className }: PageShellProps) {
 | `left` | `ReactNode` | Search + filters (left side, scrollable) |
 | `right` | `ReactNode` | View options (right side, fixed) |
 
+**Layout:** Static (default positioning) - stays fixed below header via flexbox order
+
 ### PageContent
 
 **File:** [page-content.tsx](../../components/shell/page-content.tsx)
@@ -655,11 +717,94 @@ export function PageShell({ children, className }: PageShellProps) {
 </PageContent>
 ```
 
-Scrollable content area - header and toolbar stay sticky.
+**Layout:**
+- `flex-1` - Takes remaining vertical space
+- `overflow-y-auto` - ONLY scrollable container in the layout
+- `overflow-x-hidden` - Prevent horizontal scroll
+- `p-4` - Padding for content (replaces padding removed from admin layout)
+- Header and Toolbar stay fixed above this area
 
 ---
 
-## 7. Shared DataTable Components
+## 8. Visual Standards
+
+### Horizontal Alignment ("Plumb Line")
+
+All shell components use **`px-8`** (32px) horizontal padding for perfect vertical alignment.
+
+```text
+┌─────────────────────────────────────────────┐
+│  Header Content  ← px-8 on both sides      │
+├─────────────────────────────────────────────┤
+│  Toolbar Content ← px-8 on both sides      │
+├─────────────────────────────────────────────┤
+│                                             │
+│  PageContent        ← px-8 on all sides    │
+│                                             │
+└─────────────────────────────────────────────┘
+```
+
+**Why `px-8`?**
+
+- Creates consistent left margin across all components
+- Ensures title, filters, and content align perfectly
+- Matches common design system spacing scales
+- Provides visual breathing room without feeling cramped
+
+**Components with `px-8`:**
+
+- [PageHeader](../../components/shell/page-header.tsx) - `px-8` with `border-b` separator
+- [PageToolbar](../../components/shell/page-toolbar.tsx) - `px-8` **without** border
+- [PageContent](../../components/shell/page-content.tsx) - `p-8` (all sides)
+
+### Separator Rules
+
+**Single Separator Pattern:** Only `PageHeader` has a bottom border (`border-b`). This creates a clean, minimal appearance with no redundant separators.
+
+```tsx
+// PageHeader - Has border (ONLY separator)
+className="... px-8 ... border-b border-border/60 ..."
+
+// PageToolbar - NO border (clean continuation)
+className="... px-8 ..." // No border-b
+
+// DataTable Headers - NO border, NO shadow (clean flat design)
+<TableHeader className="sticky top-0 z-10 bg-background">
+  <TableRow className="hover:bg-transparent border-b-0">
+```
+
+**Visual Hierarchy:**
+
+1. **PageHeader** - Primary separator (creates top boundary)
+2. **PageToolbar** - No border (visually part of header area)
+3. **DataTable** - Clean headers (flat, no shadow or border)
+
+### Component Spacing
+
+| Component | Horizontal Padding | Vertical Padding | Border |
+|-----------|-------------------|------------------|--------|
+| PageHeader | `px-8` | `py-4` | `border-b` ✅ |
+| PageToolbar | `px-8` | `py-4` | None ❌ |
+| PageContent | `p-8` | `p-8` | None ❌ |
+| DataTable Header | None | None | None ❌ (`border-b-0`) |
+
+### Background & Effects
+
+All shell components use consistent background and backdrop effects:
+
+```tsx
+bg-background/95 backdrop-blur-sm z-10
+```
+
+This creates:
+
+- Semi-transparent background (95% opacity)
+- Subtle backdrop blur for depth
+- Proper z-index stacking
+
+---
+
+## 9. Shared DataTable Components
 
 Located in [`features/socios/components/`](../../features/socios/components/).
 
@@ -673,7 +818,7 @@ Located in [`features/socios/components/`](../../features/socios/components/).
 
 ---
 
-## 8. Filter Options (`lib/table-filters.ts`)
+## 9. Filter Options (`lib/table-filters.ts`)
 
 Define filter options for enum fields.
 
@@ -792,6 +937,51 @@ export const entityTipoOptions = [...]
 ---
 
 ## Related Documentation
+
+- [CLAUDE.md](../../CLAUDE.md) - Overall project guidelines
+- [docs/database/API.md](../database/API.md) - Supabase CRUD endpoints
+- [docs/database/TABLES.md](../database/TABLES.md) - Table schemas
+- [docs/database/VIEWS.md](../database/VIEWS.md) - Optimized database views
+
+---
+
+## Architecture Summary: Full-Height Flex Layout
+
+This project uses a **full-viewport flex layout** that eliminates scroll issues and provides a clean app-like experience.
+
+### Layout Hierarchy
+
+```text
+html (h-screen w-screen overflow-hidden)
+  └─ body (h-screen w-screen overflow-hidden)
+      └─ root wrapper (flex h-screen w-screen flex-col overflow-hidden)
+          └─ SidebarProvider
+              └─ SidebarInset
+                  ├─ header (h-16 shrink-0)
+                  └─ content wrapper (flex-1 flex-col overflow-hidden)
+                      └─ PageShell (h-screen flex flex-col overflow-hidden)
+                          ├─ PageHeader (static, shrink-0)
+                          ├─ PageToolbar (static, shrink-0)
+                          └─ PageContent (flex-1 overflow-y-auto)
+                              └─ DataTable (sticky headers)
+```
+
+### Key Design Principles
+
+1. **Single Scroll Area:** Only `PageContent` scrolls - body/html never scroll
+2. **No Magic Numbers:** Uses `h-screen` instead of `calc(100vh-96px)`
+3. **Flexbox Positioning:** Header/Toolbar stay fixed via flex order (no sticky CSS needed)
+4. **Clean Headers:** Table headers are sticky but flat (no shadow, no border: `border-b-0`)
+5. **Full Viewport:** App occupies exactly 100% of viewport with no white space
+
+### Benefits
+
+- ✅ No "double scroll" issue
+- ✅ No white space at bottom
+- ✅ Headers/toolbar always visible
+- ✅ Table headers sticky when scrolling
+- ✅ Clean, modern "app-like" feel
+- ✅ Responsive without complex calculations
 
 - [CLAUDE.md](../../CLAUDE.md) - Overall project guidelines
 - [docs/database/API.md](../database/API.md) - Supabase CRUD endpoints

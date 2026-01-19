@@ -18,12 +18,20 @@ interface AccionesDataTableProps {
   router: ReturnType<typeof useRouter>
 }
 
+/**
+ * AccionesDataTable - Presentation component for acciones table
+ *
+ * This component receives a pre-configured table instance from the parent,
+ * allowing the toolbar, pagination, and floating action bar to be managed externally.
+ *
+ * Features sticky table headers that remain visible when scrolling.
+ */
 export function AccionesDataTable({ table, router }: AccionesDataTableProps) {
   return (
     <UITable>
-      <TableHeader>
+      <TableHeader className="sticky top-0 z-10 bg-background">
         {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow key={headerGroup.id}>
+          <TableRow key={headerGroup.id} className="hover:bg-transparent border-b-0">
             {headerGroup.headers.map((header) => (
               <TableHead
                 key={header.id}
