@@ -5,18 +5,16 @@ import * as React from 'react'
 export type ColorScheme =
   | 'default'
   | 'capuccino'
-  | 'materia-oscura'
+  | 'retro'
   | 'claude'
   | 'doom-64'
   | 'grafito'
-  | 'minimal'
+  | 'cielo'
   | 'neo-brutal'
   | 'jardin'
   | 'mandarina'
-  | 'twitter'
   | 'country'
-  | 'country-ii'
-  | 'yingyang'
+  | 'country-max'
 
 interface ColorSchemeContextType {
     colorScheme: ColorScheme
@@ -31,7 +29,7 @@ export function ColorSchemeProvider({ children }: { children: React.ReactNode })
     // Load from localStorage on mount
     React.useEffect(() => {
         const savedScheme = localStorage.getItem('color-scheme') as ColorScheme
-        if (savedScheme && ['default', 'capuccino', 'materia-oscura', 'claude', 'doom-64', 'grafito', 'minimal', 'neo-brutal', 'jardin', 'mandarina', 'twitter', 'country', 'country-ii', 'yingyang'].includes(savedScheme)) {
+        if (savedScheme && ['default', 'capuccino', 'retro', 'claude', 'doom-64', 'grafito', 'cielo', 'neo-brutal', 'jardin', 'mandarina', 'country', 'country-max'].includes(savedScheme)) {
             setColorScheme(savedScheme)
             document.documentElement.setAttribute('data-theme', savedScheme)
         }

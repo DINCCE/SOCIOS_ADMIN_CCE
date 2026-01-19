@@ -13,18 +13,16 @@ import { useColorScheme } from '@/components/providers/color-scheme-provider'
 const colorOptions = [
   { value: 'default', label: 'Por defecto' },
   { value: 'capuccino', label: 'Capuccino' },
-  { value: 'materia-oscura', label: 'Materia Oscura' },
+  { value: 'cielo', label: 'Cielo' },
   { value: 'claude', label: 'Claude' },
+  { value: 'country', label: 'Country' },
+  { value: 'country-max', label: 'Country Max' },
   { value: 'doom-64', label: 'Doom 64' },
   { value: 'grafito', label: 'Grafito' },
-  { value: 'minimal', label: 'Minimal' },
-  { value: 'neo-brutal', label: 'Neo Brutal' },
   { value: 'jardin', label: 'Jardín' },
   { value: 'mandarina', label: 'Mandarina' },
-  { value: 'twitter', label: 'Twitter' },
-  { value: 'country', label: 'Country' },
-  { value: 'country-ii', label: 'Country II' },
-  { value: 'yingyang', label: 'YingYang' },
+  { value: 'neo-brutal', label: 'Neo Brutal' },
+  { value: 'retro', label: 'Retro' },
 ]
 
 export function ColorSchemeMenuButton() {

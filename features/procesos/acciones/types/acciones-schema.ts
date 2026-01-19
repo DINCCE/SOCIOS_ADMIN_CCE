@@ -6,13 +6,19 @@ import { z } from "zod"
  */
 export const accionListSchema = z.object({
   id: z.string().uuid(),
-  organizacion_id: z.string().uuid(),
+  organizacion_slug: z.string().nullable(),
   organizacion_nombre: z.string().nullable(),
   codigo_accion: z.string(),
   estado: z.enum(["disponible", "asignada", "arrendada", "bloqueada", "inactiva"]),
   creado_en: z.string(),
+  creado_por_email: z.string().nullable(),
+  creado_por_nombre: z.string().nullable(),
   actualizado_en: z.string().nullable(),
+  actualizado_por_email: z.string().nullable(),
+  actualizado_por_nombre: z.string().nullable(),
   eliminado_en: z.string().nullable(),
+  eliminado_por_email: z.string().nullable(),
+  eliminado_por_nombre: z.string().nullable(),
 })
 
 export type AccionList = z.infer<typeof accionListSchema>

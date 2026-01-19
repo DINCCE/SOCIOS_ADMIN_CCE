@@ -435,7 +435,7 @@ Flex container for two-column layout.
 
 **File:** [page-detail-sidebar.tsx](../../components/shell/page-detail-sidebar.tsx)
 
-Fixed-width sidebar with ScrollArea.
+Percentage-based sidebar with smart constraints that maintains ~80/20 split across all screen sizes.
 
 ```tsx
 <PageDetailSidebar>
@@ -444,10 +444,20 @@ Fixed-width sidebar with ScrollArea.
 </PageDetailSidebar>
 ```
 
-**Width:**
-- `lg:` (1024px+) - 320px
-- `xl:` (1280px+) - 360px
-- Mobile - 100% (stacks)
+**Width Strategy (80/20 Split):**
+- `lg:` (1024px+) - `flex-[0_0_20%]` with min 280px, max 400px
+- `xl:` (1280px+) - Same 20% basis with min 300px, max 440px
+- Mobile - 100% (stacks above content)
+
+**Key classes:**
+- `flex-[0_0_20%]` - Fixed flex-basis of 20% (no grow, no shrink)
+- `min-w-[280px]` / `max-w-[400px]` - Prevents sidebar from becoming too narrow/wide
+- `min-w-[300px]` / `max-w-[440px]` on xl - Slightly relaxed constraints for large screens
+
+**How it works:**
+1. **Normal range (1280px-1920px)**: Sidebar is exactly 20% of available width
+2. **Small desktops (1024px-1279px)**: Sidebar hits min-width (280px) if 20% would be too small
+3. **Large screens (>1920px)**: Sidebar hits max-width (440px), main content gets extra space
 
 **Features:**
 - ScrollArea for custom scrollbar styling
@@ -485,21 +495,34 @@ PageShell (h-[calc(100vh-96px)])
 │  └─ EntityDetailHeader
 │
 └─ PageDetailLayout (flex-1, fills remaining space)
-   ├─ PageDetailSidebar (320px lg+, 360px xl+)
+   ├─ PageDetailSidebar (20% with min/max constraints)
    │  └─ ScrollArea (independent scroll)
    │     └─ EntityIdentityPanel
    │
-   └─ PageDetailMain (flex-1, remaining width)
+   └─ PageDetailMain (flex-1, ~80% of space)
       └─ ScrollArea (independent scroll)
          └─ EntityTabsContent
             └─ Tabs + TabContent
 ```
 
 **Key behaviors:**
+
 - Header stays fixed at top (`shrink-0`)
+- Sidebar maintains ~20% width with smart constraints (280-440px range)
+- Main content fills remaining space (~80%)
 - Sidebar and main scroll independently (via ScrollArea)
 - No double scrollbars
 - Proper height calculation fills viewport
+
+**80/20 Split by Screen Size:**
+
+| Screen Width | Sidebar Width | Main Content | Effective Split |
+|--------------|---------------|--------------|-----------------|
+| **1024px (lg)** | 280px (min) | ~744px | ~27% / 73% |
+| **1280px (xl)** | 256px (20%) | ~1024px | 20% / 80% ✅ |
+| **1440px** | 288px (20%) | ~1152px | 20% / 80% ✅ |
+| **1920px** | 384px (20%) | ~1536px | 20% / 80% ✅ |
+| **2560px** | 440px (max) | ~2116px | ~17% / 83% |
 
 ---
 
@@ -545,9 +568,9 @@ Follow the template from section 1.
 
 ### Step 5: Test Responsive Behavior
 
-- [ ] Desktop (1280px+): Sidebar 360px, side-by-side
-- [ ] Tablet (1024px-1279px): Sidebar 320px, side-by-side
-- [ ] Mobile (<1024px): Sidebar stacks above main
+- [ ] Desktop (1280px+): ~20% sidebar (256-440px range), 80% main content
+- [ ] Tablet (1024px-1279px): Min 280px sidebar (~27%), remaining for main
+- [ ] Mobile (<1024px): Sidebar stacks above main (full width)
 - [ ] Both sidebar and main scroll independently
 - [ ] No double scrollbars or layout overflow
 
@@ -582,6 +605,53 @@ Follow the template from section 1.
 - Don't hardcode sidebar width on mobile - let it stack naturally
 - Don't put interactive elements in server component (use `'use client'`)
 - Don't create custom API endpoints for basic CRUD (use Supabase auto-generated)
+
+---
+
+## Width Distribution Strategy (80/20)
+
+### Why Percentage-Based with Constraints?
+
+The `PageDetailSidebar` uses a **percentage-based flex system with min/max constraints** instead of fixed pixel widths:
+
+**Benefits:**
+
+1. **Consistent Proportions** - Maintains ~80/20 split across all screen sizes
+2. **Readable Content** - Sidebar never becomes too narrow (<280px) or too wide (>440px)
+3. **Scalable** - Main content gets more space on large screens instead of sidebar growing indefinitely
+4. **Future-Proof** - Automatically adapts to new screen sizes
+
+### Implementation Details
+
+```tsx
+// PageDetailSidebar className
+"lg:flex-[0_0_20%] lg:min-w-[280px] lg:max-w-[400px] xl:min-w-[300px] xl:max-w-[440px]"
+```
+
+**Breakdown:**
+
+- `flex-[0_0_20%]` - Fixed flex-basis of 20%, no grow, no shrink
+- `min-w-[280px]` / `max-w-[400px]` - Clamp width on lg screens
+- `min-w-[300px]` / `max-w-[440px]` - Relaxed constraints on xl screens
+
+**Result:**
+
+| Screen Size | Sidebar | Main | Split |
+|------------|---------|------|-------|
+| 1280px | 256px (20%) | 1024px | 20/80 ✅ |
+| 1440px | 288px (20%) | 1152px | 20/80 ✅ |
+| 1920px | 384px (20%) | 1536px | 20/80 ✅ |
+| 2560px | 440px (max) | 2116px | 17/83 |
+
+### Comparison with Fixed Widths
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **Fixed pixels** (old: 320-360px) | - Predictable width<br>- Simple to understand | - Becomes tiny on large screens<br>- No consistent ratio |
+| **Percentage only** | - Perfect 20/80 ratio | - Too narrow on small screens<br>- Too wide on 4K displays |
+| **Percentage + constraints** (current) | - Best of both worlds<br>- Adapts to all sizes<br>- Never too narrow/wide | - Slightly more complex |
+
+**Recommendation:** Use percentage + constraints for detail pages where sidebar has summary content and main area has primary data.
 
 ---
 

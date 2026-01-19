@@ -44,11 +44,17 @@ export function ColorSchemeToggle() {
                 <DropdownMenuItem onClick={() => setColorScheme('capuccino')}>
                     Capuccino {colorScheme === 'capuccino' && '✓'}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setColorScheme('materia-oscura')}>
-                    Materia Oscura {colorScheme === 'materia-oscura' && '✓'}
+                <DropdownMenuItem onClick={() => setColorScheme('cielo')}>
+                    Cielo {colorScheme === 'cielo' && '✓'}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setColorScheme('claude')}>
                     Claude {colorScheme === 'claude' && '✓'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setColorScheme('country')}>
+                    Country {colorScheme === 'country' && '✓'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setColorScheme('country-max')}>
+                    Country Max {colorScheme === 'country-max' && '✓'}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setColorScheme('doom-64')}>
                     Doom 64 {colorScheme === 'doom-64' && '✓'}
@@ -56,29 +62,17 @@ export function ColorSchemeToggle() {
                 <DropdownMenuItem onClick={() => setColorScheme('grafito')}>
                     Grafito {colorScheme === 'grafito' && '✓'}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setColorScheme('minimal')}>
-                    Minimal {colorScheme === 'minimal' && '✓'}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setColorScheme('neo-brutal')}>
-                    Neo Brutal {colorScheme === 'neo-brutal' && '✓'}
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setColorScheme('jardin')}>
                     Jardín {colorScheme === 'jardin' && '✓'}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setColorScheme('mandarina')}>
                     Mandarina {colorScheme === 'mandarina' && '✓'}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setColorScheme('twitter')}>
-                    Twitter {colorScheme === 'twitter' && '✓'}
+                <DropdownMenuItem onClick={() => setColorScheme('neo-brutal')}>
+                    Neo Brutal {colorScheme === 'neo-brutal' && '✓'}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setColorScheme('country')}>
-                    Country {colorScheme === 'country' && '✓'}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setColorScheme('country-ii')}>
-                    Country II {colorScheme === 'country-ii' && '✓'}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setColorScheme('yingyang')}>
-                    YingYang {colorScheme === 'yingyang' && '✓'}
+                <DropdownMenuItem onClick={() => setColorScheme('retro')}>
+                    Retro {colorScheme === 'retro' && '✓'}
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

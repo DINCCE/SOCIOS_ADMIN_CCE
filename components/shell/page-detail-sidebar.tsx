@@ -8,8 +8,13 @@ interface PageDetailSidebarProps extends React.HTMLAttributes<HTMLDivElement> {
 /**
  * PageDetailSidebar - Left sidebar for detail views
  *
- * Fixed-width sidebar (320px on lg+, 360px on xl+) with ScrollArea.
- * Stack above main content on mobile.
+ * Percentage-based sidebar that maintains ~20% width with constraints:
+ * - lg: min 280px, max 400px (flex-basis with clamping)
+ * - xl: min 300px, max 440px (slightly wider on large screens)
+ * - Mobile: Full width (stacks above content)
+ *
+ * This creates a consistent 80/20 split across screen sizes while
+ * preventing the sidebar from becoming too narrow or too wide.
  *
  * @example
  * ```tsx
@@ -23,7 +28,7 @@ export function PageDetailSidebar({ children, className, ...props }: PageDetailS
   return (
     <aside
       className={cn(
-        "w-full lg:w-[320px] xl:w-[360px] flex-shrink-0 flex flex-col gap-4",
+        "w-full lg:flex-[0_0_20%] lg:min-w-[280px] lg:max-w-[400px] xl:min-w-[300px] xl:max-w-[440px] flex-shrink-0 flex flex-col gap-4",
         className
       )}
       {...props}
