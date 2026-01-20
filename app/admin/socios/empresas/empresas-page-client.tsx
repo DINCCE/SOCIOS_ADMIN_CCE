@@ -22,7 +22,7 @@ import { PageShell } from '@/components/shell/page-shell'
 import { PageHeader } from '@/components/shell/page-header'
 import { PageToolbar } from '@/components/shell/page-toolbar'
 import { PageContent } from '@/components/shell/page-content'
-import { EmpresasDataTable } from '@/features/socios/empresas/data-table'
+import { ResponsiveEmpresaDataTable } from '@/features/socios/empresas/responsive-data-table'
 import { NewCompanySheet } from '@/components/socios/empresas/new-company-sheet'
 import { Input } from '@/components/ui/input'
 import { Search } from 'lucide-react'
@@ -506,12 +506,8 @@ export function EmpresasPageClient() {
       {/* Content */}
       <PageContent>
         <div className="space-y-4">
-          {/* Table - with horizontal scroll for wide tables */}
-          <div className="overflow-x-auto">
-            <div className="rounded-md border min-w-full">
-              <EmpresasDataTable table={table} router={router} />
-            </div>
-          </div>
+          {/* Table - with responsive card view on mobile */}
+          <ResponsiveEmpresaDataTable table={table} router={router} />
 
           {/* Pagination */}
           <div className="border-t bg-background p-2">

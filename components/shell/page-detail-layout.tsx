@@ -25,7 +25,7 @@ export function PageDetailLayout({ children, className, ...props }: PageDetailLa
   return (
     <div
       className={cn(
-        "flex flex-col lg:flex-row gap-6 p-4 lg:p-6 flex-1 overflow-hidden",
+        "flex flex-col md:flex-row gap-6 p-4 md:p-6 flex-1 overflow-hidden",
         className
       )}
       {...props}

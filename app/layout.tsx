@@ -52,9 +52,9 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${jetBrainsMono.variable} h-screen w-screen overflow-hidden bg-background`}
+      className={`${geistSans.variable} ${geistMono.variable} ${jetBrainsMono.variable} h-full w-full bg-background`}
     >
-      <body className="antialiased h-screen w-screen overflow-hidden">
+      <body className="antialiased h-full w-full">
         <CSPostHogProvider>
           <ThemeProvider
             attribute="class"
@@ -64,7 +64,7 @@ export default function RootLayout({
           >
             <ColorSchemeProvider>
               <QueryProvider>
-                <div className="flex h-screen w-screen flex-col overflow-hidden">
+                <div className="flex h-full w-full flex-col">
                   {children}
                   <Toaster />
                 </div>

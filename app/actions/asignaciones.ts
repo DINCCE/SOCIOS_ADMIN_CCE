@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getActiveOrganizationId } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 // ============================================================================
@@ -54,6 +54,40 @@ export interface AsignacionRecord {
 // ============================================================================
 // SERVER ACTIONS
 // ============================================================================
+
+/**
+ * Crea una nueva asignación de acción usando la RPC vn_asociados_crear_asignacion
+ * Obtiene automáticamente el organizacion_id del usuario autenticado.
+ *
+ * @param params - Parámetros de la asignación en camelCase (sin organizacionId)
+ * @returns La asignación creada como JSONB
+ * @throws Error si la validación falla (ej: permisos, unicidad, jerarquía, estado de acción)
+ *
+ * @example
+ * ```ts
+ * const asignacion = await crearAsignacionConOrg({
+ *   accionId: 'uuid-accion',
+ *   asociadoId: 'uuid-asociado',
+ *   tipoVinculo: 'propietario',
+ *   modalidad: 'propiedad',
+ *   planComercial: 'regular'
+ * })
+ * ```
+ */
+export async function crearAsignacionConOrg(
+  params: Omit<CrearAsignacionParams, 'organizacionId'>
+): Promise<AsignacionRecord> {
+  const organizacionId = await getActiveOrganizationId()
+
+  if (!organizacionId) {
+    throw new Error('No se pudo determinar la organización del usuario')
+  }
+
+  return crearAsignacion({
+    ...params,
+    organizacionId,
+  })
+}
 
 /**
  * Crea una nueva asignación de acción usando la RPC vn_asociados_crear_asignacion
@@ -262,4 +296,188 @@ export async function crearAsignacionesBatch(
   )
 
   return resultados
+}
+
+// ============================================================================
+// LOOKUP FUNCTIONS (para comboboxes de búsqueda)
+// ============================================================================
+
+/**
+ * Resultado de búsqueda de acción
+ */
+export interface AccionBuscada {
+  id: string
+  codigo_accion: string
+  estado: string
+  organizacion_nombre?: string
+}
+
+/**
+ * Resultado de búsqueda de actor
+ */
+export interface ActorBuscado {
+  id: string
+  codigo_bp: string
+  nombre_completo: string
+  identificacion: string
+  email_principal?: string
+  telefono_principal?: string
+  foto_url?: string | null
+  tipo_actor: string
+}
+
+/**
+ * Busca acciones disponibles para asignar por organización
+ * Obtiene automáticamente el organizacion_id del usuario autenticado.
+ *
+ * @param query - Texto de búsqueda (busca por código_accion)
+ * @param tipoVinculo - Opcional: filtra acciones disponibles según el tipo de vinculo
+ * @returns Objeto con { success, data }
+ */
+export async function buscarAccionesParaAsignar(
+  query: string,
+  tipoVinculo?: 'propietario' | 'titular' | 'beneficiario' | 'intermediario'
+): Promise<{ success: boolean; data: AccionBuscada[] }> {
+  const organizacionId = await getActiveOrganizationId()
+
+  if (!organizacionId) {
+    console.warn('[buscarAccionesParaAsignar] No organization ID found')
+    return { success: false, data: [] }
+  }
+
+  const result = await buscarAccionesDisponibles(organizacionId, query, tipoVinculo)
+  return { success: true, data: result }
+}
+
+/**
+ * Busca acciones disponibles para asignar por organización
+ *
+ * @param organizacionId - ID de la organización
+ * @param query - Texto de búsqueda (busca por código_accion). Si está vacío, devuelve las primeras 5
+ * @param tipoVinculo - Opcional: filtra acciones disponibles según el tipo de vinculo
+ *   - 'propietario' | 'titular': solo acciones con estado 'disponible'
+ *   - 'beneficiario': acciones con estado 'asignada' o 'disponible'
+ * @returns Array de acciones encontradas
+ */
+export async function buscarAccionesDisponibles(
+  organizacionId: string,
+  query: string,
+  tipoVinculo?: 'propietario' | 'titular' | 'beneficiario' | 'intermediario'
+): Promise<AccionBuscada[]> {
+  const supabase = await createClient()
+
+  try {
+    // Determinar qué estados buscar según el tipo de vínculo
+    let estadosPermitidos: string[] = ['disponible']
+    if (tipoVinculo === 'beneficiario') {
+      estadosPermitidos = ['asignada', 'disponible']
+    }
+
+    // Si no hay query, devolver las primeras 5 acciones disponibles
+    if (!query || query.trim().length === 0) {
+      const { data, error } = await supabase
+        .from('v_acciones_org')
+        .select('id, codigo_accion, estado, organizacion_nombre')
+        .in('estado', estadosPermitidos)
+        .order('codigo_accion', { ascending: true })
+        .limit(5)
+
+      if (error) {
+        console.error('[buscarAccionesDisponibles] Error:', error)
+        return []
+      }
+
+      return (data || []) as AccionBuscada[]
+    }
+
+    // Con query, buscar coincidencias
+    const { data, error } = await supabase
+      .from('v_acciones_org')
+      .select('id, codigo_accion, estado, organizacion_nombre')
+      .in('estado', estadosPermitidos)
+      .or(`codigo_accion.ilike.%${query}%`)
+      .order('codigo_accion', { ascending: true })
+      .limit(50)
+
+    if (error) {
+      console.error('[buscarAccionesDisponibles] Error:', error)
+      return []
+    }
+
+    return (data || []) as AccionBuscada[]
+  } catch (error) {
+    console.error('[buscarAccionesDisponibles] Error buscando acciones:', error)
+    return []
+  }
+}
+
+/**
+ * Busca actores/socios para asignar acciones
+ * Obtiene automáticamente el organizacion_id del usuario autenticado.
+ *
+ * @param query - Texto de búsqueda (busca por nombre, documento o código)
+ * @returns Objeto con { success, data }
+ */
+export async function buscarActoresParaAsignar(
+  query: string
+): Promise<{ success: boolean; data: ActorBuscado[] }> {
+  const organizacionId = await getActiveOrganizationId()
+
+  if (!organizacionId) {
+    console.warn('[buscarActoresParaAsignar] No organization ID found')
+    return { success: false, data: [] }
+  }
+
+  const result = await buscarActores(organizacionId, query)
+  return { success: true, data: result }
+}
+
+/**
+ * Busca actores/socios por organización para asignar acciones
+ *
+ * @param organizacionId - ID de la organización
+ * @param query - Texto de búsqueda (busca por nombre, documento o código)
+ * @returns Array de actores encontrados
+ */
+export async function buscarActores(
+  organizacionId: string,
+  query: string
+): Promise<ActorBuscado[]> {
+  const supabase = await createClient()
+
+  try {
+    const searchQuery = query.trim()
+
+    // Buscar en v_actores_org (vista optimizada que ya incluye nombre_completo calculado)
+    const { data, error } = await supabase
+      .from('v_actores_org')
+      .select(
+        'id, codigo_bp, tipo_actor, num_documento, nombre_completo, email_principal, telefono_principal'
+      )
+      .or(
+        `nombre_completo.ilike.%${searchQuery}%,codigo_bp.ilike.%${searchQuery}%,num_documento.ilike.%${searchQuery}%`
+      )
+      .order('codigo_bp', { ascending: true })
+      .limit(50)
+
+    if (error) {
+      console.error('[buscarActores] Error:', error)
+      return []
+    }
+
+    // La vista ya incluye nombre_completo calculado, solo mapeamos al tipo
+    return (data || []).map((actor) => ({
+      id: actor.id,
+      codigo_bp: actor.codigo_bp,
+      tipo_actor: actor.tipo_actor,
+      identificacion: actor.num_documento || actor.codigo_bp,
+      nombre_completo: actor.nombre_completo,
+      email_principal: actor.email_principal,
+      telefono_principal: actor.telefono_principal,
+      foto_url: null, // La vista v_actores_org no tiene foto_url
+    })) as ActorBuscado[]
+  } catch (error) {
+    console.error('[buscarActores] Error buscando actores:', error)
+    return []
+  }
 }

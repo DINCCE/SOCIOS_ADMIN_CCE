@@ -688,23 +688,25 @@ export function EntityDataTable({ table, router }: EntityDataTableProps) {
 
 ## 6. Global Layout Architecture
 
-The application uses a **full-viewport flex layout** from root to content to eliminate scroll issues and white space.
+> **Note:** For detailed documentation on the shell layout system, see [SHELL_LAYOUT.md](./SHELL_LAYOUT.md).
+
+The application uses a **full-viewport flex layout** that is responsive-friendly.
 
 ### Root Layout (`app/layout.tsx`)
 
 **File:** [app/layout.tsx](../../app/layout.tsx)
 
 ```tsx
-<html className="h-screen w-screen overflow-hidden bg-background">
-  <body className="h-screen w-screen overflow-hidden">
-    <div className="flex h-screen w-screen flex-col overflow-hidden">
+<html className="h-full w-full bg-background">
+  <body className="antialiased h-full w-full">
+    <div className="flex h-full w-full flex-col">
       {children}
     </div>
   </body>
 </html>
 ```
 
-**Purpose:** Ensures the entire app occupies exactly 100% of the viewport with no scroll on body/html.
+**Purpose:** Ensures the entire app occupies the viewport but allows natural scrolling when needed. We use `h-full` instead of `h-screen` + `overflow-hidden` to avoid locking the viewport on mobile.
 
 ### Admin Layout (`app/admin/layout.tsx`)
 
@@ -715,17 +717,13 @@ The application uses a **full-viewport flex layout** from root to content to eli
   <header className="flex h-16 shrink-0 items-center gap-2">
     {/* Breadcrumb */}
   </header>
-  <div className="flex flex-1 flex-col overflow-hidden">
+  <div className="flex flex-1 flex-col overflow-auto">
     {children}
   </div>
 </SidebarInset>
 ```
 
-**Purpose:** Wrapper that fills remaining space (flex-1) and passes overflow control to child components.
-
-**Key Changes:**
-- Removed `gap-4` and `p-4` from wrapper div (padding now handled by PageContent)
-- Uses `overflow-hidden` to prevent unintended scrolling
+**Purpose:** Wrapper that fills remaining space (flex-1) and handles overflow via `overflow-auto`.
 
 ---
 
@@ -740,7 +738,7 @@ Located in [`components/shell/`](../../components/shell/).
 ```tsx
 export function PageShell({ children, className }: PageShellProps) {
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
+    <div className="flex h-screen w-full flex-col overflow-auto bg-background">
       {children}
     </div>
   )
@@ -748,12 +746,27 @@ export function PageShell({ children, className }: PageShellProps) {
 ```
 
 **Key points:**
-- Uses `h-screen` for full viewport height (no calculation needed)
-- Flex column layout with `overflow-hidden` on container
-- Header and Toolbar stay fixed at top via flexbox (no sticky positioning)
-- PageContent is the only scrollable area (flex-1)
+- Uses `h-screen` for full viewport height
+- Uses `overflow-auto` to prevent content lock
+- Flex column layout stacks Header, Toolbar, and Content
 
-### PageHeader
+### PageContent
+
+**File:** [page-content.tsx](../../components/shell/page-content.tsx)
+
+```tsx
+export function PageContent({ children, className }: PageContentProps) {
+  return (
+    <div className="flex-1 min-w-0 overflow-auto px-8 pb-8 pt-0">
+      {children}
+    </div>
+  )
+}
+```
+
+**Key points:**
+- **`overflow-auto`**: Enables **both vertical and horizontal** scrolling
+- **`min-w-0`**: Critical for responsive tables
 
 **File:** [page-header.tsx](../../components/shell/page-header.tsx)
 

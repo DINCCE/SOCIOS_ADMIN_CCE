@@ -23,7 +23,7 @@ import { PageToolbar } from '@/components/shell/page-toolbar'
 import { PageContent } from '@/components/shell/page-content'
 import { ViewToggle } from '@/components/procesos/view-toggle'
 import { OportunidadesBoard } from '@/components/procesos/oportunidades/oportunidades-board'
-import { OportunidadesDataTable } from '@/components/procesos/oportunidades/oportunidades-data-table'
+import { ResponsiveOportunidadDataTable } from '@/features/procesos/oportunidades/responsive-data-table'
 import { NewOportunidadSheet } from '@/components/procesos/oportunidades/new-oportunidad-sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -247,12 +247,8 @@ export function OportunidadesPageClient() {
         ) : (
           /* TABLA: Comportamiento natural con scroll */
           <div className="space-y-4">
-            {/* Table - with horizontal scroll for wide tables */}
-            <div className="overflow-x-auto">
-              <div className="rounded-md border min-w-full">
-                <OportunidadesDataTable table={table} router={router} />
-              </div>
-            </div>
+            {/* Table - with responsive card view on mobile */}
+            <ResponsiveOportunidadDataTable table={table} router={router} />
             {/* Pagination Footer */}
             <div className="border-t bg-background p-2">
               <DataTablePagination table={table} />

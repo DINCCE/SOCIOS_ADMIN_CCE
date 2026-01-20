@@ -20,7 +20,7 @@ import { PageShell } from '@/components/shell/page-shell'
 import { PageHeader } from '@/components/shell/page-header'
 import { PageToolbar } from '@/components/shell/page-toolbar'
 import { PageContent } from '@/components/shell/page-content'
-import { AccionesDataTable } from '@/features/procesos/acciones/data-table'
+import { ResponsiveAccionDataTable } from '@/features/procesos/acciones/responsive-data-table'
 import { AsignarAccionSheet } from '@/components/procesos/acciones/asignar-accion-sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -178,12 +178,8 @@ export function AccionesPageClient() {
       {/* Content */}
       <PageContent>
         <div className="space-y-4">
-          {/* Table - with horizontal scroll for wide tables */}
-          <div className="overflow-x-auto">
-            <div className="rounded-md border min-w-full">
-              <AccionesDataTable table={table} router={router} />
-            </div>
-          </div>
+          {/* Table - with responsive card view on mobile */}
+          <ResponsiveAccionDataTable table={table} router={router} />
 
           {/* Pagination */}
           <div className="border-t bg-background p-2">

@@ -22,7 +22,7 @@ import { PageShell } from '@/components/shell/page-shell'
 import { PageHeader } from '@/components/shell/page-header'
 import { PageToolbar } from '@/components/shell/page-toolbar'
 import { PageContent } from '@/components/shell/page-content'
-import { PersonasDataTable } from '@/features/socios/personas/data-table'
+import { ResponsivePersonaDataTable } from '@/features/socios/personas/responsive-data-table'
 import { NewPersonSheet } from '@/components/socios/personas/new-person-sheet'
 import { Input } from '@/components/ui/input'
 import { Search } from 'lucide-react'
@@ -390,12 +390,8 @@ export function PersonasPageClient() {
       {/* Content */}
       <PageContent>
         <div className="space-y-4">
-          {/* Table - with horizontal scroll for wide tables */}
-          <div className="overflow-x-auto">
-            <div className="rounded-md border min-w-full">
-              <PersonasDataTable table={table} router={router} />
-            </div>
-          </div>
+          {/* Table - with responsive card view on mobile */}
+          <ResponsivePersonaDataTable table={table} router={router} />
 
           {/* Pagination */}
           <div className="border-t bg-background p-2">

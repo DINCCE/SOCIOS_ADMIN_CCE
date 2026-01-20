@@ -26,7 +26,7 @@ import { PageToolbar } from '@/components/shell/page-toolbar'
 import { PageContent } from '@/components/shell/page-content'
 import { ViewToggle } from '@/components/procesos/view-toggle'
 import { TareasBoard } from '@/components/procesos/tareas/tareas-board'
-import { TareasDataTable } from '@/components/procesos/tareas/tareas-data-table'
+import { ResponsiveTareaDataTable } from '@/features/procesos/tareas/responsive-data-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -198,12 +198,8 @@ export function TareasPageClient() {
               </div>
             ) : (
               <>
-                {/* Table - with horizontal scroll for wide tables */}
-                <div className="overflow-x-auto">
-                  <div className="rounded-md border min-w-full">
-                    <TareasDataTable table={table} router={router} />
-                  </div>
-                </div>
+                {/* Table - with responsive card view on mobile */}
+                <ResponsiveTareaDataTable table={table} router={router} />
                 {/* Pagination Footer */}
                 <div className="border-t bg-background p-2">
                   <DataTablePagination table={table} />
