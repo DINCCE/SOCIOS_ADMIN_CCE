@@ -1041,9 +1041,66 @@ Located in [`features/socios/components/`](../../features/socios/components/).
 | `DataTablePagination` | [data-table-pagination.tsx](../../features/socios/components/data-table-pagination.tsx) | Pagination controls (rows per page, page navigation) |
 | `DataTableResetFilters` | [data-table-reset-filters.tsx](../../features/socios/components/data-table-reset-filters.tsx) | Button to reset all filters |
 
+### 9.1 Dynamic Pagination
+
+The application uses **dynamic rows-per-page** configuration that automatically adjusts based on the total number of records available. This improves UX by showing more data when it makes sense, reducing unnecessary pagination clicks.
+
+#### How It Works
+
+**Location:** `lib/utils/pagination.ts`
+
+The default page size is calculated using these rules:
+
+| Total Records | Default Page Size | Available Options |
+| :--- | :--- | :--- |
+| ≤ 10 records | 10 | [10] |
+| 11-20 records | 20 | [10, 20] |
+| 21-50 records | 50 | [10, 20, 50] |
+| > 50 records | 100 | [10, 20, 50, 100] |
+
+#### Implementation Pattern
+
+In each `{entity}-page-client.tsx`:
+
+```tsx
+// 1. Import utility
+import { calculateDefaultPageSize } from '@/lib/utils/pagination'
+
+// 2. Add pageSize state
+const [pageSize, setPageSize] = React.useState(10)
+
+// 3. Update page size when data changes
+React.useEffect(() => {
+  const newSize = calculateDefaultPageSize(filteredData.length)
+  setPageSize(newSize)
+}, [filteredData.length])
+
+// 4. Pass to table state
+const table = useReactTable({
+  // ...
+  state: {
+    // ...
+    pagination: {
+      pageSize,
+      pageIndex: 0,
+    },
+  },
+})
+
+// 5. Pass totalRecords to pagination component
+<DataTablePagination table={table} totalRecords={filteredData.length} />
+```
+
+#### Key Benefits
+
+- **Fewer clicks**: Small datasets show all records on one page
+- **Better UX**: Users see more relevant data without manual page size adjustment
+- **Flexible**: Users can still manually select page size from available options
+- **No performance impact**: Client-side calculation (microseconds)
+
 ---
 
-## 9. Identity Cell Components (`components/ui/`)
+## 10. Identity Cell Components (`components/ui/`)
 
 When displaying person/user information in tables, use the specialized components below to maintain visual consistency.
 
@@ -1215,7 +1272,7 @@ When mapping fields from database views to these components:
 
 ---
 
-## 10. Filter Options (`lib/table-filters.ts`)
+## 11. Filter Options (`lib/table-filters.ts`)
 
 Define filter options for enum fields.
 

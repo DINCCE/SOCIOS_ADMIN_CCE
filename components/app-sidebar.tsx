@@ -47,7 +47,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
   }
 
   return (
-    <Sidebar variant="inset" collapsible="none" {...props}>
+    <Sidebar variant="inset" collapsible="icon" {...props}>
       <SidebarHeader>
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>

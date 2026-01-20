@@ -44,6 +44,7 @@ import { DataTableResetFilters } from '@/features/socios/components/data-table-r
 import { Skeleton } from '@/components/ui/skeleton'
 import { columns, type TareaView } from '@/features/procesos/tareas/columns'
 import { tareasPrioridadOptions, tareasEstadoOptions, getTareaTagsOptions } from '@/lib/table-filters'
+import { calculateDefaultPageSize } from '@/lib/utils/pagination'
 
 export function TareasPageClient() {
   const searchParams = useSearchParams()
@@ -59,6 +60,7 @@ export function TareasPageClient() {
     codigo_tarea: false,
   })
   const [rowSelection, setRowSelection] = React.useState({})
+  const [pageSize, setPageSize] = React.useState(10)
 
   const { data: initialData = [], isLoading } = useQuery({
     queryKey: ['tareas'],
@@ -97,6 +99,12 @@ export function TareasPageClient() {
     setHasMounted(true)
   }, [])
 
+  // Update page size dynamically based on data count
+  React.useEffect(() => {
+    const newSize = calculateDefaultPageSize(filteredData.length)
+    setPageSize(newSize)
+  }, [filteredData.length])
+
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -105,6 +113,10 @@ export function TareasPageClient() {
       columnFilters,
       columnVisibility,
       rowSelection,
+      pagination: {
+        pageSize,
+        pageIndex: 0,
+      },
     },
     enableRowSelection: true,
     enableColumnResizing: true,
@@ -202,7 +214,7 @@ export function TareasPageClient() {
                 <ResponsiveTareaDataTable table={table} router={router} />
                 {/* Pagination Footer */}
                 <div className="border-t bg-background p-2">
-                  <DataTablePagination table={table} />
+                  <DataTablePagination table={table} totalRecords={filteredData.length} />
                 </div>
               </>
             )

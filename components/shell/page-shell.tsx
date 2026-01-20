@@ -8,9 +8,9 @@ interface PageShellProps {
 /**
  * PageShell - Full-height flex container
  *
- * Uses h-screen for full viewport height.
+ * Uses h-full to fill available space from parent (SidebarInset).
  * Header and Toolbar stay fixed at top via flexbox.
- * Content area supports both vertical and horizontal scrolling via overflow-auto.
+ * Content area (PageContent) handles scrolling - this shell does not scroll.
  *
  * Layout structure:
  *   - Static header (fixed at top via flex order)
@@ -29,7 +29,7 @@ interface PageShellProps {
 export function PageShell({ children, className }: PageShellProps) {
   return (
     <div className={cn(
-      "flex h-screen w-full flex-col overflow-auto bg-background",
+      "flex h-full w-full max-w-full flex-col overflow-hidden bg-background",
       className
     )}>
       {children}

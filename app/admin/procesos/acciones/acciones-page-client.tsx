@@ -32,6 +32,7 @@ import { DataTableResetFilters } from '@/features/socios/components/data-table-r
 import { columns } from '@/features/procesos/acciones/columns'
 import type { AccionList } from '@/features/procesos/acciones/types/acciones-schema'
 import { accionesEstadoOptions } from '@/lib/table-filters'
+import { calculateDefaultPageSize } from '@/lib/utils/pagination'
 
 export function AccionesPageClient() {
   const router = useRouter()
@@ -44,6 +45,7 @@ export function AccionesPageClient() {
   const [globalSearch, setGlobalSearch] = React.useState("")
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+  const [pageSize, setPageSize] = React.useState(10)
 
   const { data: initialData = [], isLoading, error } = useQuery({
     queryKey: ['acciones'],
@@ -87,6 +89,12 @@ export function AccionesPageClient() {
     setHasMounted(true)
   }, [])
 
+  // Update page size dynamically based on data count
+  React.useEffect(() => {
+    const newSize = calculateDefaultPageSize(filteredData.length)
+    setPageSize(newSize)
+  }, [filteredData.length])
+
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -95,6 +103,10 @@ export function AccionesPageClient() {
       columnFilters,
       columnVisibility,
       rowSelection,
+      pagination: {
+        pageSize,
+        pageIndex: 0,
+      },
     },
     enableRowSelection: true,
     enableColumnResizing: true,
@@ -183,7 +195,7 @@ export function AccionesPageClient() {
 
           {/* Pagination */}
           <div className="border-t bg-background p-2">
-            <DataTablePagination table={table} />
+            <DataTablePagination table={table} totalRecords={filteredData.length} />
           </div>
         </div>
       </PageContent>

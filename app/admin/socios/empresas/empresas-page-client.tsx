@@ -49,6 +49,7 @@ import { useDataExport } from '@/lib/hooks/use-data-export'
 import { useNotify } from '@/lib/hooks/use-notify'
 import { Download, Trash2 } from 'lucide-react'
 import { softDeleteEmpresa } from '@/app/actions/empresas'
+import { calculateDefaultPageSize } from '@/lib/utils/pagination'
 
 export function EmpresasPageClient() {
   const router = useRouter()
@@ -101,6 +102,7 @@ export function EmpresasPageClient() {
     nombre_representante_legal: false,
   })
   const [rowSelection, setRowSelection] = React.useState({})
+  const [pageSize, setPageSize] = React.useState(10)
 
   // Client-side data fetching
   const { data: initialData = [], isLoading, error } = useQuery({
@@ -348,6 +350,12 @@ export function EmpresasPageClient() {
     setHasMounted(true)
   }, [])
 
+  // Update page size dynamically based on data count
+  React.useEffect(() => {
+    const newSize = calculateDefaultPageSize(filteredData.length)
+    setPageSize(newSize)
+  }, [filteredData.length])
+
   // Dynamic visibility for "tags" column - only run on client after mount
   // Note: tags column removed since v_actores_org doesn't have a tags field
   // React.useEffect(() => {
@@ -373,6 +381,10 @@ export function EmpresasPageClient() {
       columnFilters,
       columnVisibility,
       rowSelection,
+      pagination: {
+        pageSize,
+        pageIndex: 0,
+      },
     },
     enableRowSelection: true,
     enableColumnResizing: true,
@@ -511,7 +523,7 @@ export function EmpresasPageClient() {
 
           {/* Pagination */}
           <div className="border-t bg-background p-2">
-            <DataTablePagination table={table} />
+            <DataTablePagination table={table} totalRecords={filteredData.length} />
           </div>
 
           {/* Floating Action Capsule */}

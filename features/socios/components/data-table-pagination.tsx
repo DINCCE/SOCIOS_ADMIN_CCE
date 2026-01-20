@@ -16,14 +16,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { getAvailablePageSizes } from "@/lib/utils/pagination"
 
 interface DataTablePaginationProps<TData> {
   table: Table<TData>
+  totalRecords: number
 }
 
 export function DataTablePagination<TData>({
   table,
+  totalRecords,
 }: DataTablePaginationProps<TData>) {
+  // Calculate available page sizes based on total records
+  const availablePageSizes = getAvailablePageSizes(totalRecords)
   return (
     <>
       {/* Mobile pagination - simplified */}
@@ -72,7 +77,7 @@ export function DataTablePagination<TData>({
                 <SelectValue placeholder={table.getState().pagination.pageSize} />
               </SelectTrigger>
               <SelectContent side="top">
-                {[10, 20, 50, 100].map((pageSize) => (
+                {availablePageSizes.map((pageSize) => (
                   <SelectItem key={pageSize} value={`${pageSize}`}>
                     {pageSize}
                   </SelectItem>

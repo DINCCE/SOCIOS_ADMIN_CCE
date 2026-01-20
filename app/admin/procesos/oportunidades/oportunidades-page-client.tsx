@@ -42,6 +42,7 @@ import { DataTableResetFilters } from '@/features/socios/components/data-table-r
 import { Skeleton } from '@/components/ui/skeleton'
 import { columns, type DocumentoComercialView } from '@/features/procesos/oportunidades/columns'
 import { oportunidadesEstadoOptions, oportunidadesTipoOptions, getOportunidadTagsOptions } from '@/lib/table-filters'
+import { calculateDefaultPageSize } from '@/lib/utils/pagination'
 
 export function OportunidadesPageClient() {
   const searchParams = useSearchParams()
@@ -58,6 +59,7 @@ export function OportunidadesPageClient() {
     titulo: false, // Oculto por defecto, el usuario puede activarlo
   })
   const [rowSelection, setRowSelection] = React.useState({})
+  const [pageSize, setPageSize] = React.useState(10)
 
   const { data: initialData = [], isLoading, error } = useQuery({
     queryKey: ['doc_comercial'],
@@ -136,6 +138,12 @@ export function OportunidadesPageClient() {
     setHasMounted(true)
   }, [])
 
+  // Update page size dynamically based on data count
+  React.useEffect(() => {
+    const newSize = calculateDefaultPageSize(filteredData.length)
+    setPageSize(newSize)
+  }, [filteredData.length])
+
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -144,6 +152,10 @@ export function OportunidadesPageClient() {
       columnFilters,
       columnVisibility,
       rowSelection,
+      pagination: {
+        pageSize,
+        pageIndex: 0,
+      },
     },
     enableRowSelection: true,
     enableColumnResizing: true,
@@ -251,7 +263,7 @@ export function OportunidadesPageClient() {
             <ResponsiveOportunidadDataTable table={table} router={router} />
             {/* Pagination Footer */}
             <div className="border-t bg-background p-2">
-              <DataTablePagination table={table} />
+              <DataTablePagination table={table} totalRecords={filteredData.length} />
             </div>
           </div>
         )}

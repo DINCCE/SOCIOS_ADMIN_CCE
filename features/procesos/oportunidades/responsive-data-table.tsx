@@ -49,7 +49,7 @@ export function ResponsiveOportunidadDataTable({
 
   // Desktop: Table view (with border container)
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto max-w-full">
       <div className="rounded-md border min-w-full">
         <OportunidadesDataTable table={table} router={router} />
       </div>
