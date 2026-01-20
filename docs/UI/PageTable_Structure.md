@@ -471,6 +471,98 @@ export const columns: ColumnDef<EntityList>[] = [
 | **Fixed Width** | Add `size`, `minSize`, `maxSize` |
 | **No Sort/Hide/Resize** | Add `enableSorting: false`, `enableHiding: false`, `enableResizing: false` |
 
+### Mandatory Column Standards
+
+All PageTable columns must follow these mandatory standards for consistency:
+
+#### 1. Checkbox/Select Column (Always First Column)
+
+**REQUIRED** for all tables with row selection.
+
+```tsx
+{
+  id: "select",
+  header: ({ table }) => (
+    <Checkbox
+      checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+      onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+      aria-label="Seleccionar todas"
+      className="translate-y-[2px]"
+    />
+  ),
+  cell: ({ row }) => (
+    <Checkbox
+      checked={row.getIsSelected()}
+      onCheckedChange={(value) => row.toggleSelected(!!value)}
+      aria-label="Seleccionar fila"
+      className="translate-y-[2px]"
+    />
+  ),
+  enableSorting: false,
+  enableHiding: false,
+  enableResizing: false,
+  size: 40,        // ⚠️ MANDATORY: Fixed width
+  minSize: 40,     // ⚠️ MANDATORY: Prevents resizing
+  maxSize: 40,     // ⚠️ MANDATORY: Prevents resizing
+}
+```
+
+**Standard:**
+
+- **Width:** Always `size: 40, minSize: 40, maxSize: 40` (40px fixed, no resizing)
+- **Position:** Always first column in table
+- **Features:** No sorting, no hiding, no resizing
+- **Alignment:** `className="translate-y-[2px]"` on both header and cell checkboxes
+
+#### 2. Actions Column (Always Last Column)
+
+**REQUIRED** for all tables with row actions menu.
+
+```tsx
+{
+  id: "actions",
+  cell: ({ row }) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-8 w-8 p-0">
+          <span className="sr-only">Abrir menú</span>
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+        {/* Menu items */}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ),
+  enableSorting: false,
+  enableHiding: false,
+  enableResizing: false,
+  size: 40,        // ⚠️ MANDATORY: Fixed width
+  minSize: 40,     // ⚠️ MANDATORY: Prevents resizing
+  maxSize: 40,     // ⚠️ MANDATORY: Prevents resizing
+}
+```
+
+**Standard:**
+
+- **Width:** Always `size: 40, minSize: 40, maxSize: 40` (40px fixed, no resizing)
+- **Position:** Always last column in table
+- **Features:** No sorting, no hiding, no resizing
+- **UI:** Dropdown menu with `MoreHorizontal` icon
+
+### Fixed Column Width Reference
+
+| Column Type | Size (px) | Min/Max Size | Resizing | Position |
+| :--- | :--- | :--- | :--- | :--- |
+| **Checkbox/Select** | 40 | 40 / 40 | Disabled | First |
+| **Actions** | 40 | 40 / 40 | Disabled | Last |
+| **Identity (ActorCell/UserCell)** | 220 | 200 / - | Enabled | - |
+| **Short Text (Code, ID)** | 100-130 | - | Enabled | - |
+| **Medium Text (Name, Email)** | 200-250 | - | Enabled | - |
+| **Badge (Status, Priority)** | 110-130 | - | Enabled | - |
+| **Date** | 120-140 | - | Enabled | - |
+
 ---
 
 ## 5. DataTable Component (`data-table.tsx`)
@@ -508,7 +600,7 @@ interface EntityDataTableProps {
 
 export function EntityDataTable({ table, router }: EntityDataTableProps) {
   return (
-    <UITable>
+    <UITable className="min-w-max">
       {/* Clean sticky header: no shadow, no border */}
       <TableHeader className="sticky top-0 z-10 bg-background">
         {table.getHeaderGroups().map((headerGroup) => (
@@ -587,9 +679,10 @@ export function EntityDataTable({ table, router }: EntityDataTableProps) {
 - **Row click navigation** - Click anywhere on row to navigate to detail page
 - **Column resizing** - Drag edge of column header to resize
 - **Row selection** - Checkbox in first column
-- **Empty state** - Friendly message when no data
+- **Empty state** - Consistent message: "No se encontraron resultados."
 - **Sticky headers** - Table headers stay visible when scrolling (via `sticky top-0 z-10 bg-background`)
 - **Clean flat design** - No shadow or border on headers (`border-b-0`) for minimal appearance
+- **Horizontal scroll** - Enabled via `min-w-max` class on UITable
 
 ---
 
@@ -849,7 +942,7 @@ The application is designed to work seamlessly from **md (768px)** and up.
 Global search input adapts to screen width:
 
 ```tsx
-<div className="relative w-full md:w-64 lg:w-80">
+<div className="relative sm:w-full md:w-64 lg:w-80">
   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
   <Input placeholder="Buscar..." />
 </div>
@@ -857,9 +950,35 @@ Global search input adapts to screen width:
 
 **Behavior:**
 
-- **< 768px:** `w-full` - Takes full width on mobile/tablet
+- **< 640px:** `w-full` - Takes full width on mobile
+- **640px - 767px:** `sm:w-full` - Full width on small screens
 - **768px - 1023px:** `md:w-64` (256px) - Compact on tablets
 - **≥ 1024px:** `lg:w-80` (320px) - Expanded on desktop
+
+#### Table Container Pattern
+
+**CRITICAL:** Never wrap the DataTable in an `overflow-x-auto` div. PageContent already handles horizontal scroll.
+
+**CORRECT:**
+```tsx
+<PageContent>
+  <div className="space-y-4">
+    <div className="rounded-md border">
+      <EntityDataTable table={table} router={router} />
+    </div>
+    <div className="border-t bg-background p-2">
+      <DataTablePagination table={table} />
+    </div>
+  </div>
+</PageContent>
+```
+
+**INCORRECT:**
+```tsx
+<div className="overflow-x-auto">  {/* ❌ Wrong - PageContent handles this */}
+  <EntityDataTable table={table} router={router} />
+</div>
+```
 
 #### Scroll Behavior
 
@@ -873,7 +992,7 @@ Global search input adapts to screen width:
 
 - **PageContent:** `overflow-x-auto` - Allows horizontal scroll for wide tables
 - **PageToolbar:** `overflow-x-auto` + `no-scrollbar` - Scrollable filters without visible scrollbar
-- **Table Container:** `overflow-hidden` - Table content scrolls within PageContent
+- **DataTable:** Uses `min-w-max` class to enable proper horizontal scrolling
 
 **Why horizontal scroll in PageContent?**
 
@@ -911,7 +1030,179 @@ Located in [`features/socios/components/`](../../features/socios/components/).
 
 ---
 
-## 9. Filter Options (`lib/table-filters.ts`)
+## 9. Identity Cell Components (`components/ui/`)
+
+When displaying person/user information in tables, use the specialized components below to maintain visual consistency.
+
+### Component Types
+
+#### `ActorCell` - For dm_actores fields
+
+Use for displaying business partners/actors from `dm_actores` table.
+
+**File:** [actor-cell.tsx](../../components/ui/actor-cell.tsx)
+
+```tsx
+import { ActorCell } from "@/components/ui/actor-cell"
+
+<ActorCell
+  nombre={row.original.asociado_nombre_completo}
+  codigo={row.original.asociado_codigo_bp}
+  foto={row.original.asociado_foto_url}
+  className="min-w-[200px] flex-1"
+/>
+```
+
+**Visual Standard:**
+
+- **Avatar:** Photo from actor or initials generated from name
+- **Title (main):** `nombre_completo` field
+- **Subtitle:** `codigo_bp` field (e.g., "ACT-000001")
+
+**Typical use cases:**
+
+- `asociado_nombre_completo` + `asociado_codigo_bp`
+- `solicitante_nombre_completo` + `solicitante_codigo_bp`
+- `actor_relacionado_nombre_completo` + `actor_relacionado_codigo_bp`
+- `pagador_nombre_completo` + `pagador_codigo_bp`
+
+#### `UserCell` - For config_organizacion_miembros/auth.users fields
+
+Use for displaying users from `config_organizacion_miembros` or `auth.users` tables.
+
+**File:** [user-cell.tsx](../../components/ui/user-cell.tsx)
+
+```tsx
+import { UserCell } from "@/components/ui/user-cell"
+
+<UserCell
+  nombre={row.original.asignado_nombre_completo}
+  email={row.original.asignado_email}
+  avatar={row.original.asignado_avatar_url}
+  className="min-w-[200px] flex-1"
+/>
+```
+
+**Visual Standard:**
+
+- **Avatar:** Photo from user or initials generated from name
+- **Title (main):** `nombre_completo` field
+- **Subtitle:** `email` field
+
+**Typical use cases:**
+
+- `asignado_nombre_completo` + `asignado_email`
+- `responsable_nombre_completo` + `responsable_email`
+- `creado_por_nombre` + `creado_por_email`
+
+#### `IdentityCell` - Generic component (legacy)
+
+Generic component for any identity display. Prefer `ActorCell` or `UserCell` for type safety.
+
+**File:** [identity-cell.tsx](../../components/ui/identity-cell.tsx)
+
+```tsx
+import { IdentityCell } from "@/components/ui/identity-cell"
+
+<IdentityCell
+  name={entity.nombre}
+  subtitle={entity.codigo}
+  image={entity.foto_url}
+  className="min-w-[200px] flex-1"
+/>
+```
+
+### Comparison Table
+
+| Component | Use For | Title | Subtitle | Avatar Source |
+| :--- | :--- | :--- | :--- | :--- |
+| **ActorCell** | dm_actores fields | `nombre_completo` | `codigo_bp` | Actor foto or initials |
+| **UserCell** | User/member fields | `nombre_completo` | `email` | User avatar or initials |
+| **IdentityCell** | Generic (legacy) | Custom `name` | Custom `subtitle` | Custom `image` |
+
+### Column Definition Example
+
+```tsx
+// Actor column (dm_actores)
+{
+  accessorKey: "solicitante_codigo_bp",
+  header: ({ column }) => (
+    <DataTableColumnHeader column={column} title="Solicitante" />
+  ),
+  cell: ({ row }) => {
+    const codigo = row.original.solicitante_codigo_bp
+    const nombre = row.original.solicitante_nombre_completo
+
+    if (!codigo) return <NullCell />
+
+    return (
+      <ActorCell
+        nombre={nombre || codigo}
+        codigo={codigo}
+        className="min-w-[200px] flex-1"
+      />
+    )
+  },
+  meta: { size: 220 },
+}
+
+// User column (config_organizacion_miembros)
+{
+  accessorKey: "asignado_nombre",
+  header: ({ column }) => (
+    <DataTableColumnHeader column={column} title="Asignado" />
+  ),
+  cell: ({ row }) => {
+    const nombre = row.original.asignado_nombre
+    const email = row.original.asignado_email
+
+    if (!nombre) {
+      return <span className="text-muted-foreground text-xs">-</span>
+    }
+
+    return (
+      <UserCell
+        nombre={nombre}
+        email={email || ''}
+        className="min-w-[200px] flex-1"
+      />
+    )
+  },
+  meta: { size: 220 },
+}
+```
+
+### View Field Mapping
+
+When mapping fields from database views to these components:
+
+**For ActorCell:**
+
+- `nombre` → View fields ending with `_nombre_completo` (from dm_actores)
+- `codigo` → View fields ending with `_codigo_bp` (from dm_actores)
+- `foto` → View fields ending with `_foto_url` (optional)
+
+**For UserCell:**
+
+- `nombre` → View fields ending with `_nombre_completo` (from config_organizacion_miembros)
+- `email` → View fields ending with `_email` (from config_organizacion_miembros or auth.users)
+- `avatar` → View fields ending with `_avatar_url` (optional)
+
+### Common View Patterns
+
+| Context | View Prefix | Component | Nombre Field | Subtitle Field |
+| :--- | :--- | :--- | :--- | :--- |
+| Associated member | `asociado_*` | ActorCell | `asociado_nombre_completo` | `asociado_codigo_bp` |
+| Applicant | `solicitante_*` | ActorCell | `solicitante_nombre_completo` | `solicitante_codigo_bp` |
+| Payer | `pagador_*` | ActorCell | `pagador_nombre_completo` | `pagador_codigo_bp` |
+| Related actor | `actor_relacionado_*` | ActorCell | `actor_relacionado_nombre_completo` | `actor_relacionado_codigo_bp` |
+| Assigned user | `asignado_*` | UserCell | `asignado_nombre_completo` | `asignado_email` |
+| Responsible user | `responsable_*` | UserCell | `responsable_nombre_completo` | `responsable_email` |
+| Creator | `creado_por_*` | UserCell | `creado_por_nombre` | `creado_por_email` |
+
+---
+
+## 10. Filter Options (`lib/table-filters.ts`)
 
 Define filter options for enum fields.
 

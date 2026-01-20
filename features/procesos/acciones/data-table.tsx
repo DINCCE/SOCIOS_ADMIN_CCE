@@ -28,7 +28,7 @@ interface AccionesDataTableProps {
  */
 export function AccionesDataTable({ table, router }: AccionesDataTableProps) {
   return (
-    <UITable>
+    <UITable className="min-w-max">
       <TableHeader className="sticky top-0 z-10 bg-background">
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow key={headerGroup.id} className="hover:bg-transparent border-b-0">

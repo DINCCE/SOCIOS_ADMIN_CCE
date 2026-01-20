@@ -78,19 +78,19 @@ export const columns: ColumnDef<PersonaList>[] = [
     maxSize: 40,
   },
   {
-    accessorKey: "codigo",
+    accessorKey: "codigo_bp",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Código" />
     ),
     cell: ({ row }) => (
-      <CopyableCell value={row.getValue("codigo")} />
+      <CopyableCell value={row.getValue("codigo_bp")} />
     ),
     meta: {
       size: 100,
     },
   },
   {
-    accessorKey: "nombre",
+    accessorKey: "nombre_completo",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Nombre Completo" />
     ),
@@ -98,8 +98,8 @@ export const columns: ColumnDef<PersonaList>[] = [
       const persona = row.original
       return (
         <IdentityCell
-          name={persona.nombre}
-          subtitle={persona.codigo}
+          name={persona.nombre_completo}
+          subtitle={persona.codigo_bp}
           image={persona.foto_url}
           className="min-w-[200px] flex-1"
         />
@@ -159,12 +159,12 @@ export const columns: ColumnDef<PersonaList>[] = [
   //   },
   // },
   {
-    accessorKey: "identificacion",
+    accessorKey: "num_documento",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Documento" className="text-left" />
     ),
     cell: ({ row }) => {
-      const numeroDocumento = row.getValue("identificacion") as string
+      const numeroDocumento = row.getValue("num_documento") as string
       return (
         <div className="flex items-center gap-2">
           <CopyableCell
@@ -179,12 +179,12 @@ export const columns: ColumnDef<PersonaList>[] = [
     },
   },
   {
-    accessorKey: "email",
+    accessorKey: "email_principal",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Email" />
     ),
     cell: ({ row }) => {
-      const email = row.getValue("email") as string
+      const email = row.getValue("email_principal") as string
       return email ? <CopyableCell value={email} /> : <NullCell />
     },
     meta: {
@@ -192,12 +192,12 @@ export const columns: ColumnDef<PersonaList>[] = [
     },
   },
   {
-    accessorKey: "telefono",
+    accessorKey: "telefono_principal",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Teléfono" />
     ),
     cell: ({ row }) => {
-      const telefono = row.getValue("telefono") as string
+      const telefono = row.getValue("telefono_principal") as string
       return telefono ? (
         <CopyableCell
           value={telefono}
@@ -210,12 +210,12 @@ export const columns: ColumnDef<PersonaList>[] = [
     },
   },
   {
-    accessorKey: "estado",
+    accessorKey: "estado_actor",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Estado" className="text-left" />
     ),
     cell: ({ row }) => {
-      const estado = (row.getValue("estado") as string)?.toLowerCase()
+      const estado = (row.getValue("estado_actor") as string)?.toLowerCase()
       const dotClassName = estadoVariants[estado] || "bg-status-neutral"
       return (
         <div className="flex justify-start">

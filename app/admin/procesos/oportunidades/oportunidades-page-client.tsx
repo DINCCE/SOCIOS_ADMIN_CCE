@@ -145,6 +145,7 @@ export function OportunidadesPageClient() {
       columnVisibility,
       rowSelection,
     },
+    enableRowSelection: true,
     enableColumnResizing: true,
     columnResizeMode: "onChange",
     onSortingChange: setSorting,
@@ -240,23 +241,24 @@ export function OportunidadesPageClient() {
 
       {/* Content */}
       <PageContent>
-        <div className="flex-1 overflow-hidden bg-background relative flex flex-col">
-          {view === 'board' ? (
-            /* KANBAN: Mantiene h-full absoluto para el canvas */
-            <OportunidadesBoard />
-          ) : (
-            /* TABLA: Comportamiento natural con scroll */
-            <>
-              <div className="overflow-auto rounded-md border">
+        {view === 'board' ? (
+          /* KANBAN: Mantiene h-full absoluto para el canvas */
+          <OportunidadesBoard />
+        ) : (
+          /* TABLA: Comportamiento natural con scroll */
+          <div className="space-y-4">
+            {/* Table - with horizontal scroll for wide tables */}
+            <div className="overflow-x-auto">
+              <div className="rounded-md border min-w-full">
                 <OportunidadesDataTable table={table} router={router} />
               </div>
-              {/* Pagination Footer */}
-              <div className="border-t bg-background p-2">
-                <DataTablePagination table={table} />
-              </div>
-            </>
-          )}
-        </div>
+            </div>
+            {/* Pagination Footer */}
+            <div className="border-t bg-background p-2">
+              <DataTablePagination table={table} />
+            </div>
+          </div>
+        )}
       </PageContent>
     </PageShell>
   )

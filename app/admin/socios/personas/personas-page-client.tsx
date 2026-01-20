@@ -342,7 +342,7 @@ export function PersonasPageClient() {
             </div>
             <Separator orientation="vertical" className="h-6" />
             <DataTableFacetedFilter
-              column={table.getColumn("estado")}
+              column={table.getColumn("estado_actor")}
               title="Estado"
               options={personasEstadoOptions}
             />
@@ -390,9 +390,11 @@ export function PersonasPageClient() {
       {/* Content */}
       <PageContent>
         <div className="space-y-4">
-          {/* Table */}
-          <div className="overflow-hidden rounded-md border">
-            <PersonasDataTable table={table} router={router} />
+          {/* Table - with horizontal scroll for wide tables */}
+          <div className="overflow-x-auto">
+            <div className="rounded-md border min-w-full">
+              <PersonasDataTable table={table} router={router} />
+            </div>
           </div>
 
           {/* Pagination */}

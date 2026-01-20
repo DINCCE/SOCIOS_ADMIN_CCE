@@ -39,7 +39,7 @@ interface PersonasDataTableProps {
  */
 export function PersonasDataTable({ table, router }: PersonasDataTableProps) {
   return (
-    <UITable>
+    <UITable className="min-w-max">
       <TableHeader className="sticky top-0 z-10 bg-background">
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow key={headerGroup.id} className="hover:bg-transparent border-b-0">

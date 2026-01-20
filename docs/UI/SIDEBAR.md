@@ -51,13 +51,12 @@ The `Sidebar` component uses a two-layer approach:
 
 ### Width Calculation
 
-| State | Width | Calculation |
-|-------|-------|-------------|
-| **Expanded** | 336px | `className="w-[21rem]"` (21rem = 336px) |
-| **Collapsed (inset)** | 64px | `calc(3rem + 1rem)` = 3rem icon + 1rem padding |
-| **Collapsed (sidebar)** | 48px | `3rem` = icon only |
+| State | Width | Configuration |
+|-------|-------|---------------|
+| **Fixed** | 256px | `className="w-[16rem]"` (16rem = 256px) |
 
-**Important:** The `inset` variant needs extra width for padding (`p-2` = 0.5rem × 2 sides = 1rem).
+> [!IMPORTANT]
+> The sidebar is configured as **non-collapsible** (`collapsible="none"`), maintaining a constant width of 16rem.
 
 ## Customization Guide
 
@@ -76,17 +75,18 @@ The `Sidebar` component uses a two-layer approach:
 
 | Width | rem | px | Use Case |
 |-------|-----|----|----------|
-| Narrow | 16rem | 256px | Default shadcn width |
-| Medium | 21rem | 336px | **Current project setting** |
-| Wide | 24rem | 384px | More spacious navigation |
+| Narrow | 16rem | 256px | **Current project setting** - Compact, modern |
+| Medium | 21rem | 336px | More spacious navigation |
+| Wide | 24rem | 384px | Maximum information density |
 
 ### Variant Behavior
 
-| Variant | Expanded | Collapsed | Style |
-|---------|----------|-----------|-------|
-| `sidebar` | Flush to edge, border separator | 48px (icon only) | Traditional admin panel |
-| `inset` | Rounded, padded, shadow | 64px (icon + padding) | **Current project setting** |
-| `floating` | Like `inset` but more detached | 64px (icon + padding) | Modern floating card |
+| Variant | Width | Collapsible | Style |
+|---------|-------|-------------|-------|
+| `inset` | 16rem (256px) | **none** (fixed) | **Current project setting** - Rounded, padded, shadow |
+
+> [!NOTE]
+> The sidebar is configured as **fixed** (non-collapsible) to ensure consistent layout and avoid content resizing issues.
 
 ## Troubleshooting
 

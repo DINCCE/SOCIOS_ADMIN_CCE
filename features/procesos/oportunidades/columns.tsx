@@ -9,6 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { DataId } from "@/components/ui/data-id"
 import { IdentityCell } from "@/components/ui/identity-cell"
 import { CopyableCell } from "@/components/ui/copyable-cell"
+import { UserCell } from "@/components/ui/user-cell"
+import { NullCell } from "@/components/ui/null-cell"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,6 +52,8 @@ export type DocumentoComercialView = {
   solicitante_razon_social: string | null
   solicitante_nit: string | null
   responsable_id: string | null
+  responsable_nombre_completo: string | null
+  responsable_email: string | null
   pagador_id: string | null
   pagador_codigo: string | null
   pagador_tipo_actor: 'persona' | 'empresa' | null
@@ -185,6 +189,27 @@ export const columns: ColumnDef<DocumentoComercialView>[] = [
       return value.includes(row.getValue(id))
     },
     meta: { size: 110 },
+  },
+  {
+    accessorKey: 'responsable_nombre_completo',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Responsable" />,
+    cell: ({ row }) => {
+      const nombre = row.original.responsable_nombre_completo
+      const email = row.original.responsable_email
+
+      if (!nombre && !email) {
+        return <NullCell />
+      }
+
+      return (
+        <UserCell
+          nombre={nombre || 'Sin responsable'}
+          email={email || 'no-email@responsable'}
+          className="min-w-[200px] flex-1"
+        />
+      )
+    },
+    meta: { size: 220 },
   },
   {
     accessorKey: 'creado_en',

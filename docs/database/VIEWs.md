@@ -448,7 +448,7 @@ ORDER BY nombre_completo;
 - Track audit information with user emails and names
 - Filter out soft-deleted records automatically
 
-**Structure:** 49 fields organized logically:
+**Structure:** 50 fields organized logically:
 
 | # | Field | Type | Description |
 |---|-------|------|-------------|
@@ -485,29 +485,30 @@ ORDER BY nombre_completo;
 | **Información del responsable** |
 | 25 | `responsable_id` | uuid | Responsible user ID |
 | 26 | `responsable_nombre_completo` | text | Responsible user full name |
+| 27 | `responsable_email` | text | Responsible user email from auth.users |
 | **Valores financieros** |
-| 27 | `moneda_iso` | enum | Currency ISO code |
-| 28 | `valor_neto` | numeric | Subtotal before taxes/discounts |
-| 29 | `valor_descuento` | numeric | Total discounts |
-| 30 | `valor_impuestos` | numeric | Total taxes |
-| 31 | `valor_total` | numeric | Final amount |
-| 32 | `monto_estimado` | numeric | Estimated amount (legacy) |
+| 28 | `moneda_iso` | enum | Currency ISO code |
+| 29 | `valor_neto` | numeric | Subtotal before taxes/discounts |
+| 30 | `valor_descuento` | numeric | Total discounts |
+| 31 | `valor_impuestos` | numeric | Total taxes |
+| 32 | `valor_total` | numeric | Final amount |
+| 33 | `monto_estimado` | numeric | Estimated amount (legacy) |
 | **Campos adicionales** |
-| 33 | `notas` | text | Notes |
-| 34 | `atributos` | jsonb | Custom attributes |
-| 35 | `tags` | text[] | Search tags |
-| 36 | `items` | jsonb | Line items (JSONB) |
-| 37 | `documento_origen_id` | uuid | Origin document ID (self-reference) |
+| 34 | `notas` | text | Notes |
+| 35 | `atributos` | jsonb | Custom attributes |
+| 36 | `tags` | text[] | Search tags |
+| 37 | `items` | jsonb | Line items (JSONB) |
+| 38 | `documento_origen_id` | uuid | Origin document ID (self-reference) |
 | **Auditoría** |
-| 38 | `creado_en` | timestamptz | Creation timestamp |
-| 39 | `creado_por_email` | text | Creator user email |
-| 40 | `creado_por_nombre` | text | Creator user name |
-| 41 | `actualizado_en` | timestamptz | Last update timestamp |
-| 42 | `actualizado_por_email` | text | Updater user email |
-| 43 | `actualizado_por_nombre` | text | Updater user name |
-| 44 | `eliminado_en` | timestamptz | Soft delete timestamp (filtered in WHERE) |
-| 45 | `eliminado_por_email` | text | Deleter user email |
-| 46 | `eliminado_por_nombre` | text | Deleter user name |
+| 39 | `creado_en` | timestamptz | Creation timestamp |
+| 40 | `creado_por_email` | text | Creator user email |
+| 41 | `creado_por_nombre` | text | Creator user name |
+| 42 | `actualizado_en` | timestamptz | Last update timestamp |
+| 43 | `actualizado_por_email` | text | Updater user email |
+| 44 | `actualizado_por_nombre` | text | Updater user name |
+| 45 | `eliminado_en` | timestamptz | Soft delete timestamp (filtered in WHERE) |
+| 46 | `eliminado_por_email` | text | Deleter user email |
+| 47 | `eliminado_por_nombre` | text | Deleter user name |
 
 **Joined Tables:**
 - `tr_doc_comercial` (main table)
@@ -515,6 +516,7 @@ ORDER BY nombre_completo;
 - `vn_asociados` (associated member information)
 - `dm_actores` (solicitante, pagador, and asociado actor information - 3 JOINs)
 - `config_organizacion_miembros` (responsible user information)
+- `auth.users` (responsible user email information)
 - `auth.users` (audit information: creator, updater, deleter)
 
 **Filter:** `WHERE eliminado_en IS NULL` (excludes soft-deleted records)
@@ -550,6 +552,7 @@ SELECT
   daso2.email_principal AS pagador_email_principal,
   t.responsable_id,
   m_responsable.nombre_completo AS responsable_nombre_completo,
+  au_responsable.email AS responsable_email,
   t.moneda_iso,
   t.valor_neto,
   t.valor_descuento,
@@ -579,6 +582,7 @@ FROM tr_doc_comercial t
   LEFT JOIN config_organizacion_miembros m_responsable ON m_responsable.user_id = t.responsable_id
     AND m_responsable.organization_id = t.organizacion_id
     AND m_responsable.eliminado_en IS NULL
+  LEFT JOIN auth.users au_responsable ON au_responsable.id = m_responsable.user_id
   LEFT JOIN auth.users uc ON uc.id = t.creado_por
   LEFT JOIN auth.users ua ON ua.id = t.actualizado_por
   LEFT JOIN auth.users ue ON ue.id = t.eliminado_por
@@ -623,7 +627,7 @@ ORDER BY fecha_doc DESC;
 - Track audit information with user emails and names
 - Filter out soft-deleted records automatically
 
-**Structure:** 34 fields organized logically:
+**Structure:** 35 fields organized logically:
 
 | # | Field | Type | Description |
 |---|-------|------|-------------|
@@ -654,18 +658,19 @@ ORDER BY fecha_doc DESC;
 | **Información del usuario asignado** |
 | 20 | `asignado_id` | uuid | Assigned user ID |
 | 21 | `asignado_nombre_completo` | text | Assigned user full name |
+| 22 | `asignado_email` | text | Assigned user email from auth.users |
 | **Campos adicionales** |
-| 22 | `tags` | text[] | Search tags |
+| 23 | `tags` | text[] | Search tags |
 | **Auditoría** |
-| 23 | `creado_en` | timestamptz | Creation timestamp |
-| 24 | `creado_por_email` | text | Creator user email |
-| 25 | `creado_por_nombre` | text | Creator user name |
-| 26 | `actualizado_en` | timestamptz | Last update timestamp |
-| 27 | `actualizado_por_email` | text | Updater user email |
-| 28 | `actualizado_por_nombre` | text | Updater user name |
-| 29 | `eliminado_en` | timestamptz | Soft delete timestamp (filtered in WHERE) |
-| 30 | `eliminado_por_email` | text | Deleter user email |
-| 31 | `eliminado_por_nombre` | text | Deleter user name |
+| 24 | `creado_en` | timestamptz | Creation timestamp |
+| 25 | `creado_por_email` | text | Creator user email |
+| 26 | `creado_por_nombre` | text | Creator user name |
+| 27 | `actualizado_en` | timestamptz | Last update timestamp |
+| 28 | `actualizado_por_email` | text | Updater user email |
+| 29 | `actualizado_por_nombre` | text | Updater user name |
+| 30 | `eliminado_en` | timestamptz | Soft delete timestamp (filtered in WHERE) |
+| 31 | `eliminado_por_email` | text | Deleter user email |
+| 32 | `eliminado_por_nombre` | text | Deleter user name |
 
 **Joined Tables:**
 - `tr_tareas` (main table)
@@ -673,6 +678,7 @@ ORDER BY fecha_doc DESC;
 - `tr_doc_comercial` (related commercial document information)
 - `dm_actores` (related actor information)
 - `config_organizacion_miembros` (assigned user information)
+- `auth.users` (assigned user email information)
 - `auth.users` (audit information: creator, updater, deleter)
 
 **Filter:** `WHERE eliminado_en IS NULL` (excludes soft-deleted records)
@@ -703,6 +709,7 @@ SELECT
   a.tipo_actor AS actor_relacionado_tipo_actor,
   t.asignado_id,
   om.nombre_completo AS asignado_nombre_completo,
+  au.email AS asignado_email,
   t.tags,
   t.creado_en,
   uc.email AS creado_por_email,
@@ -720,6 +727,7 @@ FROM tr_tareas t
   LEFT JOIN config_organizacion_miembros om ON om.user_id = t.asignado_id
     AND om.organization_id = t.organizacion_id
     AND om.eliminado_en IS NULL
+  LEFT JOIN auth.users au ON au.id = om.user_id
   LEFT JOIN auth.users uc ON uc.id = t.creado_por
   LEFT JOIN auth.users ua ON ua.id = t.actualizado_por
   LEFT JOIN auth.users ue ON ue.id = t.eliminado_por

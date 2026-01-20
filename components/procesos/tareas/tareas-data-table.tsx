@@ -25,11 +25,14 @@ interface TareasDataTableProps {
  * This component receives a pre-configured table instance from the parent,
  * allowing the toolbar, pagination, and floating action bar to be managed externally.
  *
+ * Features sticky table headers that remain visible when scrolling.
+ * Headers have clean, flat appearance with no shadow or bottom border (border-b-0).
+ *
  * @example
  * ```tsx
  * const table = useReactTable({ data, columns, ... })
  * return (
- *   <div className="overflow-hidden rounded-md border">
+ *   <div className="rounded-md border">
  *     <TareasDataTable table={table} router={router} />
  *   </div>
  * )
@@ -37,10 +40,11 @@ interface TareasDataTableProps {
  */
 export function TareasDataTable({ table, router }: TareasDataTableProps) {
   return (
-    <UITable>
-      <TableHeader>
+    <UITable className="min-w-max">
+      {/* Clean sticky header: no shadow, no border */}
+      <TableHeader className="sticky top-0 z-10 bg-background">
         {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow key={headerGroup.id}>
+          <TableRow key={headerGroup.id} className="hover:bg-transparent border-b-0">
             {headerGroup.headers.map((header) => {
               return (
                 <TableHead
@@ -112,7 +116,7 @@ export function TareasDataTable({ table, router }: TareasDataTableProps) {
               colSpan={table.getAllColumns().length}
               className="h-24 text-center text-muted-foreground"
             >
-              No hay tareas registradas
+              No se encontraron resultados.
             </TableCell>
           </TableRow>
         )}

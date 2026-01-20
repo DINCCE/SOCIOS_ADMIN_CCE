@@ -181,7 +181,7 @@ export function TareasPageClient() {
 
       {/* Content */}
       <PageContent>
-        <div className="flex-1 overflow-hidden bg-background relative flex flex-col">
+        <div className="space-y-4">
           {view === 'board' ? (
             /* KANBAN: Mantiene h-full absoluto para el canvas */
             <TareasBoard />
@@ -198,8 +198,11 @@ export function TareasPageClient() {
               </div>
             ) : (
               <>
-                <div className="overflow-auto rounded-md border">
-                  <TareasDataTable table={table} router={router} />
+                {/* Table - with horizontal scroll for wide tables */}
+                <div className="overflow-x-auto">
+                  <div className="rounded-md border min-w-full">
+                    <TareasDataTable table={table} router={router} />
+                  </div>
                 </div>
                 {/* Pagination Footer */}
                 <div className="border-t bg-background p-2">

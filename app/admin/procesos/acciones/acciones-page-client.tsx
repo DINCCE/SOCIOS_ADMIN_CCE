@@ -178,9 +178,11 @@ export function AccionesPageClient() {
       {/* Content */}
       <PageContent>
         <div className="space-y-4">
-          {/* Table */}
-          <div className="overflow-hidden rounded-md border">
-            <AccionesDataTable table={table} router={router} />
+          {/* Table - with horizontal scroll for wide tables */}
+          <div className="overflow-x-auto">
+            <div className="rounded-md border min-w-full">
+              <AccionesDataTable table={table} router={router} />
+            </div>
           </div>
 
           {/* Pagination */}

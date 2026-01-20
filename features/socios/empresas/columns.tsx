@@ -64,12 +64,12 @@ export const columns: ColumnDef<EmpresaList>[] = [
     maxSize: 40,
   },
   {
-    accessorKey: "codigo",
+    accessorKey: "codigo_bp",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Código" />
     ),
     cell: ({ row }) => (
-      <CopyableCell value={row.getValue("codigo")} />
+      <CopyableCell value={row.getValue("codigo_bp")} />
     ),
     meta: {
       size: 100,
@@ -85,7 +85,7 @@ export const columns: ColumnDef<EmpresaList>[] = [
       return (
         <IdentityCell
           name={empresa.razon_social}
-          subtitle={empresa.codigo}
+          subtitle={empresa.codigo_bp}
         />
       )
     },
@@ -95,14 +95,13 @@ export const columns: ColumnDef<EmpresaList>[] = [
     },
   },
   {
-    accessorKey: "nit_completo",
+    accessorKey: "num_documento",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="NIT" className="text-left" />
     ),
     cell: ({ row }) => {
       const empresa = row.original
-      // Use nit_completo if available, otherwise fall back to nit
-      const nitValue = empresa.nit_completo || empresa.nit || ""
+      const nitValue = empresa.num_documento || ""
       return (
         <CopyableCell
           value={nitValue}
@@ -190,12 +189,12 @@ export const columns: ColumnDef<EmpresaList>[] = [
     },
   },
   {
-    accessorKey: "tipo_sociedad",
+    accessorKey: "nat_fiscal",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Tipo" />
     ),
     cell: ({ row }) => {
-      const val = row.getValue("tipo_sociedad") as string
+      const val = row.getValue("nat_fiscal") as string
       return val ? (
         <Badge
           variant="metadata-outline"
@@ -212,12 +211,12 @@ export const columns: ColumnDef<EmpresaList>[] = [
     },
   },
   {
-    accessorKey: "estado",
+    accessorKey: "estado_actor",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Estado" className="text-left" />
     ),
     cell: ({ row }) => {
-      const estado = (row.getValue("estado") as string)?.toLowerCase()
+      const estado = (row.getValue("estado_actor") as string)?.toLowerCase()
       const dotClassName = estadoVariants[estado] || "bg-status-neutral"
       return (
         <div className="flex justify-start">

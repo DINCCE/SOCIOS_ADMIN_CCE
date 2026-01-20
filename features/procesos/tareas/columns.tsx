@@ -17,6 +17,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { DataId } from "@/components/ui/data-id"
 import { CopyableCell } from "@/components/ui/copyable-cell"
 import { IdentityCell } from "@/components/ui/identity-cell"
+import { ActorCell } from "@/components/ui/actor-cell"
+import { UserCell } from "@/components/ui/user-cell"
 import { NullCell } from "@/components/ui/null-cell"
 import {
   DropdownMenu,
@@ -125,15 +127,18 @@ export type TareaView = {
   fecha_vencimiento: string | null
   organizacion_id: string
   organizacion_nombre: string
-  asignado_a: string | null
+  // Usuario asignado (de config_organizacion_miembros via v_tareas_org)
+  asignado_id: string | null
+  asignado_nombre_completo: string | null
   asignado_email: string | null
-  asignado_nombre: string | null
-  oportunidad_id: string | null
-  oportunidad_codigo: string | null
-  oportunidad_estado: string | null
-  relacionado_con_bp: string | null
-  relacionado_codigo_bp: string | null
-  relacionado_nombre: string | null
+  // Documento comercial relacionado (via v_tareas_org)
+  doc_comercial_id: string | null
+  doc_comercial_codigo: string | null
+  doc_comercial_estado: string | null
+  // Actor relacionado (de dm_actores via v_tareas_org)
+  actor_relacionado_id: string | null
+  actor_relacionado_codigo_bp: string | null
+  actor_relacionado_nombre_completo: string | null
   tags: string[] | null
   creado_en: string
   eliminado_en: string | null
@@ -252,20 +257,20 @@ export const columns: ColumnDef<TareaView>[] = [
     meta: { size: 110 },
   },
   {
-    accessorKey: 'asignado_nombre',
+    accessorKey: 'asignado_nombre_completo',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Asignado" />,
     cell: ({ row }) => {
-      const nombre = row.original.asignado_nombre
+      const nombre = row.original.asignado_nombre_completo
       const email = row.original.asignado_email
 
-      if (!nombre) {
-        return <span className="text-muted-foreground text-xs">-</span>
+      if (!nombre && !email) {
+        return <NullCell />
       }
 
       return (
-        <IdentityCell
-          name={nombre}
-          subtitle={email}
+        <UserCell
+          nombre={nombre || 'Sin asignar'}
+          email={email || 'no-email@asignado'}
           className="min-w-[200px] flex-1"
         />
       )
@@ -273,22 +278,34 @@ export const columns: ColumnDef<TareaView>[] = [
     meta: { size: 220 },
   },
   {
-    accessorKey: 'oportunidad_codigo',
+    accessorKey: 'doc_comercial_codigo',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Oportunidad" />,
     cell: ({ row }) => {
-      const codigo = row.original.oportunidad_codigo
+      const codigo = row.original.doc_comercial_codigo
       return codigo ? <CopyableCell value={codigo} /> : <NullCell />
     },
     meta: { size: 130 },
   },
   {
-    accessorKey: 'relacionado_codigo_bp',
+    accessorKey: 'actor_relacionado_codigo_bp',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Solicitante" />,
     cell: ({ row }) => {
-      const codigo = row.original.relacionado_codigo_bp
-      return codigo ? <CopyableCell value={codigo} /> : <NullCell />
+      const codigo = row.original.actor_relacionado_codigo_bp
+      const nombre = row.original.actor_relacionado_nombre_completo
+
+      if (!codigo) {
+        return <NullCell />
+      }
+
+      return (
+        <ActorCell
+          nombre={nombre || codigo}
+          codigo={codigo}
+          className="min-w-[200px] flex-1"
+        />
+      )
     },
-    meta: { size: 130 },
+    meta: { size: 220 },
   },
   {
     accessorKey: 'codigo_tarea',
