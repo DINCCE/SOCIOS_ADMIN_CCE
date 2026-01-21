@@ -10,6 +10,23 @@ export const accionListSchema = z.object({
   organizacion_nombre: z.string().nullable(),
   codigo_accion: z.string(),
   estado: z.enum(["disponible", "asignada", "arrendada", "bloqueada", "inactiva"]),
+  tags: z.array(z.string()).default([]),
+  // Propietario - desde vn_asociados
+  propietario_codigo_completo: z.string().nullable(),
+  propietario_subcodigo: z.string().nullable(),
+  propietario_tipo_vinculo: z.string().nullable(),
+  propietario_modalidad: z.string().nullable(),
+  propietario_plan_comercial: z.string().nullable(),
+  propietario_fecha_inicio: z.string().nullable(),
+  // Propietario - desde dm_actores
+  propietario_codigo_bp: z.string().nullable(),
+  propietario_nombre_completo: z.string().nullable(),
+  propietario_tipo_actor: z.enum(["persona", "empresa"]).nullable(),
+  propietario_tipo_documento: z.string().nullable(),
+  propietario_num_documento: z.string().nullable(),
+  propietario_email_principal: z.string().nullable(),
+  propietario_telefono_principal: z.string().nullable(),
+  // Audit fields
   creado_en: z.string(),
   creado_por_email: z.string().nullable(),
   creado_por_nombre: z.string().nullable(),

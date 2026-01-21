@@ -172,15 +172,16 @@ ORDER BY accion_codigo, subcodigo;
 
 ### `v_acciones_org`
 
-**Purpose:** Provides a denormalized view of actions/shares (`dm_acciones`) with organization and audit information.
+**Purpose:** Provides a denormalized view of actions/shares (`dm_acciones`) with organization, owner (propietario) information, and audit details.
 
 **Use Cases:**
 - Display action information in UI tables
 - Query actions without manual JOINs
 - Show human-readable organization slugs instead of UUIDs
 - Track audit information with user names
+- Display owner assignment details (codigo_completo, fecha_inicio, etc.)
 
-**Structure:** 14 fields organized logically:
+**Structure:** 25 fields organized logically:
 
 | # | Field | Type | Description |
 |---|-------|------|-------------|
@@ -192,21 +193,39 @@ ORDER BY accion_codigo, subcodigo;
 | **Información de la organización** |
 | 4 | `organizacion_slug` | text | Organization slug |
 | 5 | `organizacion_nombre` | text | Organization name |
-| **Auditoría** |
-| 6 | `creado_en` | timestamptz | Creation timestamp |
-| 7 | `creado_por_email` | text | Creator user email |
-| 8 | `creado_por_nombre` | text | Creator user name |
-| 9 | `actualizado_en` | timestamptz | Last update timestamp |
-| 10 | `actualizado_por_email` | text | Updater user email |
-| 11 | `actualizado_por_nombre` | text | Updater user name |
-| 12 | `eliminado_en` | timestamptz | Soft delete timestamp |
-| 13 | `eliminado_por_email` | text | Deleter user email |
-| 14 | `eliminado_por_nombre` | text | Deleter user name |
+| **Información del propietario (vinculado)** | | | |
+| 6 | `propietario_codigo_completo` | text | Owner's full code (action + subcode) |
+| 7 | `propietario_subcodigo` | text | Owner's subcode (typically "00") |
+| 8 | `propietario_fecha_inicio` | date | Owner's assignment start date |
+| 9 | `propietario_tipo_vinculo` | enum | Owner's link type (always "propietario") |
+| 10 | `propietario_modalidad` | enum | Owner's modality: propiedad, comodato, asignacion_corp, convenio |
+| 11 | `propietario_plan_comercial` | enum | Owner's plan: regular, plan dorado, joven ejecutivo, honorifico |
+| 12 | `propietario_codigo_bp` | text | Owner's actor BP code (ACT-XXXXXXXX) |
+| 13 | `propietario_nombre_completo` | text | Owner's full name |
+| 14 | `propietario_tipo_actor` | enum | Owner's actor type: persona, empresa |
+| 15 | `propietario_tipo_documento` | enum | Owner's document type: CC, CE, PA, TI, RC, PEP, PPT, NIT |
+| 16 | `propietario_num_documento` | text | Owner's document number |
+| 17 | `propietario_email_principal` | text | Owner's primary email |
+| 18 | `propietario_telefono_principal` | text | Owner's primary phone |
+| **Auditoría** | | | |
+| 19 | `creado_en` | timestamptz | Creation timestamp |
+| 20 | `creado_por_email` | text | Creator user email |
+| 21 | `creado_por_nombre` | text | Creator user name |
+| 22 | `actualizado_en` | timestamptz | Last update timestamp |
+| 23 | `actualizado_por_email` | text | Updater user email |
+| 24 | `actualizado_por_nombre` | text | Updater user name |
+| 25 | `eliminado_en` | timestamptz | Soft delete timestamp |
+| 26 | `eliminado_por_email` | text | Deleter user email |
+| 27 | `eliminado_por_nombre` | text | Deleter user name |
 
 **Joined Tables:**
 - `dm_acciones` (main table)
 - `config_organizaciones` (organization information)
+- `vn_asociados` (owner assignment information, filtered by tipo_vinculo='propietario' and es_vigente=true)
+- `dm_actores` (owner actor information)
 - `auth.users` (audit information: creator, updater, deleter)
+
+**Filter:** `WHERE eliminado_en IS NULL` (excludes soft-deleted records)
 
 **SQL Definition:**
 
@@ -218,6 +237,19 @@ SELECT
   a.estado,
   org.slug AS organizacion_slug,
   org.nombre AS organizacion_nombre,
+  prop.codigo_completo AS propietario_codigo_completo,
+  prop.subcodigo AS propietario_subcodigo,
+  prop.fecha_inicio AS propietario_fecha_inicio,
+  prop.tipo_vinculo AS propietario_tipo_vinculo,
+  prop.modalidad AS propietario_modalidad,
+  prop.plan_comercial AS propietario_plan_comercial,
+  prop_actor.codigo_bp AS propietario_codigo_bp,
+  prop_actor.nombre_completo AS propietario_nombre_completo,
+  prop_actor.tipo_actor AS propietario_tipo_actor,
+  prop_actor.tipo_documento AS propietario_tipo_documento,
+  prop_actor.num_documento AS propietario_num_documento,
+  prop_actor.email_principal AS propietario_email_principal,
+  prop_actor.telefono_principal AS propietario_telefono_principal,
   a.creado_en,
   uc.email AS creado_por_email,
   uc.raw_user_meta_data->>'name' AS creado_por_nombre,
@@ -229,9 +261,15 @@ SELECT
   ue.raw_user_meta_data->>'name' AS eliminado_por_nombre
 FROM dm_acciones a
   LEFT JOIN config_organizaciones org ON org.id = a.organizacion_id
+  LEFT JOIN vn_asociados prop ON prop.accion_id = a.id
+    AND prop.tipo_vinculo = 'propietario'::vn_asociados_tipo_vinculo
+    AND prop.es_vigente = true
+    AND prop.eliminado_en IS NULL
+  LEFT JOIN dm_actores prop_actor ON prop_actor.id = prop.asociado_id
   LEFT JOIN auth.users uc ON uc.id = a.creado_por
   LEFT JOIN auth.users ua ON ua.id = a.actualizado_por
-  LEFT JOIN auth.users ue ON ue.id = a.eliminado_por;
+  LEFT JOIN auth.users ue ON ue.id = a.eliminado_por
+WHERE a.eliminado_en IS NULL;
 ```
 
 **Example Query:**
@@ -269,7 +307,7 @@ ORDER BY codigo_accion;
 - Track audit information with user names
 - Filter out soft-deleted records automatically
 
-**Structure:** 59 fields organized logically:
+**Structure:** 57 fields organized logically:
 
 | # | Field | Type | Description |
 |---|-------|------|-------------|
@@ -295,7 +333,7 @@ ORDER BY codigo_accion;
 | 15 | `genero_actor` | enum | Gender: masculino, femenino, otro, no aplica |
 | 16 | `fecha_nacimiento` | date | Birth date |
 | 17 | `estado_civil` | enum | Civil status: soltero, casado, union libre, divorciado, viudo |
-| 18 | `es_socio` | boolean | Is a partner/member |
+| 18 | `es_socio` | boolean | **Calculated**: TRUE if has active association in vn_asociados |
 | 19 | `es_cliente` | boolean | Is a customer |
 | 20 | `es_proveedor` | boolean | Is a supplier |
 | 21 | `estado_actor` | enum | Status: activo, inactivo, bloqueado |
@@ -322,26 +360,29 @@ ORDER BY codigo_accion;
 | 39 | `perfil_redes` | jsonb | Social media presence |
 | 40 | `perfil_compliance` | jsonb | Compliance and risk |
 | 41 | `perfil_referencias` | jsonb | References |
-| **Tags** |
 | 42 | `tags` | text[] | Search tags |
-| **Información de la organización** |
 | 43 | `organizacion_slug` | text | Organization slug |
 | 44 | `organizacion_nombre` | text | Organization name |
-| **Auditoría** |
-| 45 | `creado_en` | timestamptz | Creation timestamp |
-| 46 | `creado_por_email` | text | Creator user email |
-| 47 | `creado_por_nombre` | text | Creator user name |
-| 48 | `actualizado_en` | timestamptz | Last update timestamp |
-| 49 | `actualizado_por_email` | text | Updater user email |
-| 50 | `actualizado_por_nombre` | text | Updater user name |
-| 51 | `eliminado_en` | timestamptz | Soft delete timestamp (filtered in WHERE) |
-| 52 | `eliminado_por_email` | text | Deleter user email |
-| 53 | `eliminado_por_nombre` | text | Deleter user name |
+| 45 | `asociado_desde` | date | Earliest start date of active associations (NULL if not a partner) |
+| 46 | `asociado_tipo_socio` | text | Active link type(s) concatenated: "propietario, titular, beneficiario" (NULL if not a partner) |
+| 47 | `asociado_modalidad` | text | Active modality/modalities concatenated: "propiedad, comodato, asignacion_corp, convenio" (NULL if not a partner) |
+| 48 | `asociado_plan_comercial` | text | Active commercial plan(s) concatenated: "regular, plan dorado, joven ejecutivo, honorifico" (NULL if not a partner) |
+| 49 | `creado_en` | timestamptz | Creation timestamp |
+| 50 | `creado_por_email` | text | Creator user email |
+| 51 | `creado_por_nombre` | text | Creator user name |
+| 52 | `actualizado_en` | timestamptz | Last update timestamp |
+| 53 | `actualizado_por_email` | text | Updater user email |
+| 54 | `actualizado_por_nombre` | text | Updater user name |
+| 55 | `eliminado_en` | timestamptz | Soft delete timestamp (filtered in WHERE) |
+| 56 | `eliminado_por_email` | text | Deleter user email |
+| 57 | `eliminado_por_nombre` | text | Deleter user name |
 
 **Joined Tables:**
+
 - `dm_actores` (main table)
 - `config_ciudades` (city information for address)
 - `config_organizaciones` (organization information)
+- `vn_asociados` (association information via LATERAL JOIN for `asociado_*` fields and `es_socio` calculation)
 - `auth.users` (audit information: creator, updater, deleter)
 
 **Filter:** `WHERE eliminado_en IS NULL` (excludes soft-deleted records)
@@ -368,7 +409,19 @@ SELECT
   a.genero_actor,
   a.fecha_nacimiento,
   a.estado_civil,
-  a.es_socio,
+  -- es_socio is calculated from active associations in vn_asociados
+  COALESCE(
+    EXISTS (
+      SELECT 1
+      FROM vn_asociados assoc
+      WHERE assoc.asociado_id = a.id
+        AND assoc.es_vigente = TRUE
+        AND assoc.fecha_inicio <= CURRENT_DATE
+        AND (assoc.fecha_fin IS NULL OR assoc.fecha_fin >= CURRENT_DATE)
+        AND assoc.eliminado_en IS NULL
+    ),
+    FALSE
+  ) AS es_socio,
   a.es_cliente,
   a.es_proveedor,
   a.estado_actor,
@@ -395,6 +448,11 @@ SELECT
   a.tags,
   org.slug AS organizacion_slug,
   org.nombre AS organizacion_nombre,
+  -- Association fields from vn_asociados (via LATERAL JOIN)
+  assoc_info.asociado_desde,
+  assoc_info.asociado_tipo_socio,
+  assoc_info.asociado_modalidad,
+  assoc_info.asociado_plan_comercial,
   a.creado_en,
   uc.email AS creado_por_email,
   uc.raw_user_meta_data->>'name' AS creado_por_nombre,
@@ -407,6 +465,20 @@ SELECT
 FROM dm_actores a
   LEFT JOIN config_ciudades c ON c.id = a.ciudad_id
   LEFT JOIN config_organizaciones org ON org.id = a.organizacion_id
+  -- LATERAL JOIN to get association information (aggregates multiple active links)
+  LEFT JOIN LATERAL (
+    SELECT
+      MIN(assoc.fecha_inicio) AS asociado_desde,
+      string_agg(DISTINCT assoc.tipo_vinculo, ', ' ORDER BY assoc.tipo_vinculo) AS asociado_tipo_socio,
+      string_agg(DISTINCT assoc.modalidad, ', ' ORDER BY assoc.modalidad) AS asociado_modalidad,
+      string_agg(DISTINCT assoc.plan_comercial, ', ' ORDER BY assoc.plan_comercial) AS asociado_plan_comercial
+    FROM vn_asociados assoc
+    WHERE assoc.asociado_id = a.id
+      AND assoc.es_vigente = TRUE
+      AND assoc.fecha_inicio <= CURRENT_DATE
+      AND (assoc.fecha_fin IS NULL OR assoc.fecha_fin >= CURRENT_DATE)
+      AND assoc.eliminado_en IS NULL
+  ) assoc_info ON TRUE
   LEFT JOIN auth.users uc ON uc.id = a.creado_por
   LEFT JOIN auth.users ua ON ua.id = a.actualizado_por
   LEFT JOIN auth.users ue ON ue.id = a.eliminado_por

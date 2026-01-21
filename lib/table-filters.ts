@@ -6,6 +6,7 @@ import {
   Building2,
   Factory,
   Users,
+  User,
   Scale,
   AlertTriangle,
   ArrowUpCircle,
@@ -13,6 +14,11 @@ import {
   ArrowDownCircle,
   Briefcase,
   DollarSign,
+  Circle,
+  Star,
+  Crown,
+  Calendar,
+  ShoppingCart,
 } from "lucide-react"
 
 export interface FilterOption {
@@ -148,16 +154,27 @@ export const getEmpresaSectorOptions = (data: TaggableItem[]): FilterOption[] =>
 
 // Opciones de filtro para Oportunidades - Estado
 export const oportunidadesEstadoOptions: FilterOption[] = [
-  { value: "pendiente", label: "Pendiente", icon: HelpCircle },
-  { value: "en_proceso", label: "En Proceso", icon: CheckCircle2 },
-  { value: "aprobada", label: "Aprobada", icon: CheckCircle2 },
-  { value: "rechazada", label: "Rechazada", icon: XCircle },
+  { value: "Nueva", label: "Nueva", icon: HelpCircle },
+  { value: "En Progreso", label: "En Progreso", icon: ArrowRightCircle },
+  { value: "Ganada", label: "Ganada", icon: CheckCircle2 },
+  { value: "Pérdida", label: "Pérdida", icon: XCircle },
+  { value: "Descartada", label: "Descartada", icon: Circle },
 ]
 
 // Opciones de filtro para Oportunidades - Tipo
 export const oportunidadesTipoOptions: FilterOption[] = [
-  { value: "Solicitud Retiro", label: "Retiro", icon: XCircle },
-  { value: "Solicitud Ingreso", label: "Ingreso", icon: CheckCircle2 },
+  { value: "oportunidad", label: "Oportunidad", icon: Star },
+  { value: "oferta", label: "Oferta", icon: Briefcase },
+  { value: "pedido_venta", label: "Pedido Venta", icon: ShoppingCart },
+  { value: "reserva", label: "Reserva", icon: AlertTriangle },
+]
+
+// Opciones de filtro para Oportunidades - Subtipo
+export const oportunidadesSubTipoOptions: FilterOption[] = [
+  { value: "sol_ingreso", label: "Solicitud Ingreso", icon: ArrowUpCircle },
+  { value: "sol_retiro", label: "Solicitud Retiro", icon: ArrowDownCircle },
+  { value: "oferta_eventos", label: "Oferta Eventos", icon: Calendar },
+  { value: "pedido_eventos", label: "Pedido Eventos", icon: ShoppingCart },
 ]
 
 // Tags dinámicos para Oportunidades
@@ -209,4 +226,17 @@ export const accionesEstadoOptions: FilterOption[] = [
   { value: "arrendada", label: "Arrendada", icon: Building2 },
   { value: "bloqueada", label: "Bloqueada", icon: AlertTriangle },
   { value: "inactiva", label: "Inactiva", icon: XCircle },
+]
+
+// Opciones de filtro para Acciones - Tipo Propietario
+export const accionesTipoPropietarioOptions: FilterOption[] = [
+  { value: "persona", label: "Persona", icon: User },
+  { value: "empresa", label: "Empresa", icon: Building2 },
+]
+
+// Opciones de filtro para Acciones - Plan Comercial
+export const accionesPlanComercialOptions: FilterOption[] = [
+  { value: "regular", label: "Regular", icon: Circle },
+  { value: "premium", label: "Premium", icon: Star },
+  { value: "vip", label: "VIP", icon: Crown },
 ]

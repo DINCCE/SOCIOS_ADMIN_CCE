@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ColumnFiltersState,
   SortingState,
@@ -15,7 +15,8 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { Search } from 'lucide-react'
+import { Search, Trash2 } from 'lucide-react'
+import { AnimatePresence } from 'framer-motion'
 
 import { PageShell } from '@/components/shell/page-shell'
 import { PageHeader } from '@/components/shell/page-header'
@@ -39,14 +40,29 @@ import { DataTablePagination } from '@/features/socios/components/data-table-pag
 import { DataTableViewOptions } from '@/features/socios/components/data-table-view-options'
 import { DataTableFacetedFilter } from '@/features/socios/components/data-table-faceted-filter'
 import { DataTableResetFilters } from '@/features/socios/components/data-table-reset-filters'
+import { DataTableExportDialog } from '@/components/ui/data-table-export-dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import { FloatingActionCapsule } from '@/components/ui/floating-action-capsule'
 import { columns, type DocumentoComercialView } from '@/features/procesos/oportunidades/columns'
-import { oportunidadesEstadoOptions, oportunidadesTipoOptions, getOportunidadTagsOptions } from '@/lib/table-filters'
+import {
+  oportunidadesEstadoOptions,
+  oportunidadesTipoOptions,
+  oportunidadesSubTipoOptions,
+  getOportunidadTagsOptions
+} from '@/lib/table-filters'
 import { calculateDefaultPageSize } from '@/lib/utils/pagination'
+import { useDataExport } from '@/lib/hooks/use-data-export'
+import { useNotify } from '@/lib/hooks/use-notify'
+import { toggleTagsForDocumentos, createAndAssignTagForDocumentos } from '@/app/actions/tags'
+import { softDeleteOportunidad } from '@/app/actions/oportunidades'
 
 export function OportunidadesPageClient() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const queryClient = useQueryClient()
+  const { exportData } = useDataExport()
+  const { notifySuccess, notifyError } = useNotify()
   const view = (searchParams.get('view') as 'list' | 'board') || 'list'
 
   const [hasMounted, setHasMounted] = React.useState(false)
@@ -55,9 +71,9 @@ export function OportunidadesPageClient() {
   ])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [globalSearch, setGlobalSearch] = React.useState("")
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
-    titulo: false, // Oculto por defecto, el usuario puede activarlo
-  })
+  const [showSelectionExport, setShowSelectionExport] = React.useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false)
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
   const [pageSize, setPageSize] = React.useState(10)
 
@@ -133,6 +149,37 @@ export function OportunidadesPageClient() {
     })
   }, [initialData, globalSearch])
 
+  // Obtener todas las etiquetas únicas disponibles
+  const availableTags = React.useMemo(() => {
+    const tagsSet = new Set<string>()
+    initialData.forEach((doc) => {
+      if (doc.tags) {
+        doc.tags.forEach((tag) => tagsSet.add(tag))
+      }
+    })
+    return Array.from(tagsSet).sort()
+  }, [initialData])
+
+  // Export columns definition
+  const exportColumns = React.useMemo(() => {
+    return columns
+      .map((col: any) => {
+        const id = col.id || col.accessorKey || ''
+        let label = id
+
+        // Extract label from header
+        if (typeof col.header === 'string') {
+          label = col.header
+        } else if (col.header?.props?.children) {
+          // Handle complex headers like components
+          label = String(col.header.props.children || id)
+        }
+
+        return { id, label }
+      })
+      .filter((col: any) => col.id && col.id !== 'select' && col.id !== 'actions')
+  }, [columns])
+
   // Handle mount state
   React.useEffect(() => {
     setHasMounted(true)
@@ -169,6 +216,82 @@ export function OportunidadesPageClient() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
   }) as any
+
+  // Export handler for all filtered data
+  const handleExport = ({ format, selectedColumns }: { format: 'csv' | 'xlsx'; selectedColumns: string[] }) => {
+    exportData(filteredData, {
+      format,
+      columns: exportColumns,
+      selectedColumns,
+      filename: `oportunidades-${Date.now()}`
+    })
+  }
+
+  // Selection export handler
+  const handleExportSelection = ({ format, selectedColumns }: { format: 'csv' | 'xlsx'; selectedColumns: string[] }) => {
+    // Get only selected rows from table
+    const selectedRows = table.getSelectedRowModel().rows.map((row: any) => row.original)
+
+    exportData(selectedRows, {
+      format,
+      columns: exportColumns,
+      selectedColumns,
+      filename: `seleccion_oportunidades_${Date.now()}`
+    })
+
+    setShowSelectionExport(false)
+  }
+
+  // Delete handler with confirmation
+  const handleDelete = async () => {
+    const selectedIds = table.getFilteredSelectedRowModel().rows.map((row: any) => row.original.id)
+    const selectedCount = selectedIds.length
+
+    try {
+      // Delete all selected records
+      let successCount = 0
+      let errorCount = 0
+
+      for (const id of selectedIds) {
+        const result = await softDeleteOportunidad(id)
+        if (result.success) {
+          successCount++
+        } else {
+          errorCount++
+          console.error('Error deleting oportunidad:', result.message)
+        }
+      }
+
+      // Clear selection and refresh data
+      setRowSelection({})
+      await queryClient.invalidateQueries({ queryKey: ['doc_comercial'] })
+      setShowDeleteConfirm(false)
+
+      // Show appropriate notification
+      if (errorCount === 0) {
+        notifySuccess({
+          title: `${successCount} ${successCount === 1 ? 'oportunidad eliminada' : 'oportunidades eliminadas'} correctamente`
+        })
+      } else if (successCount === 0) {
+        notifyError({
+          title: 'Error al eliminar',
+          description: `No se pudieron eliminar las oportunidades. ${errorCount > 1 ? 'Intente nuevamente.' : ''}`
+        })
+      } else {
+        notifyError({
+          title: 'Eliminación parcial',
+          description: `${successCount} de ${selectedCount} oportunidades eliminadas. ${errorCount} errores.`
+        })
+      }
+    } catch (error) {
+      console.error('Error in batch delete:', error)
+      notifyError({
+        title: 'Error al eliminar',
+        description: 'Error al eliminar las oportunidades. Intente nuevamente.'
+      })
+      setShowDeleteConfirm(false)
+    }
+  }
 
   if (!hasMounted || isLoading) {
     return (
@@ -231,6 +354,11 @@ export function OportunidadesPageClient() {
               options={oportunidadesTipoOptions}
             />
             <DataTableFacetedFilter
+              column={table.getColumn("sub_tipo")}
+              title="Subtipo"
+              options={oportunidadesSubTipoOptions}
+            />
+            <DataTableFacetedFilter
               column={table.getColumn("tags")}
               title="Etiquetas"
               options={getOportunidadTagsOptions(initialData)}
@@ -267,7 +395,77 @@ export function OportunidadesPageClient() {
             </div>
           </div>
         )}
+
+        {/* Floating Action Capsule */}
+        <AnimatePresence>
+          {table.getFilteredSelectedRowModel().rows.length > 0 && (
+            <FloatingActionCapsule
+              selectedCount={table.getFilteredSelectedRowModel().rows.length}
+              selectedIds={table.getFilteredSelectedRowModel().rows.map((row: any) => row.original.id)}
+              totalCount={table.getFilteredRowModel().rows.length}
+              availableTags={availableTags}
+              selectedRowsTags={table.getFilteredSelectedRowModel().rows.map((row: any) => (row.original as DocumentoComercialView).tags || [])}
+              onClearSelection={() => setRowSelection({})}
+              onExport={() => setShowSelectionExport(true)}
+              onToggleTag={async (tag: string, add: boolean) => {
+                const selectedIds = table.getFilteredSelectedRowModel().rows.map((row: any) => row.original.id)
+                const result = await toggleTagsForDocumentos(selectedIds, tag, add)
+                if (!result.success) {
+                  console.error('Error toggling tag:', result.message)
+                }
+                await queryClient.invalidateQueries({ queryKey: ['doc_comercial'] })
+              }}
+              onCreateTag={async (tag: string) => {
+                const selectedIds = table.getFilteredSelectedRowModel().rows.map((row: any) => row.original.id)
+                const result = await createAndAssignTagForDocumentos(selectedIds, tag)
+                if (!result.success) {
+                  console.error('Error creating tag:', result.message)
+                }
+                await queryClient.invalidateQueries({ queryKey: ['doc_comercial'] })
+              }}
+              onDelete={() => setShowDeleteConfirm(true)}
+            />
+          )}
+        </AnimatePresence>
       </PageContent>
+
+      {/* Selection Export Dialog */}
+      <DataTableExportDialog
+        open={showSelectionExport}
+        onOpenChange={setShowSelectionExport}
+        title="Exportar Selección"
+        description={`Se exportarán ${table.getSelectedRowModel().rows.length} registros seleccionados`}
+        columns={exportColumns}
+        totalRows={table.getSelectedRowModel().rows.length}
+        isLoading={isLoading}
+        onExport={handleExportSelection}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Eliminar {table.getFilteredSelectedRowModel().rows.length} {table.getFilteredSelectedRowModel().rows.length === 1 ? 'registro' : 'registros'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción establecerá la marca de soft delete. Los registros ya no aparecerán en la lista pero se conservarán en la base de datos.
+              <br /><br />
+              <strong>¿Está seguro de que desea continuar?</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageShell>
   )
 }

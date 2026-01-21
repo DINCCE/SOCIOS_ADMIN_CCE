@@ -1,13 +1,15 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal } from "lucide-react"
+import { MoreHorizontal, User, Building2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CopyableCell } from "@/components/ui/copyable-cell"
 import { NullCell } from "@/components/ui/null-cell"
+import { ActorCell } from "@/components/ui/actor-cell"
+import { ContactCell } from "@/components/ui/contact-cell"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,11 +49,11 @@ export const columns: ColumnDef<AccionList>[] = [
     maxSize: 40,
   },
 
-  // Código de acción
+  // Acción (renombrado de "Código")
   {
     accessorKey: "codigo_accion",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Código" />
+      <DataTableColumnHeader column={column} title="Acción" />
     ),
     cell: ({ row }) => (
       <CopyableCell value={row.getValue("codigo_accion")} />
@@ -77,27 +79,107 @@ export const columns: ColumnDef<AccionList>[] = [
     meta: { size: 110 },
   },
 
-  // Organización
+  // Propietario (NUEVO)
   {
-    accessorKey: "organizacion_nombre",
+    accessorKey: "propietario_nombre_completo",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Organización" />
+      <DataTableColumnHeader column={column} title="Propietario" />
     ),
     cell: ({ row }) => {
-      const nombre = row.getValue("organizacion_nombre") as string | null
-      return <NullCell value={nombre || ""} />
+      const nombre = row.getValue("propietario_nombre_completo") as string | null
+      const codigo = row.original.propietario_codigo_bp
+      return (
+        <ActorCell
+          nombre={nombre || "Sin propietario"}
+          codigo={codigo || "-"}
+          className="min-w-[200px] flex-1"
+        />
+      )
+    },
+    meta: { size: 250 },
+  },
+
+  // Tipo Propietario (NUEVO)
+  {
+    accessorKey: "propietario_tipo_actor",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Tipo Propietario" />
+    ),
+    cell: ({ row }) => {
+      const tipo = row.getValue("propietario_tipo_actor") as string | null
+      if (!tipo) return <NullCell value="" />
+
+      const variants: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+        persona: "default",
+        empresa: "secondary",
+      }
+
+      const icons: Record<string, React.ReactNode> = {
+        persona: <User className="h-3 w-3" />,
+        empresa: <Building2 className="h-3 w-3" />,
+      }
+
+      return (
+        <Badge variant={variants[tipo] || "outline"}>
+          {icons[tipo]}
+          <span className="ml-1 capitalize">{tipo}</span>
+        </Badge>
+      )
+    },
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    meta: { size: 140 },
+  },
+
+  // Plan Comercial (NUEVO)
+  {
+    accessorKey: "propietario_plan_comercial",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Plan Comercial" />
+    ),
+    cell: ({ row }) => {
+      const plan = row.getValue("propietario_plan_comercial") as string | null
+      if (!plan) return <NullCell value="" />
+
+      return (
+        <Badge variant="metadata-outline">
+          {plan}
+        </Badge>
+      )
+    },
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    meta: { size: 140 },
+  },
+
+  // Contacto (NUEVO)
+  {
+    accessorKey: "propietario_telefono_principal",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Contacto" />
+    ),
+    cell: ({ row }) => {
+      const phone = row.getValue("propietario_telefono_principal") as string | null
+      const email = row.original.propietario_email_principal
+      return (
+        <ContactCell
+          phone={phone}
+          email={email}
+          className="min-w-[200px] flex-1"
+        />
+      )
     },
     meta: { size: 200 },
   },
 
-  // Fecha de creación
+  // Desde (NUEVO)
   {
-    accessorKey: "creado_en",
+    accessorKey: "propietario_fecha_inicio",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Creado" />
+      <DataTableColumnHeader column={column} title="Desde" />
     ),
     cell: ({ row }) => {
-      const fecha = row.getValue("creado_en") as string
+      const fecha = row.getValue("propietario_fecha_inicio") as string | null
+      if (!fecha) return <NullCell value="" />
+
       const date = new Date(fecha)
       return (
         <div className="text-sm text-muted-foreground">
@@ -110,6 +192,19 @@ export const columns: ColumnDef<AccionList>[] = [
       )
     },
     meta: { size: 120 },
+  },
+
+  // Organización
+  {
+    accessorKey: "organizacion_nombre",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Organización" />
+    ),
+    cell: ({ row }) => {
+      const nombre = row.getValue("organizacion_nombre") as string | null
+      return <NullCell value={nombre || ""} />
+    },
+    meta: { size: 200 },
   },
 
   // Actions column (dropdown menu)

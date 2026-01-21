@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DataId } from "@/components/ui/data-id"
 import { IdentityCell } from "@/components/ui/identity-cell"
-import { CopyableCell } from "@/components/ui/copyable-cell"
 import { UserCell } from "@/components/ui/user-cell"
 import { NullCell } from "@/components/ui/null-cell"
+import { TitleCell } from "@/components/ui/title-cell"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +20,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { DataTableColumnHeader } from "@/features/socios/components/data-table-column-header"
-import { formatCurrency, formatDocumentId } from "@/lib/utils"
 import type { TrDocComercialEstados } from "@/lib/db-types"
 
 const ESTADO_CONFIG: Record<
@@ -119,58 +118,45 @@ export const columns: ColumnDef<DocumentoComercialView>[] = [
     minSize: 40,
     maxSize: 40,
   },
+  // 1. TÍTULO - Primera columna con título + código
   {
-    accessorKey: 'solicitante_nombre',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Solicitante" />,
+    accessorKey: 'titulo',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Título" />,
     cell: ({ row }) => {
-      const nombre = row.getValue('solicitante_nombre') as string
-      const codigo = row.original.solicitante_codigo_bp
+      const titulo = row.getValue('titulo') as string
+      const codigo = row.original.codigo
       return (
-        <IdentityCell
-          name={nombre}
+        <TitleCell
+          title={titulo}
           subtitle={codigo}
-          className="min-w-[200px] flex-1"
+          className="min-w-[250px] flex-1"
         />
       )
     },
-    meta: { size: 220, minSize: 200 },
+    meta: { size: 280, minSize: 250 },
   },
-  {
-    accessorKey: 'codigo',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="# Solicitud" className="text-left" />,
-    cell: ({ row }) => (
-      <CopyableCell
-        value={row.getValue('codigo')}
-        label={formatDocumentId(row.getValue('codigo'))}
-      />
-    ),
-    meta: { size: 140 },
-  },
-  {
-    accessorKey: 'titulo',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Título" className="text-left" />,
-    cell: ({ row }) => {
-      const titulo = row.getValue('titulo') as string
-      return <span className="truncate max-w-[300px] block" title={titulo}>{titulo || '-'}</span>
-    },
-    meta: { size: 200 },
-  },
+  // 2. TIPO - Combina tipo + sub_tipo
   {
     accessorKey: 'tipo',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo" className="text-left" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo" />,
     cell: ({ row }) => {
       const tipo = row.getValue('tipo') as string
+      const subTipo = row.original.sub_tipo
+      const displayValue = subTipo ? `${tipo} - ${subTipo}` : tipo
       return (
         <Badge variant="metadata-outline">
-          {tipo}
+          {displayValue}
         </Badge>
       )
     },
     filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id))
+      const tipo = row.getValue(id) as string
+      const subTipo = row.original.sub_tipo
+      return value.some((v: string) => v === tipo || v === subTipo)
     },
-    meta: { size: 120 },
+    meta: { size: 140, minSize: 120 },
   },
+  // 3. ESTADO
   {
     accessorKey: 'estado',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" className="text-left" />,
@@ -188,47 +174,9 @@ export const columns: ColumnDef<DocumentoComercialView>[] = [
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id))
     },
-    meta: { size: 110 },
+    meta: { size: 110, minSize: 100 },
   },
-  {
-    accessorKey: 'responsable_nombre_completo',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Responsable" />,
-    cell: ({ row }) => {
-      const nombre = row.original.responsable_nombre_completo
-      const email = row.original.responsable_email
-
-      if (!nombre && !email) {
-        return <NullCell />
-      }
-
-      return (
-        <UserCell
-          nombre={nombre || 'Sin responsable'}
-          email={email || 'no-email@responsable'}
-          className="min-w-[200px] flex-1"
-        />
-      )
-    },
-    meta: { size: 220 },
-  },
-  {
-    accessorKey: 'creado_en',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" className="text-left" />,
-    cell: ({ row }) => {
-      const fecha = new Date(row.getValue('creado_en'))
-      return <span>{fecha.toLocaleDateString('es-CO')}</span>
-    },
-    meta: { size: 110 },
-  },
-  {
-    accessorKey: 'monto_estimado',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Monto" className="text-left" />,
-    cell: ({ row }) => {
-      const monto = row.getValue('monto_estimado') as number | null
-      return <span>{monto ? formatCurrency(monto) : '-'}</span>
-    },
-    meta: { size: 120 },
-  },
+  // 4. ETIQUETAS
   {
     accessorKey: 'tags',
     header: ({ column }) => (
@@ -254,8 +202,67 @@ export const columns: ColumnDef<DocumentoComercialView>[] = [
     },
     meta: {
       size: 130,
+      minSize: 100,
     },
   },
+  // 5. SOLICITANTE
+  {
+    accessorKey: 'solicitante_nombre',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Solicitante" />,
+    cell: ({ row }) => {
+      const nombre = row.getValue('solicitante_nombre') as string
+      const codigo = row.original.solicitante_codigo_bp
+      return (
+        <IdentityCell
+          name={nombre}
+          subtitle={codigo}
+          className="min-w-[200px] flex-1"
+        />
+      )
+    },
+    meta: { size: 220, minSize: 200 },
+  },
+  // 6. RESPONSABLE
+  {
+    accessorKey: 'responsable_nombre_completo',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Responsable" />,
+    cell: ({ row }) => {
+      const nombre = row.original.responsable_nombre_completo
+      const email = row.original.responsable_email
+
+      if (!nombre && !email) {
+        return <NullCell />
+      }
+
+      return (
+        <UserCell
+          nombre={nombre || 'Sin responsable'}
+          email={email || 'no-email@responsable'}
+          className="min-w-[200px] flex-1"
+        />
+      )
+    },
+    meta: { size: 220, minSize: 200 },
+  },
+  // 7. FECHA
+  {
+    accessorKey: 'creado_en',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" className="text-left" />,
+    cell: ({ row }) => {
+      const fecha = new Date(row.getValue('creado_en'))
+      return (
+        <span className="text-sm text-muted-foreground">
+          {fecha.toLocaleDateString('es-CO', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          })}
+        </span>
+      )
+    },
+    meta: { size: 110, minSize: 100 },
+  },
+  // Actions column
   {
     id: 'actions',
     cell: ({ row }) => {
