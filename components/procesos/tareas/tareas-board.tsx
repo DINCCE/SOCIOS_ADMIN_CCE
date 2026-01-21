@@ -11,30 +11,7 @@ import { TareaCard } from './tarea-card'
 import { TareaColumn } from './tarea-column'
 import { actualizarTarea } from '@/app/actions/tareas'
 import { toast } from 'sonner'
-import type { Database } from '@/types_db'
-
-export type TareaView = {
-  id: string
-  codigo_tarea: string | null
-  titulo: string
-  descripcion: string | null
-  estado: string
-  prioridad: string
-  fecha_vencimiento: string | null
-  organizacion_id: string
-  organizacion_nombre: string
-  asignado_a: string | null
-  asignado_email: string | null
-  asignado_nombre: string | null
-  oportunidad_id: string | null
-  oportunidad_codigo: string | null
-  oportunidad_estado: string | null
-  relacionado_con_bp: string | null
-  relacionado_codigo_bp: string | null
-  relacionado_nombre: string | null
-  creado_en: string
-  eliminado_en: string | null
-}
+import type { TareaView } from '@/features/procesos/tareas/columns'
 
 export type EstadoTarea = TrTareasEstado
 
@@ -69,7 +46,7 @@ export function TareasBoard() {
     queryFn: async () => {
       const supabase = createClient()
       const { data, error } = await supabase
-        .from('tareas_view')
+        .from('v_tareas_org')
         .select('*')
         .is('eliminado_en', null)
         .order('fecha_vencimiento', { ascending: true })

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { DataTableColumnHeader } from "@/features/socios/components/data-table-column-header"
 import type { TrDocComercialEstados } from "@/lib/db-types"
+import { oportunidadesTipoOptions, oportunidadesSubTipoOptions } from "@/lib/table-filters"
 
 const ESTADO_CONFIG: Record<
   TrDocComercialEstados,
@@ -41,54 +42,51 @@ export type DocumentoComercialView = {
   tipo: 'oportunidad' | 'oferta' | 'pedido_venta' | 'reserva'
   sub_tipo: 'sol_ingreso' | 'sol_retiro' | 'oferta_eventos' | 'pedido_eventos' | null
   estado: 'Nueva' | 'En Progreso' | 'Ganada' | 'Pérdida' | 'Descartada'
-  organizacion_id: string
+  organizacion_slug: string
+  organizacion_nombre: string
   solicitante_id: string | null
-  solicitante_codigo: string | null
+  solicitante_codigo_bp: string
+  solicitante_nombre_completo: string
   solicitante_tipo_actor: 'persona' | 'empresa' | null
-  solicitante_primer_nombre: string | null
-  solicitante_primer_apellido: string | null
-  solicitante_numero_documento: string | null
-  solicitante_razon_social: string | null
-  solicitante_nit: string | null
+  solicitante_email_principal: string | null
+  pagador_id: string | null
+  pagador_codigo_bp: string | null
+  pagador_nombre_completo: string | null
+  pagador_tipo_actor: 'persona' | 'empresa' | null
+  pagador_email_principal: string | null
   responsable_id: string | null
   responsable_nombre_completo: string | null
   responsable_email: string | null
-  pagador_id: string | null
-  pagador_codigo: string | null
-  pagador_tipo_actor: 'persona' | 'empresa' | null
-  pagador_primer_nombre: string | null
-  pagador_primer_apellido: string | null
-  pagador_num_documento: string | null
-  pagador_razon_social: string | null
-  pagador_nit: string | null
-  monto_estimado: number | null
+  asociado_id: string | null
+  asociado_codigo_completo: string | null
+  asociado_tipo_vinculo: string | null
+  asociado_nombre_completo: string | null
+  moneda_iso: string | null
   valor_neto: number | null
   valor_descuento: number | null
   valor_impuestos: number | null
   valor_total: number | null
-  moneda_iso: string | null
+  monto_estimado: number | null
+  fecha_doc: string | null
   fecha_venc_doc: string | null
-  asociado_id: string | null
-  asociado_codigo: string | null
-  asociado_tipo: string | null
-  asociado_codigo_bp: string | null
-  asociado_primer_nombre: string | null
-  asociado_primer_apellido: string | null
-  documento_origen_id: string | null
-  documento_origen_codigo: string | null
   notas: string | null
   atributos: Record<string, unknown> | null
-  items: Record<string, unknown> | null
   tags: string[]
+  items: Record<string, unknown> | null
+  documento_origen_id: string | null
   creado_en: string
+  creado_por_email: string | null
+  creado_por_nombre: string | null
   actualizado_en: string
+  actualizado_por_email: string | null
+  actualizado_por_nombre: string | null
   eliminado_en: string | null
+  eliminado_por_email: string | null
+  eliminado_por_nombre: string | null
 
-  // === Campos computados para compatibilidad ===
+  // === Campos mapeados para compatibilidad con columnas ===
   solicitante_nombre: string
-  solicitante_codigo_bp: string
   pagador_nombre: string | null
-  pagador_codigo_bp: string | null
 }
 
 export const columns: ColumnDef<DocumentoComercialView>[] = [
@@ -135,24 +133,77 @@ export const columns: ColumnDef<DocumentoComercialView>[] = [
     },
     meta: { size: 280, minSize: 250 },
   },
-  // 2. TIPO - Combina tipo + sub_tipo
+  // 2. CÓDIGO - Columna oculta independiente para filtrar/ordenar por código
   {
+    id: 'codigo_column',
+    accessorKey: 'codigo',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Código" />,
+    cell: ({ row }) => {
+      const codigo = row.getValue('codigo') as string
+      return <span className="text-sm text-muted-foreground">{codigo}</span>
+    },
+    enableHiding: true, // Aparece en dropdown pero oculta por defecto
+    meta: { size: 120, minSize: 100 },
+  },
+  // 3. TIPO (FILTRO) - Columna oculta independiente para filtrar por tipo
+  {
+    id: 'tipo_filter',
     accessorKey: 'tipo',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo" />,
-    cell: ({ row }) => {
-      const tipo = row.getValue('tipo') as string
-      const subTipo = row.original.sub_tipo
-      const displayValue = subTipo ? `${tipo} - ${subTipo}` : tipo
-      return (
-        <Badge variant="metadata-outline">
-          {displayValue}
-        </Badge>
-      )
-    },
+    cell: () => null, // No se visualiza
     filterFn: (row, id, value) => {
       const tipo = row.getValue(id) as string
-      const subTipo = row.original.sub_tipo
-      return value.some((v: string) => v === tipo || v === subTipo)
+      return value.includes(tipo)
+    },
+    enableHiding: true, // Aparece en dropdown pero oculta por defecto
+    meta: { size: 0 },
+  },
+  // 3. SUB_TIPO (FILTRO) - Columna oculta independiente para filtrar por sub_tipo
+  {
+    id: 'sub_tipo_filter',
+    accessorKey: 'sub_tipo',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Subtipo" />,
+    cell: () => null, // No se visualiza
+    filterFn: (row, id, value) => {
+      const subTipo = row.getValue(id) as string | null
+      if (!subTipo) return false
+      return value.includes(subTipo)
+    },
+    enableHiding: true, // Aparece en dropdown pero oculta por defecto
+    meta: { size: 0 },
+  },
+  // 4. TIPO/SUB_TIPO (VISUAL) - Combina tipo + sub_tipo para visualización
+  {
+    id: 'tipo_visual',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo / Subtipo" />,
+    cell: ({ row }) => {
+      const tipo = row.original.tipo as string
+      const subTipo = row.original.sub_tipo as string | null
+
+      // Obtener configuración del tipo
+      const tipoConfig = oportunidadesTipoOptions.find(opt => opt.value === tipo)
+      const TipoIcon = tipoConfig?.icon
+
+      // Obtener configuración del subtipo
+      const subTipoConfig = subTipo
+        ? oportunidadesSubTipoOptions.find(opt => opt.value === subTipo)
+        : null
+      const SubTipoIcon = subTipoConfig?.icon
+
+      return (
+        <div className="flex flex-col gap-1">
+          <Badge variant="metadata-outline" className="w-fit">
+            {TipoIcon && <TipoIcon className="mr-1 h-3 w-3" />}
+            {tipoConfig?.label || tipo}
+          </Badge>
+          {subTipo && subTipoConfig && (
+            <Badge variant="metadata-outline" className="w-fit">
+              {SubTipoIcon && <SubTipoIcon className="mr-1 h-3 w-3" />}
+              {subTipoConfig.label}
+            </Badge>
+          )}
+        </div>
+      )
     },
     meta: { size: 140, minSize: 120 },
   },
@@ -244,10 +295,10 @@ export const columns: ColumnDef<DocumentoComercialView>[] = [
     },
     meta: { size: 220, minSize: 200 },
   },
-  // 7. FECHA
+  // 7. FECHA CREACIÓN
   {
     accessorKey: 'creado_en',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" className="text-left" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha Creación" className="text-left" />,
     cell: ({ row }) => {
       const fecha = new Date(row.getValue('creado_en'))
       return (

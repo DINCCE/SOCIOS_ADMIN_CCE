@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { DataTableColumnHeader } from "@/features/socios/components/data-table-column-header"
+import { isDateInRange, parseDateFilterValue } from "@/lib/utils/date-helpers"
 import type { Database } from "@/types_db"
 import type { TrTareasEstado, TrTareasPrioridad } from "@/lib/db-types"
 
@@ -237,6 +238,21 @@ export const columns: ColumnDef<TareaView>[] = [
         </div>
       )
     },
+    filterFn: (row, id, value) => {
+      const fechaVencimiento = row.getValue(id) as string | null
+
+      // Handle null dates - only show when no filter or "all"
+      if (!fechaVencimiento) {
+        return !value || value === 'all'
+      }
+
+      // No filter means include all
+      if (!value || value === 'all') return true
+
+      // Handle preset strings or custom range objects
+      const range = parseDateFilterValue(value)
+      return isDateInRange(fechaVencimiento, range)
+    },
     meta: { size: 140 },
   },
   {
@@ -257,7 +273,7 @@ export const columns: ColumnDef<TareaView>[] = [
     meta: { size: 110 },
   },
   {
-    accessorKey: 'asignado_nombre_completo',
+    accessorKey: 'asignado_id',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Asignado" />,
     cell: ({ row }) => {
       const nombre = row.original.asignado_nombre_completo
@@ -274,6 +290,14 @@ export const columns: ColumnDef<TareaView>[] = [
           className="min-w-[200px] flex-1"
         />
       )
+    },
+    filterFn: (row, id, value) => {
+      const asignadoId = row.getValue(id) as string | null
+      // Handle "unassigned" special case
+      if (value.includes('unassigned')) {
+        return !asignadoId
+      }
+      return asignadoId && value.includes(asignadoId)
     },
     meta: { size: 220 },
   },

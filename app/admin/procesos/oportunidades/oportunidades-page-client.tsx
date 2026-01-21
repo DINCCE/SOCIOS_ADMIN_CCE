@@ -73,7 +73,11 @@ export function OportunidadesPageClient() {
   const [globalSearch, setGlobalSearch] = React.useState("")
   const [showSelectionExport, setShowSelectionExport] = React.useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false)
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
+    codigo_column: false,
+    tipo_filter: false,
+    sub_tipo_filter: false,
+  })
   const [rowSelection, setRowSelection] = React.useState({})
   const [pageSize, setPageSize] = React.useState(10)
 
@@ -92,34 +96,12 @@ export function OportunidadesPageClient() {
         throw queryError
       }
 
-      // Transform data to compute nombre fields
+      // Transform data - use view fields directly
       const transformed = data?.map((doc: any) => {
-        // Compute solicitante_nombre
-        let solicitanteNombre = ''
-        if (doc.solicitante_tipo_actor === 'empresa') {
-          solicitanteNombre = doc.solicitante_razon_social || 'Sin nombre'
-        } else {
-          const firstName = doc.solicitante_primer_nombre || ''
-          const lastName = doc.solicitante_primer_apellido || ''
-          solicitanteNombre = `${firstName} ${lastName}`.trim() || 'Sin nombre'
-        }
-
-        // Compute pagador_nombre
-        let pagadorNombre: string | null = null
-        if (doc.pagador_tipo_actor === 'empresa') {
-          pagadorNombre = doc.pagador_razon_social || null
-        } else {
-          const firstName = doc.pagador_primer_nombre || ''
-          const lastName = doc.pagador_primer_apellido || ''
-          pagadorNombre = `${firstName} ${lastName}`.trim() || null
-        }
-
         return {
           ...doc,
-          solicitante_nombre: solicitanteNombre,
-          solicitante_codigo_bp: doc.solicitante_codigo || '',
-          pagador_nombre: pagadorNombre,
-          pagador_codigo_bp: doc.pagador_codigo || null,
+          solicitante_nombre: doc.solicitante_nombre_completo || 'Sin nombre',
+          pagador_nombre: doc.pagador_nombre_completo || null,
         }
       }) || []
 
@@ -349,12 +331,12 @@ export function OportunidadesPageClient() {
               options={oportunidadesEstadoOptions}
             />
             <DataTableFacetedFilter
-              column={table.getColumn("tipo")}
+              column={table.getColumn("tipo_filter")}
               title="Tipo"
               options={oportunidadesTipoOptions}
             />
             <DataTableFacetedFilter
-              column={table.getColumn("sub_tipo")}
+              column={table.getColumn("sub_tipo_filter")}
               title="Subtipo"
               options={oportunidadesSubTipoOptions}
             />

@@ -6,9 +6,11 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { AlertCircle, AlertTriangle, CheckCircle2, Clock, XCircle, type LucideIcon } from 'lucide-react'
-import type { TareaView } from './tareas-board'
-import { EstadoTarea } from './tareas-board'
-import { PrioridadTarea } from './tareas-board'
+import type { TareaView } from '@/features/procesos/tareas/columns'
+import type { TrTareasEstado, TrTareasPrioridad } from '@/lib/db-types'
+
+type EstadoTarea = TrTareasEstado
+type PrioridadTarea = TrTareasPrioridad
 
 interface TareaCardProps {
   tarea: TareaView
@@ -131,16 +133,16 @@ export function TareaCard({ tarea, isDragging }: TareaCardProps) {
           )}
         </div>
 
-        {(tarea.relacionado_codigo_bp || tarea.oportunidad_codigo) && (
+        {(tarea.actor_relacionado_codigo_bp || tarea.doc_comercial_codigo) && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {tarea.relacionado_codigo_bp && (
+            {tarea.actor_relacionado_codigo_bp && (
               <span className="bg-muted px-1.5 py-0.5 rounded">
-                {tarea.relacionado_codigo_bp}
+                {tarea.actor_relacionado_codigo_bp}
               </span>
             )}
-            {tarea.oportunidad_codigo && (
+            {tarea.doc_comercial_codigo && (
               <span className="bg-muted px-1.5 py-0.5 rounded">
-                {tarea.oportunidad_codigo}
+                {tarea.doc_comercial_codigo}
               </span>
             )}
           </div>

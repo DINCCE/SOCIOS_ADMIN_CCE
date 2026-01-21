@@ -42,13 +42,14 @@ import { Separator } from '@/components/ui/separator'
 import { DataTablePagination } from '@/features/socios/components/data-table-pagination'
 import { DataTableViewOptions } from '@/features/socios/components/data-table-view-options'
 import { DataTableFacetedFilter } from '@/features/socios/components/data-table-faceted-filter'
+import { DataTableDateFilter } from '@/features/socios/components/data-table-date-filter'
 import { DataTableResetFilters } from '@/features/socios/components/data-table-reset-filters'
 import { DataTableExportDialog } from '@/components/ui/data-table-export-dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { FloatingActionCapsule } from '@/components/ui/floating-action-capsule'
 import { columns, type TareaView } from '@/features/procesos/tareas/columns'
-import { tareasPrioridadOptions, tareasEstadoOptions, getTareaTagsOptions } from '@/lib/table-filters'
+import { tareasPrioridadOptions, tareasEstadoOptions, getTareaTagsOptions, getTareaAsignadoOptions } from '@/lib/table-filters'
 import { calculateDefaultPageSize } from '@/lib/utils/pagination'
 import { useDataExport } from '@/lib/hooks/use-data-export'
 import { useNotify } from '@/lib/hooks/use-notify'
@@ -295,6 +296,15 @@ export function TareasPageClient() {
               column={table.getColumn("tags")}
               title="Etiquetas"
               options={getTareaTagsOptions(initialData)}
+            />
+            <DataTableFacetedFilter
+              column={table.getColumn("asignado_id")}
+              title="Asignado"
+              options={getTareaAsignadoOptions(initialData)}
+            />
+            <DataTableDateFilter
+              column={table.getColumn("fecha_vencimiento")}
+              title="Vencimiento"
             />
             {table.getState().columnFilters.length > 0 && (
               <>

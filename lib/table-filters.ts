@@ -190,6 +190,32 @@ export const getOportunidadTagsOptions = (data: TaggableItem[]): FilterOption[] 
 // TAREAS
 // ============================================================================
 
+// Dinámico para Tareas - Asignado
+export const getTareaAsignadoOptions = (data: {
+  asignado_id: string | null
+  asignado_nombre_completo: string | null
+  asignado_email: string | null
+}[]): FilterOption[] => {
+  const uniqueUsers = new Map<string, { name: string; email: string }>()
+
+  data.forEach((tarea) => {
+    const id = tarea.asignado_id || "unassigned"
+    const name = tarea.asignado_nombre_completo || "Sin asignar"
+    const email = tarea.asignado_email || ""
+
+    if (!uniqueUsers.has(id)) {
+      uniqueUsers.set(id, { name, email })
+    }
+  })
+
+  return Array.from(uniqueUsers.entries())
+    .sort(([, a], [, b]) => a.name.localeCompare(b.name, "es"))
+    .map(([id, { name, email }]) => ({
+      value: id,
+      label: email ? `${name} (${email})` : name,
+    }))
+}
+
 // Opciones de filtro para Tareas - Prioridad
 export const tareasPrioridadOptions: FilterOption[] = [
   { value: "critica", label: "Crítica", icon: AlertTriangle },
