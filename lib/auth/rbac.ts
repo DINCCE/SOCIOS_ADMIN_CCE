@@ -49,11 +49,14 @@ export async function getUserOrganizations() {
 
   if (error) return []
 
-  return (data || []).map(item => ({
-    organizationId: item.organization_id,
-    role: item.role as UserRole,
-    organizationName: item.organizacion?.nombre || 'Unknown',
-  }))
+  return (data || []).map(item => {
+    const org = Array.isArray(item.organizacion) ? item.organizacion[0] : item.organizacion
+    return {
+      organizationId: item.organization_id,
+      role: item.role as UserRole,
+      organizationName: org?.nombre || 'Unknown',
+    }
+  })
 }
 
 /**
