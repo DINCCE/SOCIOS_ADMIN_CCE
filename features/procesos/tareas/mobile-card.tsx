@@ -95,25 +95,25 @@ export function TareaMobileCard({
             )}
 
             {/* Assignee */}
-            {tarea.asignado_nombre ? (
+            {tarea.asignado_nombre_completo ? (
               <div className="flex items-center gap-2">
                 <span className="text-xs uppercase tracking-wide shrink-0">Asignado a:</span>
-                <span className="truncate">{tarea.asignado_nombre}</span>
+                <span className="truncate">{tarea.asignado_nombre_completo}</span>
               </div>
             ) : null}
           </div>
 
           {/* Related items */}
-          {(tarea.relacionado_codigo_bp || tarea.oportunidad_codigo) && (
+          {(tarea.actor_relacionado_codigo_bp || tarea.doc_comercial_codigo) && (
             <div className="flex flex-wrap gap-2 mt-3">
-              {tarea.relacionado_codigo_bp && (
+              {tarea.actor_relacionado_codigo_bp && (
                 <div className="bg-muted px-2 py-1 rounded text-xs">
-                  {tarea.relacionado_codigo_bp}
+                  {tarea.actor_relacionado_codigo_bp}
                 </div>
               )}
-              {tarea.oportunidad_codigo && (
+              {tarea.doc_comercial_codigo && (
                 <div className="bg-muted px-2 py-1 rounded text-xs">
-                  {tarea.oportunidad_codigo}
+                  {tarea.doc_comercial_codigo}
                 </div>
               )}
             </div>

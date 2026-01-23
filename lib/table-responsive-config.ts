@@ -58,11 +58,11 @@ export const ACCIONES_RESPONSIVE_COLS: ResponsiveColumnConfig = {
 }
 
 /**
- * Oportunidades table responsive configuration
+ * Documentos Comerciales table responsive configuration
  * Mobile: code, stage, status, actions
  * Tablet: code, name, stage, status, amount, actions
  */
-export const OPORTUNIDADES_RESPONSIVE_COLS: ResponsiveColumnConfig = {
+export const DOC_COMERCIALES_RESPONSIVE_COLS: ResponsiveColumnConfig = {
   mobile: ['select', 'codigo_bp', 'etapa', 'estado', 'actions'],
   tablet: ['select', 'codigo_bp', 'nombre_oportunidad', 'etapa', 'estado', 'valor_estimado', 'actions'],
   desktop: [] // Show all on desktop

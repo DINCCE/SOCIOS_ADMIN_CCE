@@ -41,14 +41,13 @@ export const COLUMN_LABELS: Record<string, string> = {
     ingresos_anuales: "Ingresos Anuales",
     numero_empleados: "Número Empleados",
     website: "Sitio Web",
-    estado_actor: "Estado",
 
     // === TAREAS ===
     titulo: "Título",
     prioridad: "Prioridad",
     fecha_vencimiento: "Fecha Vencimiento",
     asignado_nombre_completo: "Asignado",
-    doc_comercial_codigo: "Oportunidad",
+    doc_comercial_codigo: "Doc. Comercial",
     actor_relacionado_codigo_bp: "Solicitante",
     codigo_tarea: "Código Tarea",
 
@@ -60,7 +59,7 @@ export const COLUMN_LABELS: Record<string, string> = {
     propietario_telefono_principal: "Contacto",
     propietario_fecha_inicio: "Desde",
 
-    // === OPORTUNIDADES ===
+    // === DOCUMENTOS COMERCIALES ===
     codigo_column: "Código",
     tipo_filter: "Tipo", // Oculta por defecto
     sub_tipo_filter: "Subtipo", // Oculta por defecto

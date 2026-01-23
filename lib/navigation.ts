@@ -1,8 +1,10 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   Building2,
+  CheckSquare,
   Kanban,
   LayoutDashboard,
+  PieChart,
   Settings2,
   Users,
 } from 'lucide-react'
@@ -31,7 +33,21 @@ export const NAVIGATION_CONFIG: NavItem[] = [
     title: 'Panel',
     url: '/admin',
     icon: LayoutDashboard,
-    isActive: true,
+  },
+  {
+    title: 'Analytics',
+    url: '#',
+    icon: PieChart,
+    items: [
+      {
+        title: 'Tareas',
+        url: '/admin/procesos/tareas/dashboard',
+      },
+      {
+        title: 'Mis Tareas',
+        url: '/admin/mis-tareas',
+      },
+    ],
   },
   {
     title: 'Socios de Negocio',
@@ -59,7 +75,7 @@ export const NAVIGATION_CONFIG: NavItem[] = [
       },
       {
         title: 'Documentos Comerciales',
-        url: '/admin/procesos/oportunidades',
+        url: '/admin/procesos/documentos-comerciales',
       },
       {
         title: 'Tareas',

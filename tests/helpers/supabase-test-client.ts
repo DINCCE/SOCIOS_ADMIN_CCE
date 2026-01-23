@@ -33,6 +33,8 @@ export function createMockSupabaseClient() {
     limit: vi.fn().mockReturnThis(),
     range: vi.fn().mockReturnThis(),
     is: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
   }
 
   return mockClient

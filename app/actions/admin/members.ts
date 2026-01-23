@@ -151,3 +151,70 @@ export async function listMembers(organization_id: string) {
     data
   }
 }
+
+/**
+ * Update user's daily focus tasks
+ * 
+ * @param user_id - The UUID of the user
+ * @param organization_id - The UUID of the organization
+ * @param focusData - Object containing fecha and tareas (array of task UUIDs)
+ */
+export async function updateUserFocus(
+  user_id: string,
+  organization_id: string,
+  focusData: { fecha: string; tareas: string[] }
+) {
+  const supabase = await createClient()
+
+  // First get current attributes to merge
+  const { data: member } = await supabase
+    .from('config_organizacion_miembros')
+    .select('atributos')
+    .eq('user_id', user_id)
+    .eq('organization_id', organization_id)
+    .single()
+
+  const attributes = member?.atributos || {}
+  const newAttributes = {
+    ...attributes,
+    foco_diario: focusData
+  }
+
+  const { error } = await supabase
+    .from('config_organizacion_miembros')
+    .update({ atributos: newAttributes })
+    .eq('user_id', user_id)
+    .eq('organization_id', organization_id)
+
+  if (error) {
+    console.error('Error updating focus:', error)
+    return { success: false, message: `Error al actualizar foco: ${error.message}` }
+  }
+
+  revalidatePath('/admin/mis-tareas')
+  return { success: true, message: 'Foco actualizado correctamente' }
+}
+
+/**
+ * Get user's daily focus
+ */
+export async function getUserFocus(user_id: string, organization_id: string) {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('config_organizacion_miembros')
+    .select('atributos')
+    .eq('user_id', user_id)
+    .eq('organization_id', organization_id)
+    .single()
+
+  if (error) {
+    console.error('Error getting focus:', error)
+    return { success: false, data: null }
+  }
+
+  return {
+    success: true,
+    data: data?.atributos?.foco_diario || null
+  }
+}

@@ -12,10 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { Empresa } from "@/features/socios/types/socios-schema"
+import type { EmpresaList } from "@/features/socios/types/socios-schema"
 
 interface EmpresasDataTableProps {
-  table: Table<Empresa>
+  table: Table<EmpresaList>
   router: ReturnType<typeof useRouter>
 }
 

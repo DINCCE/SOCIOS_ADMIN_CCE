@@ -84,8 +84,9 @@ export function DataTableFacetedFilter<TData, TValue>({
                       <Badge
                         variant="secondary"
                         key={option.value}
-                        className="rounded-sm px-1 font-normal"
+                        className="rounded-sm px-1 font-normal gap-1"
                       >
+                        {option.icon && <option.icon className="h-3 w-3" />}
                         {option.label}
                       </Badge>
                     ))

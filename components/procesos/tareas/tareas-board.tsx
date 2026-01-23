@@ -1,36 +1,73 @@
 'use client'
 
-import { useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import type { TrTareasEstado, TrTareasPrioridad } from '@/lib/db-types'
-import { useQuery } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useState } from 'react'
 import { TareaCard } from './tarea-card'
 import { TareaColumn } from './tarea-column'
 import { actualizarTarea } from '@/app/actions/tareas'
 import { toast } from 'sonner'
 import type { TareaView } from '@/features/procesos/tareas/columns'
+import type { TrTareasEstado, TrTareasPrioridad } from '@/lib/db-types'
 
 export type EstadoTarea = TrTareasEstado
-
 export type PrioridadTarea = TrTareasPrioridad
+export type { TareaView }
+
+// Props interface for the board component
+export interface TareasBoardProps {
+  data: TareaView[]
+  initialData: TareaView[]
+  onTareaClick?: (tareaId: string) => void
+}
+
+// Order of columns in the Kanban board
+export const COLUMN_ORDER: EstadoTarea[] = [
+  'Pendiente',
+  'En Progreso',
+  'Terminada',
+  'Pausada',
+  'Cancelada',
+]
 
 const COLUMN_CONFIG: Record<
   EstadoTarea,
-  { label: string; color: string; isNegative: boolean }
+  { label: string; color: string; badgeColor: string; badgeBgColor: string }
 > = {
-  Pendiente: { label: 'Pendiente', color: 'bg-blue-50 border-blue-200', isNegative: false },
-  'En Progreso': { label: 'En Progreso', color: 'bg-yellow-50 border-yellow-200', isNegative: false },
-  Pausada: { label: 'Pausada', color: 'bg-orange-50 border-orange-200', isNegative: false },
-  Terminada: { label: 'Terminada', color: 'bg-green-50 border-green-200', isNegative: false },
-  Cancelada: { label: 'Cancelada', color: 'bg-muted/30 border-muted/50', isNegative: true },
+  Pendiente: {
+    label: 'Pendiente',
+    color: 'bg-gray-50 border-gray-200',
+    badgeColor: 'text-gray-700 border-gray-300',
+    badgeBgColor: 'bg-gray-100'
+  },
+  'En Progreso': {
+    label: 'En Progreso',
+    color: 'bg-yellow-50 border-yellow-200',
+    badgeColor: 'text-yellow-700 border-yellow-300',
+    badgeBgColor: 'bg-yellow-100'
+  },
+  Terminada: {
+    label: 'Terminada',
+    color: 'bg-green-50 border-green-200',
+    badgeColor: 'text-green-700 border-green-300',
+    badgeBgColor: 'bg-green-100'
+  },
+  Pausada: {
+    label: 'Pausada',
+    color: 'bg-orange-50 border-orange-200',
+    badgeColor: 'text-orange-700 border-orange-300',
+    badgeBgColor: 'bg-orange-100'
+  },
+  Cancelada: {
+    label: 'Cancelada',
+    color: 'bg-red-50 border-red-200',
+    badgeColor: 'text-red-700 border-red-300',
+    badgeBgColor: 'bg-red-100'
+  },
 }
 
-export function TareasBoard() {
-  const searchParams = useSearchParams()
-  const view = (searchParams.get('view') as 'list' | 'board') || 'list'
+export function TareasBoard({ data, initialData, onTareaClick }: TareasBoardProps) {
+  const queryClient = useQueryClient()
 
   const [activeId, setActiveId] = useState<string | null>(null)
   const sensors = useSensors(
@@ -40,21 +77,6 @@ export function TareasBoard() {
       },
     })
   )
-
-  const { data: tareas, isLoading } = useQuery({
-    queryKey: ['tareas'],
-    queryFn: async () => {
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('v_tareas_org')
-        .select('*')
-        .is('eliminado_en', null)
-        .order('fecha_vencimiento', { ascending: true })
-
-      if (error) throw error
-      return data as TareaView[]
-    },
-  })
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
@@ -67,44 +89,51 @@ export function TareasBoard() {
     if (!over) return
 
     const tareaId = active.id as string
-    const newEstado = over.id as EstadoTarea
+    const overId = over.id as string
 
-    const tarea = tareas?.find((t) => t.id === tareaId)
-    if (!tarea || tarea.estado === newEstado) return
+    // Check if over.id is a valid estado (one of the column IDs)
+    const validEstados: EstadoTarea[] = ['Pendiente', 'En Progreso', 'Pausada', 'Terminada', 'Cancelada']
+    const newEstado = validEstados.includes(overId as EstadoTarea) ? overId as EstadoTarea : null
+
+    // If not dropped on a valid column (e.g., dropped on another card), find the card's column
+    const finalEstado = newEstado || (() => {
+      const droppedOnCard = data?.find((t: TareaView) => t.id === overId)
+      return droppedOnCard?.estado as EstadoTarea
+    })()
+
+    if (!finalEstado) return
+
+    const tarea = data?.find((t: TareaView) => t.id === tareaId)
+    if (!tarea || tarea.estado === finalEstado) return
+
+    // Store previous data for rollback
+    const previousData = data
+
+    // Optimistic update - use tareas key to match parent
+    queryClient.setQueryData(['tareas'], data?.map((t: TareaView) =>
+      t.id === tareaId ? { ...t, estado: finalEstado } : t
+    ))
 
     try {
-      const result = await actualizarTarea(tareaId, { estado: newEstado })
+      const result = await actualizarTarea(tareaId, { estado: finalEstado })
 
       if (!result.success) {
         throw new Error(result.message)
       }
 
+      // Refetch to ensure data is in sync
+      queryClient.invalidateQueries({ queryKey: ['tareas'] })
+
       toast.success('Estado actualizado correctamente')
     } catch (error) {
+      // Rollback on error
+      queryClient.setQueryData(['tareas'], previousData)
       console.error('Error updating tarea:', error)
       toast.error('Error al actualizar el estado')
     }
   }
 
-  if (view !== 'board') return null
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {Object.keys(COLUMN_CONFIG).map((estado) => (
-          <div key={estado} className="space-y-3">
-            <div className="h-8 bg-muted rounded animate-pulse" />
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-32 bg-muted/50 rounded animate-pulse" />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  const groupedTareas = tareas?.reduce((acc, tarea) => {
+  const groupedTareas = data?.reduce((acc: Record<EstadoTarea, TareaView[]>, tarea: TareaView) => {
     const estado = tarea.estado as EstadoTarea
     if (!acc[estado]) {
       acc[estado] = []
@@ -120,20 +149,21 @@ export function TareasBoard() {
       onDragEnd={handleDragEnd}
     >
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 overflow-x-auto pb-4">
-        {(Object.keys(COLUMN_CONFIG) as EstadoTarea[]).map((estado) => (
+        {COLUMN_ORDER.map((estado) => (
           <TareaColumn
             key={estado}
             estado={estado}
             config={COLUMN_CONFIG[estado]}
             tareas={groupedTareas?.[estado] || []}
+            onTareaClick={onTareaClick}
           />
         ))}
       </div>
 
       <DragOverlay>
-        {activeId && tareas?.find((t) => t.id === activeId) && (
+        {activeId && data?.find((t: TareaView) => t.id === activeId) && (
           <TareaCard
-            tarea={tareas.find((t) => t.id === activeId)!}
+            tarea={data.find((t: TareaView) => t.id === activeId)!}
             isDragging
           />
         )}

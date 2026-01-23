@@ -17,6 +17,7 @@ import type { TareaView } from "./columns"
 interface TareasDataTableProps {
   table: Table<TareaView>
   router: ReturnType<typeof useRouter>
+  onTareaClick?: (tareaId: string) => void
 }
 
 /**
@@ -37,7 +38,7 @@ interface TareasDataTableProps {
  * )
  * ```
  */
-export function TareasDataTable({ table, router }: TareasDataTableProps) {
+export function TareasDataTable({ table, router, onTareaClick }: TareasDataTableProps) {
   return (
     <UITable className="min-w-max">
       <TableHeader className="sticky top-0 z-10 bg-background">
@@ -95,8 +96,13 @@ export function TareasDataTable({ table, router }: TareasDataTableProps) {
                 ) {
                   return
                 }
-                // Navigate to tarea detail page (to be implemented)
-                router.push(`/admin/procesos/tareas/${row.original.id}`)
+                // Call the handler if provided
+                if (onTareaClick) {
+                  onTareaClick(row.original.id)
+                } else {
+                  // Navigate to tarea detail page (fallback)
+                  router.push(`/admin/procesos/tareas/${row.original.id}`)
+                }
               }}
             >
               {row.getVisibleCells().map((cell) => (

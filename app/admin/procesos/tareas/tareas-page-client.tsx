@@ -1,8 +1,8 @@
 'use client'
 
 import * as React from 'react'
-import { useSearchParams } from 'next/navigation'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -16,7 +16,6 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import {
-  Plus,
   Search,
   Trash2,
 } from 'lucide-react'
@@ -31,26 +30,23 @@ import { TareasBoard } from '@/components/procesos/tareas/tareas-board'
 import { ResponsiveTareaDataTable } from '@/features/procesos/tareas/responsive-data-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { DataTablePagination } from '@/features/socios/components/data-table-pagination'
 import { DataTableViewOptions } from '@/features/socios/components/data-table-view-options'
 import { DataTableFacetedFilter } from '@/features/socios/components/data-table-faceted-filter'
 import { DataTableDateFilter } from '@/features/socios/components/data-table-date-filter'
 import { DataTableResetFilters } from '@/features/socios/components/data-table-reset-filters'
+import { DataTableCompletedFilter } from '@/features/procesos/tareas/data-table-completed-filter'
 import { DataTableExportDialog } from '@/components/ui/data-table-export-dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { FloatingActionCapsule } from '@/components/ui/floating-action-capsule'
+import { NewTareaSheet } from '@/components/procesos/tareas/new-tarea-sheet'
+import { TareaDetailSheet } from '@/components/procesos/tareas/tarea-detail-sheet'
 import { columns, type TareaView } from '@/features/procesos/tareas/columns'
 import { tareasPrioridadOptions, tareasEstadoOptions, getTareaTagsOptions, getTareaAsignadoOptions } from '@/lib/table-filters'
 import { calculateDefaultPageSize } from '@/lib/utils/pagination'
+import { parseDateFilterValue, isDateInRange } from '@/lib/utils/date-helpers'
 import { useDataExport } from '@/lib/hooks/use-data-export'
 import { useNotify } from '@/lib/hooks/use-notify'
 import { toggleTagsForTareas, createAndAssignTagForTareas } from '@/app/actions/tags'
@@ -76,6 +72,9 @@ export function TareasPageClient() {
   })
   const [rowSelection, setRowSelection] = React.useState({})
   const [pageSize, setPageSize] = React.useState(10)
+  const [completedDaysFilter, setCompletedDaysFilter] = React.useState<string>("7")
+  const [selectedTareaId, setSelectedTareaId] = React.useState<string | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = React.useState(false)
 
   const { data: initialData = [], isLoading } = useQuery({
     queryKey: ['tareas'],
@@ -108,6 +107,88 @@ export function TareasPageClient() {
       return false
     })
   }, [initialData, globalSearch])
+
+  // Apply both globalSearch AND columnFilters for kanban view
+  const fullyFilteredData = React.useMemo(() => {
+    let data = filteredData // Already has globalSearch applied
+
+    // Apply completed tasks filter
+    if (completedDaysFilter !== "all") {
+      const days = parseInt(completedDaysFilter, 10)
+      const cutoffDate = new Date()
+      cutoffDate.setDate(cutoffDate.getDate() - days)
+
+      data = data.filter((tarea) => {
+        // Always show non-completed tasks
+        if (tarea.estado !== 'Terminada') return true
+
+        // For completed tasks, check if updated within threshold
+        const updatedAt = new Date(tarea.actualizado_en || tarea.creado_en)
+        return updatedAt >= cutoffDate
+      })
+    }
+
+    // Apply columnFilters from table state
+    if (columnFilters.length === 0) return data
+
+    return data.filter((item) => {
+      return columnFilters.every((filter) => {
+        const { id, value } = filter
+        const itemValue = item[id as keyof typeof item]
+
+        // Handle different filter types
+        if (Array.isArray(value)) {
+          // Multi-select filter (e.g., prioridad, estado, tags, asignado_id)
+          if (id === 'tags') {
+            const itemTags = itemValue as string[]
+            return value.some((v: string) => itemTags?.includes(v))
+          }
+          if (id === 'asignado_id') {
+            // Handle 'unassigned' special case
+            const asignadoId = itemValue as string | null
+            if (value.includes('unassigned')) {
+              return !asignadoId
+            }
+            return asignadoId && value.some((v: any) => String(v) === String(asignadoId))
+          }
+          // For other array filters, check if itemValue is included in the filter array
+          // Use String() to handle type mismatches
+          return value.some((v: any) => String(v) === String(itemValue))
+        }
+
+        // Handle date filter (fecha_vencimiento)
+        if (id === 'fecha_vencimiento') {
+          const fechaVencimiento = itemValue as string | null
+          if (!fechaVencimiento) {
+            return !value || value === 'all'
+          }
+          if (!value || value === 'all') return true
+
+          // Use date helper functions
+          const range = parseDateFilterValue(value)
+          return isDateInRange(fechaVencimiento, range)
+        }
+
+        // Handle single value filters
+        return String(itemValue) === String(value)
+      })
+    })
+  }, [filteredData, columnFilters, completedDaysFilter])
+
+  // Calculate count of hidden completed tasks
+  const hiddenCompletedCount = React.useMemo(() => {
+    if (completedDaysFilter === "all") return 0
+
+    const days = parseInt(completedDaysFilter, 10)
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - days)
+
+    return filteredData.filter((tarea) => {
+      if (tarea.estado !== 'Terminada') return false
+      const updatedAt = new Date(tarea.actualizado_en || tarea.creado_en)
+      return updatedAt < cutoffDate
+    }).length
+  }, [filteredData, completedDaysFilter])
 
   // Obtener todas las etiquetas únicas disponibles
   const availableTags = React.useMemo(() => {
@@ -150,6 +231,12 @@ export function TareasPageClient() {
     const newSize = calculateDefaultPageSize(filteredData.length)
     setPageSize(newSize)
   }, [filteredData.length])
+
+  // Handler for opening tarea detail
+  const handleTareaClick = React.useCallback((tareaId: string) => {
+    setSelectedTareaId(tareaId)
+    setIsDetailOpen(true)
+  }, [])
 
   const table = useReactTable({
     data: filteredData,
@@ -259,12 +346,14 @@ export function TareasPageClient() {
       <PageHeader
         title="Tareas"
         description="Gestiona las tareas y actividades"
-        metadata={`${filteredData.length} de ${initialData.length}`}
+        metadata={`${fullyFilteredData.length} de ${initialData.length}`}
         actions={
-          <Button size="sm" className="h-8 shadow-sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Nueva Tarea
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/admin/procesos/tareas/dashboard">Ver Dashboard de Equipo</Link>
+            </Button>
+            <NewTareaSheet />
+          </div>
         }
       />
 
@@ -306,6 +395,11 @@ export function TareasPageClient() {
               column={table.getColumn("fecha_vencimiento")}
               title="Vencimiento"
             />
+            <DataTableCompletedFilter
+              value={completedDaysFilter}
+              onChange={setCompletedDaysFilter}
+              hiddenCount={hiddenCompletedCount}
+            />
             {table.getState().columnFilters.length > 0 && (
               <>
                 <Separator orientation="vertical" className="h-6" />
@@ -327,7 +421,7 @@ export function TareasPageClient() {
         <div className="space-y-4">
           {view === 'board' ? (
             /* KANBAN: Mantiene h-full absoluto para el canvas */
-            <TareasBoard />
+            <TareasBoard data={fullyFilteredData} initialData={initialData} onTareaClick={handleTareaClick} />
           ) : (
             /* TABLA: Comportamiento natural con scroll */
             isLoading ? (
@@ -342,7 +436,7 @@ export function TareasPageClient() {
             ) : (
               <>
                 {/* Table - with responsive card view on mobile */}
-                <ResponsiveTareaDataTable table={table} router={router} />
+                <ResponsiveTareaDataTable table={table} router={router} onTareaClick={handleTareaClick} />
                 {/* Pagination Footer */}
                 <div className="border-t bg-background p-2">
                   <DataTablePagination table={table} totalRecords={filteredData.length} />
@@ -422,6 +516,15 @@ export function TareasPageClient() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Tarea Detail Sheet */}
+      <TareaDetailSheet
+        tareaId={selectedTareaId}
+        open={isDetailOpen}
+        onOpenChange={setIsDetailOpen}
+        onDeleted={() => queryClient.invalidateQueries({ queryKey: ['tareas'] })}
+        onUpdated={() => queryClient.invalidateQueries({ queryKey: ['tareas'] })}
+      />
     </PageShell>
   )
 }

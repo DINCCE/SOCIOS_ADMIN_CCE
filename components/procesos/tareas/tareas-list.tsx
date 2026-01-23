@@ -16,7 +16,6 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { Checkbox } from '@/components/ui/checkbox'
 import { AlertCircle, AlertTriangle, CheckCircle2, Clock, XCircle, type LucideIcon } from 'lucide-react'
-import type { Database } from '@/types_db'
 
 type TareaView = {
   id: string
@@ -31,9 +30,9 @@ type TareaView = {
   asignado_a: string | null
   asignado_email: string | null
   asignado_nombre: string | null
-  oportunidad_id: string | null
-  oportunidad_codigo: string | null
-  oportunidad_estado: string | null
+  doc_comercial_id: string | null
+  doc_comercial_codigo: string | null
+  doc_comercial_estado: string | null
   relacionado_con_bp: string | null
   relacionado_codigo_bp: string | null
   relacionado_nombre: string | null
@@ -209,12 +208,12 @@ export function TareasList() {
                         {tarea.relacionado_codigo_bp}
                       </span>
                     )}
-                    {tarea.oportunidad_codigo && (
+                    {tarea.doc_comercial_codigo && (
                       <span className="bg-muted px-2 py-1 rounded text-xs">
-                        {tarea.oportunidad_codigo}
+                        {tarea.doc_comercial_codigo}
                       </span>
                     )}
-                    {!tarea.relacionado_codigo_bp && !tarea.oportunidad_codigo && (
+                    {!tarea.relacionado_codigo_bp && !tarea.doc_comercial_codigo && (
                       <span className="text-muted-foreground text-xs">-</span>
                     )}
                   </div>

@@ -19,6 +19,7 @@ import {
   Crown,
   Calendar,
   ShoppingCart,
+  PauseCircle,
 } from "lucide-react"
 
 export interface FilterOption {
@@ -42,14 +43,16 @@ export const personasEstadoOptions: FilterOption[] = [
 ]
 
 // Opciones de filtro para Personas - Tipo de Documento
-// Valores según la base de datos: CC, CE, PA, PEP, PPT, TI
+// Valores según dm_actor_tipo_documento: CC, CE, PA, TI, RC, PEP, PPT, NIT
 export const personasTipoDocOptions: FilterOption[] = [
   { value: "CC", label: "Cédula", icon: IdCard },
   { value: "CE", label: "Cédula Extranjería", icon: IdCard },
   { value: "TI", label: "T.I", icon: IdCard },
   { value: "PA", label: "Pasaporte", icon: IdCard },
+  { value: "RC", label: "Registro Civil", icon: IdCard },
   { value: "PEP", label: "PEP", icon: IdCard },
   { value: "PPT", label: "PPT", icon: IdCard },
+  { value: "NIT", label: "NIT", icon: IdCard },
 ]
 
 // Tags son dinámicos - se extraen de los datos en runtime
@@ -68,10 +71,11 @@ export const getPersonaTagsOptions = (data: TaggableItem[]): FilterOption[] => {
 // ============================================================================
 
 // Opciones de filtro para Empresas - Estado
+// Valores según dm_actor_estado: activo, inactivo, bloqueado
 export const empresasEstadoOptions: FilterOption[] = [
   { value: "activo", label: "Activo", icon: CheckCircle2 },
   { value: "inactivo", label: "Inactivo", icon: XCircle },
-  { value: "suspendido", label: "Suspendido", icon: HelpCircle },
+  { value: "bloqueado", label: "Bloqueado", icon: HelpCircle },
 ]
 
 // Opciones de filtro para Empresas - Tamaño
@@ -149,11 +153,11 @@ export const getEmpresaSectorOptions = (data: TaggableItem[]): FilterOption[] =>
 }
 
 // ============================================================================
-// OPORTUNIDADES
+// DOCUMENTOS COMERCIALES
 // ============================================================================
 
-// Opciones de filtro para Oportunidades - Estado
-export const oportunidadesEstadoOptions: FilterOption[] = [
+// Opciones de filtro para Documentos Comerciales - Estado
+export const docComercialesEstadoOptions: FilterOption[] = [
   { value: "Nueva", label: "Nueva", icon: HelpCircle },
   { value: "En Progreso", label: "En Progreso", icon: ArrowRightCircle },
   { value: "Ganada", label: "Ganada", icon: CheckCircle2 },
@@ -161,24 +165,24 @@ export const oportunidadesEstadoOptions: FilterOption[] = [
   { value: "Descartada", label: "Descartada", icon: Circle },
 ]
 
-// Opciones de filtro para Oportunidades - Tipo
-export const oportunidadesTipoOptions: FilterOption[] = [
-  { value: "oportunidad", label: "Oportunidad", icon: Star },
+// Opciones de filtro para Documentos Comerciales - Tipo
+export const docComercialesTipoOptions: FilterOption[] = [
+  { value: "oportunidad", label: "Doc. Comercial", icon: Star },
   { value: "oferta", label: "Oferta", icon: Briefcase },
   { value: "pedido_venta", label: "Pedido Venta", icon: ShoppingCart },
   { value: "reserva", label: "Reserva", icon: AlertTriangle },
 ]
 
-// Opciones de filtro para Oportunidades - Subtipo
-export const oportunidadesSubTipoOptions: FilterOption[] = [
+// Opciones de filtro para Documentos Comerciales - Subtipo
+export const docComercialesSubTipoOptions: FilterOption[] = [
   { value: "sol_ingreso", label: "Solicitud Ingreso", icon: ArrowUpCircle },
   { value: "sol_retiro", label: "Solicitud Retiro", icon: ArrowDownCircle },
   { value: "oferta_eventos", label: "Oferta Eventos", icon: Calendar },
   { value: "pedido_eventos", label: "Pedido Eventos", icon: ShoppingCart },
 ]
 
-// Tags dinámicos para Oportunidades
-export const getOportunidadTagsOptions = (data: TaggableItem[]): FilterOption[] => {
+// Tags dinámicos para Documentos Comerciales
+export const getDocComercialTagsOptions = (data: TaggableItem[]): FilterOption[] => {
   const uniqueTags = new Set<string>()
   data.forEach((item) => {
     (item.tags || []).forEach((tag: string) => uniqueTags.add(tag))
@@ -217,19 +221,21 @@ export const getTareaAsignadoOptions = (data: {
 }
 
 // Opciones de filtro para Tareas - Prioridad
+// Valores según tr_tareas_prioridad: Baja, Media, Alta, Urgente
 export const tareasPrioridadOptions: FilterOption[] = [
-  { value: "critica", label: "Crítica", icon: AlertTriangle },
-  { value: "alta", label: "Alta", icon: ArrowUpCircle },
-  { value: "media", label: "Media", icon: ArrowRightCircle },
-  { value: "baja", label: "Baja", icon: ArrowDownCircle },
+  { value: "Urgente", label: "Urgente", icon: AlertTriangle },
+  { value: "Alta", label: "Alta", icon: ArrowUpCircle },
+  { value: "Media", label: "Media", icon: ArrowRightCircle },
+  { value: "Baja", label: "Baja", icon: ArrowDownCircle },
 ]
 
 // Opciones de filtro para Tareas - Estado
 export const tareasEstadoOptions: FilterOption[] = [
-  { value: "pendiente", label: "Pendiente", icon: HelpCircle },
-  { value: "en_progreso", label: "En Progreso", icon: ArrowRightCircle },
-  { value: "completada", label: "Completada", icon: CheckCircle2 },
-  { value: "cancelada", label: "Cancelada", icon: XCircle },
+  { value: "Pendiente", label: "Pendiente", icon: HelpCircle },
+  { value: "En Progreso", label: "En Progreso", icon: ArrowRightCircle },
+  { value: "Terminada", label: "Terminada", icon: CheckCircle2 },
+  { value: "Pausada", label: "Pausada", icon: PauseCircle },
+  { value: "Cancelada", label: "Cancelada", icon: XCircle },
 ]
 
 // Tags dinámicos para Tareas
@@ -261,8 +267,10 @@ export const accionesTipoPropietarioOptions: FilterOption[] = [
 ]
 
 // Opciones de filtro para Acciones - Plan Comercial
+// Valores según vn_asociados_plan_comercial: regular, plan dorado, joven ejecutivo, honorifico
 export const accionesPlanComercialOptions: FilterOption[] = [
   { value: "regular", label: "Regular", icon: Circle },
-  { value: "premium", label: "Premium", icon: Star },
-  { value: "vip", label: "VIP", icon: Crown },
+  { value: "plan dorado", label: "Plan Dorado", icon: Star },
+  { value: "joven ejecutivo", label: "Joven Ejecutivo", icon: Star },
+  { value: "honorifico", label: "Honorífico", icon: Crown },
 ]

@@ -11,12 +11,12 @@ interface TareaColumnProps {
   config: {
     label: string
     color: string
-    isNegative: boolean
   }
   tareas: TareaView[]
+  onTareaClick?: (tareaId: string) => void
 }
 
-export function TareaColumn({ estado, config, tareas }: TareaColumnProps) {
+export function TareaColumn({ estado, config, tareas, onTareaClick }: TareaColumnProps) {
   const { setNodeRef } = useDroppable({
     id: estado,
   })
@@ -31,16 +31,14 @@ export function TareaColumn({ estado, config, tareas }: TareaColumnProps) {
           <span className="text-xs opacity-60">{tareas.length}</span>
         </div>
       </div>
-      
+
       <div
         ref={setNodeRef}
-        className={`flex-1 p-3 space-y-3 rounded-b-lg border bg-background/50 backdrop-blur-sm ${
-          config.isNegative ? 'bg-muted/20' : ''
-        }`}
+        className={`flex-1 p-3 space-y-3 rounded-b-lg border bg-background/50 backdrop-blur-sm`}
       >
         <SortableContext items={tareas.map((t) => t.id)} strategy={verticalListSortingStrategy}>
           {tareas.map((tarea) => (
-            <TareaCard key={tarea.id} tarea={tarea} />
+            <TareaCard key={tarea.id} tarea={tarea} onClick={() => onTareaClick?.(tarea.id)} />
           ))}
         </SortableContext>
       </div>

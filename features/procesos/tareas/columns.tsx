@@ -5,10 +5,7 @@ import {
   MoreHorizontal,
   CheckCircle2,
   ArrowUpDown,
-  AlertCircle,
-  AlertTriangle,
   Clock,
-  XCircle,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -30,11 +27,17 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { DataTableColumnHeader } from "@/features/socios/components/data-table-column-header"
 import { isDateInRange, parseDateFilterValue } from "@/lib/utils/date-helpers"
-import type { Database } from "@/types_db"
 import type { TrTareasEstado, TrTareasPrioridad } from "@/lib/db-types"
+import { tareasPrioridadOptions, tareasEstadoOptions } from "@/lib/table-filters"
 
 type EstadoTarea = TrTareasEstado
 type PrioridadTarea = TrTareasPrioridad
+
+// Get icon component from filter options
+function getIconForValue(value: string, options: typeof tareasPrioridadOptions | typeof tareasEstadoOptions) {
+  const option = options.find(opt => opt.value === value)
+  return option?.icon
+}
 
 const ESTADO_CONFIG: Record<
   EstadoTarea,
@@ -142,6 +145,7 @@ export type TareaView = {
   actor_relacionado_nombre_completo: string | null
   tags: string[] | null
   creado_en: string
+  actualizado_en?: string
   eliminado_en: string | null
 }
 
@@ -197,8 +201,10 @@ export const columns: ColumnDef<TareaView>[] = [
     cell: ({ row }) => {
       const prioridad = row.getValue('prioridad') as PrioridadTarea
       const config = PRIORIDAD_CONFIG[prioridad] || { label: prioridad, dotClassName: 'bg-status-neutral' }
+      const Icon = getIconForValue(prioridad, tareasPrioridadOptions)
       return (
-        <Badge variant="metadata-outline" dotClassName={config.dotClassName} showDot>
+        <Badge variant="metadata-outline" dotClassName={config.dotClassName} showDot className="gap-1">
+          {Icon && <Icon className="h-3 w-3" />}
           {config.label}
         </Badge>
       )
@@ -261,8 +267,10 @@ export const columns: ColumnDef<TareaView>[] = [
     cell: ({ row }) => {
       const estado = row.getValue('estado') as EstadoTarea
       const config = ESTADO_CONFIG[estado] || { label: estado, dotClassName: 'bg-status-neutral' }
+      const Icon = getIconForValue(estado, tareasEstadoOptions)
       return (
-        <Badge variant="metadata-outline" dotClassName={config.dotClassName} showDot>
+        <Badge variant="metadata-outline" dotClassName={config.dotClassName} showDot className="gap-1">
+          {Icon && <Icon className="h-3 w-3" />}
           {config.label}
         </Badge>
       )

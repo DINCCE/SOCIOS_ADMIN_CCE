@@ -11,6 +11,7 @@ import {
   actualizarTarea,
   softDeleteTarea,
   listTareas,
+  reasignarTareasMasivo,
 } from '@/app/actions/tareas'
 import { generateTestOrganizationId } from '../helpers/test-data-factory'
 import { createMockClientWithData, createMockClientWithRPC } from '../helpers/supabase-test-client'
@@ -25,14 +26,13 @@ describe('Tareas Actions', () => {
 
   describe('crearTarea', () => {
     it('should successfully create a tarea', async () => {
-      const mockSupabase = createMockClientWithRPC({
-        success: true,
-        tarea_id: 'task-123',
-        message: 'Tarea creada exitosamente',
-      }, null)
+      const mockSupabase = createMockClientWithData({ id: 'task-123' }, null)
       vi.mocked(createClient).mockResolvedValue(mockSupabase as any)
-      vi.mocked(mockSupabase.rpc).mockResolvedValue({
-        data: { success: true, tarea_id: 'task-123', message: 'Tarea creada exitosamente' },
+      vi.mocked(mockSupabase.from).mockReturnValue(mockSupabase as any)
+      vi.mocked(mockSupabase.insert).mockReturnValue(mockSupabase as any)
+      vi.mocked(mockSupabase.select).mockReturnValue(mockSupabase as any)
+      vi.mocked(mockSupabase.single).mockResolvedValue({
+        data: { id: 'task-123' },
         error: null,
       })
 
@@ -46,15 +46,19 @@ describe('Tareas Actions', () => {
       const result = await crearTarea(data)
 
       expect(result.success).toBe(true)
+      expect(result.tarea_id).toBe('task-123')
       expect(revalidatePath).toHaveBeenCalled()
     })
 
-    it('should handle RPC errors', async () => {
-      const mockSupabase = createMockClientWithRPC(null, { message: 'RPC error' })
+    it('should handle errors', async () => {
+      const mockSupabase = createMockClientWithData(null, { message: 'Insert error' })
       vi.mocked(createClient).mockResolvedValue(mockSupabase as any)
-      vi.mocked(mockSupabase.rpc).mockResolvedValue({
+      vi.mocked(mockSupabase.from).mockReturnValue(mockSupabase as any)
+      vi.mocked(mockSupabase.insert).mockReturnValue(mockSupabase as any)
+      vi.mocked(mockSupabase.select).mockReturnValue(mockSupabase as any)
+      vi.mocked(mockSupabase.single).mockResolvedValue({
         data: null,
-        error: { message: 'RPC error' },
+        error: { message: 'Insert error' },
       })
 
       const result = await crearTarea({
@@ -70,13 +74,12 @@ describe('Tareas Actions', () => {
 
   describe('actualizarTarea', () => {
     it('should successfully update a tarea', async () => {
-      const mockSupabase = createMockClientWithRPC({
-        success: true,
-        message: 'Tarea actualizada exitosamente',
-      }, null)
+      const mockSupabase = createMockClientWithData(null, null)
       vi.mocked(createClient).mockResolvedValue(mockSupabase as any)
-      vi.mocked(mockSupabase.rpc).mockResolvedValue({
-        data: { success: true, message: 'Tarea actualizada exitosamente' },
+      vi.mocked(mockSupabase.from).mockReturnValue(mockSupabase as any)
+      vi.mocked(mockSupabase.update).mockReturnValue(mockSupabase as any)
+      vi.mocked(mockSupabase.eq).mockResolvedValue({
+        data: null,
         error: null,
       })
 
@@ -89,10 +92,12 @@ describe('Tareas Actions', () => {
       expect(revalidatePath).toHaveBeenCalled()
     })
 
-    it('should handle RPC errors', async () => {
-      const mockSupabase = createMockClientWithRPC(null, { message: 'Update failed' })
+    it('should handle errors', async () => {
+      const mockSupabase = createMockClientWithData(null, { message: 'Update failed' })
       vi.mocked(createClient).mockResolvedValue(mockSupabase as any)
-      vi.mocked(mockSupabase.rpc).mockResolvedValue({
+      vi.mocked(mockSupabase.from).mockReturnValue(mockSupabase as any)
+      vi.mocked(mockSupabase.update).mockReturnValue(mockSupabase as any)
+      vi.mocked(mockSupabase.eq).mockResolvedValue({
         data: null,
         error: { message: 'Update failed' },
       })
@@ -174,6 +179,42 @@ describe('Tareas Actions', () => {
       })
 
       const result = await listTareas(generateTestOrganizationId())
+
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('reasignarTareasMasivo', () => {
+    it('should successfully reassign tasks in bulk', async () => {
+      const mockSupabase = createMockClientWithData(null, null)
+      vi.mocked(createClient).mockResolvedValue(mockSupabase as any)
+      vi.mocked(mockSupabase.from).mockReturnValue(mockSupabase as any)
+      vi.mocked(mockSupabase.update).mockReturnValue(mockSupabase as any)
+      vi.mocked(mockSupabase.in).mockResolvedValue({
+        data: null,
+        error: null,
+      })
+
+      const result = await reasignarTareasMasivo(['task-1', 'task-2'], 'new-user-id')
+
+      expect(result.success).toBe(true)
+      expect(result.count).toBe(2)
+      expect(mockSupabase.in).toHaveBeenCalledWith('id', ['task-1', 'task-2'])
+      expect(revalidatePath).toHaveBeenCalledWith('/admin/procesos/tareas')
+      expect(revalidatePath).toHaveBeenCalledWith('/admin/procesos/tareas/dashboard')
+    })
+
+    it('should handle errors during bulk reassignment', async () => {
+      const mockSupabase = createMockClientWithData(null, { message: 'Update failed' })
+      vi.mocked(createClient).mockResolvedValue(mockSupabase as any)
+      vi.mocked(mockSupabase.from).mockReturnValue(mockSupabase as any)
+      vi.mocked(mockSupabase.update).mockReturnValue(mockSupabase as any)
+      vi.mocked(mockSupabase.in).mockResolvedValue({
+        data: null,
+        error: { message: 'Update failed' },
+      })
+
+      const result = await reasignarTareasMasivo(['task-1'], 'new-user-id')
 
       expect(result.success).toBe(false)
     })

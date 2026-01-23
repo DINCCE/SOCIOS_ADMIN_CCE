@@ -3,7 +3,6 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { AlertCircle, AlertTriangle, CheckCircle2, Clock, XCircle, type LucideIcon } from 'lucide-react'
 import type { TareaView } from '@/features/procesos/tareas/columns'
@@ -15,17 +14,18 @@ type PrioridadTarea = TrTareasPrioridad
 interface TareaCardProps {
   tarea: TareaView
   isDragging?: boolean
+  onClick?: () => void
 }
 
 const ESTADO_CONFIG: Record<
   EstadoTarea,
-  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: LucideIcon }
+  { label: string; icon: LucideIcon; bgColor: string; textColor: string; borderColor: string }
 > = {
-  Pendiente: { label: 'Pendiente', variant: 'default', icon: Clock },
-  'En Progreso': { label: 'En Progreso', variant: 'secondary', icon: AlertCircle },
-  Pausada: { label: 'Pausada', variant: 'secondary', icon: AlertTriangle },
-  Terminada: { label: 'Terminada', variant: 'default', icon: CheckCircle2 },
-  Cancelada: { label: 'Cancelada', variant: 'outline', icon: XCircle },
+  Pendiente: { label: 'Pendiente', icon: Clock, bgColor: 'bg-gray-100', textColor: 'text-gray-700', borderColor: 'border-gray-300' },
+  'En Progreso': { label: 'En Progreso', icon: AlertCircle, bgColor: 'bg-yellow-100', textColor: 'text-yellow-700', borderColor: 'border-yellow-300' },
+  Terminada: { label: 'Terminada', icon: CheckCircle2, bgColor: 'bg-green-100', textColor: 'text-green-700', borderColor: 'border-green-300' },
+  Pausada: { label: 'Pausada', icon: AlertTriangle, bgColor: 'bg-orange-100', textColor: 'text-orange-700', borderColor: 'border-orange-300' },
+  Cancelada: { label: 'Cancelada', icon: XCircle, bgColor: 'bg-red-100', textColor: 'text-red-700', borderColor: 'border-red-300' },
 }
 
 const PRIORIDAD_CONFIG: Record<
@@ -58,7 +58,7 @@ const PRIORIDAD_CONFIG: Record<
   },
 }
 
-export function TareaCard({ tarea, isDragging }: TareaCardProps) {
+export function TareaCard({ tarea, isDragging, onClick }: TareaCardProps) {
   const {
     attributes,
     listeners,
@@ -83,11 +83,13 @@ export function TareaCard({ tarea, isDragging }: TareaCardProps) {
       style={style}
       {...attributes}
       {...listeners}
+      onClick={onClick}
       className={`
         p-3 cursor-grab active:cursor-grabbing
         transition-all duration-200
         hover:border-primary/50
         ${dragging ? 'shadow-xl rotate-2 scale-105' : ''}
+        ${onClick ? 'hover:shadow-md' : ''}
       `}
     >
       <div className="space-y-2">
@@ -100,10 +102,10 @@ export function TareaCard({ tarea, isDragging }: TareaCardProps) {
               {tarea.titulo}
             </p>
           </div>
-          <Badge variant={ESTADO_CONFIG[tarea.estado as EstadoTarea].variant} className="text-xs shrink-0">
-            <EstadoIcon className="h-3 w-3 mr-1" />
+          <span className={`text-xs shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full border ${ESTADO_CONFIG[tarea.estado as EstadoTarea].bgColor} ${ESTADO_CONFIG[tarea.estado as EstadoTarea].textColor} ${ESTADO_CONFIG[tarea.estado as EstadoTarea].borderColor}`}>
+            <EstadoIcon className="h-3 w-3" />
             {ESTADO_CONFIG[tarea.estado as EstadoTarea].label}
-          </Badge>
+          </span>
         </div>
 
         {tarea.descripcion && (

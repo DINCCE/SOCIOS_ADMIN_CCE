@@ -10,6 +10,7 @@ import type { TareaView } from '@/components/procesos/tareas/tareas-board'
 interface ResponsiveTareaDataTableProps {
   table: Table<TareaView>
   router: ReturnType<typeof useRouter>
+  onTareaClick?: (tareaId: string) => void
 }
 
 /**
@@ -21,6 +22,7 @@ interface ResponsiveTareaDataTableProps {
 export function ResponsiveTareaDataTable({
   table,
   router,
+  onTareaClick,
 }: ResponsiveTareaDataTableProps) {
   const isMobile = useIsMobile()
 
@@ -35,7 +37,7 @@ export function ResponsiveTareaDataTable({
               tarea={row.original}
               isSelected={row.getIsSelected()}
               onToggleSelect={() => row.toggleSelected()}
-              onClick={() => router.push(`/admin/procesos/tareas/${row.original.id}`)}
+              onClick={() => onTareaClick?.(row.original.id)}
             />
           ))
         ) : (
@@ -51,7 +53,7 @@ export function ResponsiveTareaDataTable({
   return (
     <div className="overflow-x-auto">
       <div className="rounded-md border min-w-full">
-        <TareasDataTable table={table} router={router} />
+        <TareasDataTable table={table} router={router} onTareaClick={onTareaClick} />
       </div>
     </div>
   )

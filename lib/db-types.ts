@@ -99,6 +99,13 @@ export type TrTareasPrioridad = 'Baja' | 'Media' | 'Alta' | 'Urgente'
 export const TR_TAREAS_PRIORIDAD: TrTareasPrioridad[] = ['Baja', 'Media', 'Alta', 'Urgente']
 
 // =====================================================
+// TR_COMENTARIOS ENUMs
+// =====================================================
+
+export type TrComentarioEntidadTipo = 'tarea' | 'doc_comercial' | 'actor' | 'asociado'
+export const TR_COMENTARIO_ENTIDAD_TIPO: TrComentarioEntidadTipo[] = ['tarea', 'doc_comercial', 'actor', 'asociado']
+
+// =====================================================
 // DM_ACCIONES ENUMs
 // =====================================================
 
@@ -248,7 +255,7 @@ export function getStatusColor(status: string): string {
     inactivo: 'bg-gray-100 text-gray-800',
     bloqueado: 'bg-red-100 text-red-800',
 
-    // Oportunidad status
+    // Doc.Comercial status
     Nueva: 'bg-blue-100 text-blue-800',
     'En Progreso': 'bg-yellow-100 text-yellow-800',
     Ganada: 'bg-green-100 text-green-800',

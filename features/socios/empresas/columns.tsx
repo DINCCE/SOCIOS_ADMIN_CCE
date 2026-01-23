@@ -84,7 +84,7 @@ export const columns: ColumnDef<EmpresaList>[] = [
       const empresa = row.original
       return (
         <IdentityCell
-          name={empresa.razon_social}
+          name={empresa.razon_social ?? ''}
           subtitle={empresa.codigo_bp}
         />
       )
