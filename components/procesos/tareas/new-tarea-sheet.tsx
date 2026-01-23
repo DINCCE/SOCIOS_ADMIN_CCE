@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQueryClient, useQuery } from "@tanstack/react-query"
-import { Loader2, Plus, Search, X, Badge } from "lucide-react"
+import { Loader2, Plus, Search, X } from "lucide-react"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 
