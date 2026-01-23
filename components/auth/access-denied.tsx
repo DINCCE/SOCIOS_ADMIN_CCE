@@ -5,7 +5,7 @@
 
 import { AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Link } from 'next-view-transitions'
+import Link from 'next/link'
 
 interface AccessDeniedProps {
   message?: string
