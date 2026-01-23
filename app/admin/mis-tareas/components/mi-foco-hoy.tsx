@@ -61,7 +61,7 @@ export function MiFocoHoy({ userId, organizationId, allTasks }: MiFocoHoyProps) 
     }
 
     const handleRemoveFromFocus = (taskId: string) => {
-        const newIds = currentFocusIds.filter(id => id !== taskId)
+        const newIds = currentFocusIds.filter((id: string) => id !== taskId)
         mutation.mutate({ fecha: today, tareas: newIds })
     }
 
