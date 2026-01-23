@@ -610,9 +610,9 @@ export function NewTareaSheet({ open: controlledOpen, onOpenChange, onSuccess, d
                                                                         <span className="font-medium">{miembro.nombres} {miembro.apellidos}</span>
                                                                         <span className="text-xs text-muted-foreground">{miembro.email}</span>
                                                                         {miembro.role && (
-                                                                            <Badge variant="outline" className="text-[10px] mt-0.5">
+                                                                            <UIBadge variant="outline" className="text-[10px] mt-0.5">
                                                                                 {miembro.role}
-                                                                            </Badge>
+                                                                            </UIBadge>
                                                                         )}
                                                                     </div>
                                                                 </button>
