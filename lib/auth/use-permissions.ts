@@ -36,7 +36,7 @@ export interface RequireRoleProps {
 
 export function RequireRole({ role, allowedRoles, fallback, children }: RequireRoleProps) {
   if (!role || !allowedRoles.includes(role)) {
-    return <>{fallback || null}</>
+    return <>{fallback ?? null}</>
   }
   return <>{children}</>
 }
