@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { PageShell } from "@/components/shell/page-shell"
 import { PageContent } from "@/components/shell/page-content"
 import { Button } from "@/components/ui/button"
-import { Plus, ListFilter } from "lucide-react"
+import { Plus, ListFilter, CheckSquare, BarChart3, Trophy } from "lucide-react"
 import Link from "next/link"
 import { NewTareaSheet } from "@/components/procesos/tareas/new-tarea-sheet"
 import { TareaDetailSheet } from "@/components/procesos/tareas/tarea-detail-sheet"
@@ -87,7 +87,7 @@ export function MisTareasDashboard() {
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-3xl font-bold tracking-tight">
-                                {getGreeting()}, {user.email?.split('@')[0]} 👋
+                                {getGreeting()}, {user.email?.split('@')[0]}
                             </h1>
                             <p className="text-muted-foreground mt-1">
                                 Tienes {pendingCount} {pendingCount === 1 ? 'tarea pendiente' : 'tareas pendientes'} para hoy.
@@ -120,7 +120,10 @@ export function MisTareasDashboard() {
                         {/* Left: Task List (2/3) */}
                         <div className="lg:col-span-2 space-y-6">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-semibold">📋 Mis Tareas Pendientes</h2>
+                                <h2 className="text-xl font-semibold flex items-center gap-2">
+                                    <CheckSquare className="h-5 w-5 text-primary" />
+                                    Mis Tareas Pendientes
+                                </h2>
                                 <Button variant="ghost" size="sm" className="gap-1">
                                     <ListFilter className="h-4 w-4" />
                                     Filtrar
@@ -135,11 +138,17 @@ export function MisTareasDashboard() {
                         {/* Right: Insights (1/3) */}
                         <div className="space-y-8">
                             <section>
-                                <h3 className="text-lg font-medium mb-4">📊 Mi Semana</h3>
+                                <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                                    Mi Semana
+                                </h3>
                                 <MiSemanaCard tareas={misTareas} />
                             </section>
                             <section>
-                                <h3 className="text-lg font-medium mb-4">🏆 Mi Productividad</h3>
+                                <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                                    <Trophy className="h-4 w-4 text-yellow-600/80" />
+                                    Mi Productividad
+                                </h3>
                                 <MiProductividadCard tareas={misTareas} userId={user.id} />
                             </section>
                         </div>

@@ -18,7 +18,6 @@ import {
 } from "date-fns"
 
 // Components
-import { TeamAlertsSection, TeamAlert } from "./components/team-alerts-section"
 import { TeamStatsGrid } from "./components/team-stats-grid"
 import { TeamWorkloadSection } from "./components/team-workload-section"
 import { WeeklyTrendChart } from "./components/weekly-trend-chart"
@@ -84,59 +83,61 @@ export function TareasDashboardEquipo() {
             ).length
         }
 
-        // Workload
-        const IDEAL_LOAD = 8
-        const workload = members.map(member => {
-            const memberTasks = pendingTareas.filter(t => t.asignado_id === member.user_id)
-            const completedTasks = allTareas.filter(t => t.asignado_id === member.user_id && t.estado === "Terminada")
+        // Workload calculated directly from tasks
+        const workloadMap = new Map<string, { 
+            name: string, 
+            pending: number, 
+            inProgress: number, 
+            completed: number,
+            total: number,
+            tasks: TareaView[]
+        }>()
 
-            const pendingCount = memberTasks.length
-            let status: 'overloaded' | 'balanced' | 'available' = 'balanced'
-
-            if (pendingCount > IDEAL_LOAD * 1.5) status = 'overloaded'
-            else if (pendingCount < IDEAL_LOAD * 0.5) status = 'available'
-
-            return {
-                userId: member.user_id,
-                name: member.nombre_completo,
-                pending: pendingCount,
-                completed: completedTasks.length,
-                status,
-                tasks: memberTasks
+        allTareas.forEach(t => {
+            const name = t.asignado_nombre_completo || "Sin asignar"
+            if (!workloadMap.has(name)) {
+                workloadMap.set(name, { 
+                    name, 
+                    pending: 0, 
+                    inProgress: 0, 
+                    completed: 0, 
+                    total: 0,
+                    tasks: [] as TareaView[] 
+                })
             }
-        }).sort((a, b) => b.pending - a.pending)
+            
+            const stats = workloadMap.get(name)!
+            if (t.estado === "Terminada") {
+                stats.completed++
+            } else {
+                if (t.estado === "En progreso" || t.estado === "En Progreso") {
+                    stats.inProgress++
+                }
+                stats.pending++
+                stats.tasks.push(t)
+            }
+            stats.total = stats.pending + stats.completed
+        })
 
-        // Unassigned alert
-        const unassignedCount = pendingTareas.filter(t => !t.asignado_id).length
-        const alerts: TeamAlert[] = []
+        const IDEAL_LOAD = 8
+        const workload = Array.from(workloadMap.values())
+            .filter(m => m.name !== "Sin asignar")
+            .map(m => {
+                let status: 'overloaded' | 'balanced' | 'available' = 'balanced'
+                if (m.pending > IDEAL_LOAD * 1.5) status = 'overloaded'
+                else if (m.pending < IDEAL_LOAD * 0.5) status = 'available'
 
-        if (stats.overdue > 0) {
-            alerts.push({
-                type: 'overdue',
-                severity: 'critical',
-                message: `${stats.overdue} tareas vencidas sin atender.`,
-                count: stats.overdue
+                return {
+                    userId: m.name,
+                    name: m.name,
+                    pending: m.pending,
+                    inProgress: m.inProgress,
+                    completed: m.completed,
+                    status,
+                    tasks: m.tasks
+                }
             })
-        }
-
-        if (unassignedCount > 5) {
-            alerts.push({
-                type: 'unassigned',
-                severity: 'warning',
-                message: `${unassignedCount} tareas sin asignar esperando responsable.`,
-                count: unassignedCount
-            })
-        }
-
-        const overloadedMember = workload.find(m => m.status === 'overloaded')
-        if (overloadedMember) {
-            alerts.push({
-                type: 'overloaded',
-                severity: 'warning',
-                message: `${overloadedMember.name} tiene ${overloadedMember.pending} tareas asignadas.`,
-                count: overloadedMember.pending
-            })
-        }
+            .sort((a, b) => b.pending - a.pending)
 
         // Weekly Trend (Last 4 weeks)
         const weeklyTrend = [3, 2, 1, 0].map(weeksAgo => {
@@ -204,7 +205,6 @@ export function TareasDashboardEquipo() {
         return {
             stats,
             workload,
-            alerts,
             weeklyTrend,
             resolutionStats: {
                 average: avgResolutionTime,
@@ -238,10 +238,7 @@ export function TareasDashboardEquipo() {
 
     return (
         <PageContent>
-            <div className="flex flex-col gap-8 py-6 max-w-7xl mx-auto">
-                {/* Alerts Section */}
-                <TeamAlertsSection alerts={calculations.alerts} />
-
+            <div className="flex flex-col gap-4 py-6 max-w-7xl mx-auto">
                 {/* Quick Stats Grid */}
                 <TeamStatsGrid stats={calculations.stats} />
 
@@ -253,13 +250,13 @@ export function TareasDashboardEquipo() {
                 />
 
                 {/* Insights Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <WeeklyTrendChart data={calculations.weeklyTrend} />
                     <ResolutionTimeCard stats={calculations.resolutionStats} />
                 </div>
 
                 {/* Distribution & Ranking */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     <div className="lg:col-span-2">
                         <DistributionCharts tareas={allTareas} />
                     </div>

@@ -4,7 +4,9 @@ import * as React from "react"
 import { Trophy, Flame, TrendingUp, User } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
 interface RankingMember {
     rank: number
@@ -31,27 +33,41 @@ export function ProductivityRanking({ members }: ProductivityRankingProps) {
 
     if (members.length === 0) {
         return (
-            <Card className="h-full">
-                <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                        <Trophy className="h-5 w-5 text-muted-foreground" />
+            <Card className="h-full border-border/50 shadow-sm overflow-hidden">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Trophy className="h-4 w-4" />
                         Productividad
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="flex flex-col items-center justify-center h-[300px] text-muted-foreground text-sm">
-                    <TrendingUp className="h-12 w-12 opacity-10 mb-4" />
-                    Sin datos de actividad esta semana
+                <CardContent 
+                    className="flex flex-col items-center justify-center h-[300px] text-center p-6 relative"
+                    style={{
+                        backgroundImage: `radial-gradient(hsl(var(--muted-foreground)/0.15) 1px, transparent 1px)`,
+                        backgroundSize: '20px 20px'
+                    }}
+                >
+                    <div className="bg-background/80 backdrop-blur-sm p-8 rounded-xl border border-border/50 shadow-sm flex flex-col items-center">
+                        <TrendingUp className="h-10 w-10 text-muted-foreground/20 mb-4" />
+                        <p className="text-sm font-medium text-foreground">Sin actividad</p>
+                        <p className="text-xs text-muted-foreground mt-1 mb-4 max-w-[180px]">
+                            No hay datos de tareas completadas esta semana.
+                        </p>
+                        <Button variant="outline" size="sm" className="h-8 text-xs font-medium" asChild>
+                            <a href="/admin/procesos/tareas">Gestionar tareas</a>
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
         )
     }
 
     return (
-        <Card className="h-full">
-            <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                    <Trophy className="h-5 w-5 text-yellow-500" />
-                    Ranking de Productividad
+        <Card className="h-full border-border/50 shadow-sm">
+            <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-yellow-500" />
+                    Ranking de productividad
                 </CardTitle>
             </CardHeader>
             <CardContent>

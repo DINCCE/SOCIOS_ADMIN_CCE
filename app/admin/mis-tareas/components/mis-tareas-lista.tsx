@@ -47,39 +47,53 @@ export function MisTareasLista({ tareas, onTaskClick }: MisTareasListaProps) {
         }
     }
 
+    const getPriorityBadgeStyles = (prioridad: string) => {
+        const styles: Record<string, string> = {
+            "Urgente": "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+            "Alta": "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+            "Media": "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+            "Baja": "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+        }
+        return styles[prioridad] || "bg-muted text-muted-foreground"
+    }
+
     const renderGroup = (title: string, taskGroup: TareaView[], color: string, icon: LucideIcon) => {
         if (taskGroup.length === 0) return null
         const Icon = icon
 
         return (
-            <div className="space-y-3 mb-8">
-                <div className="flex items-center gap-2 px-1">
+            <div className="mb-8">
+                <div className="flex items-center gap-2 px-1 mb-2">
                     <Icon className={cn("h-4 w-4", color)} />
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3>
-                    <Badge variant="secondary" className="ml-1 px-1.5 py-0 h-4 text-[10px]">{taskGroup.length}</Badge>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3>
+                    <Badge variant="secondary" className="ml-1 px-1.5 py-0 h-4 text-[9px]">{taskGroup.length}</Badge>
                 </div>
-                <div className="space-y-2">
-                    {taskGroup.map((tarea) => (
+                <div className="rounded-lg border bg-card overflow-hidden">
+                    {taskGroup.map((tarea, index) => (
                         <div
                             key={tarea.id}
-                            className="group flex items-center justify-between p-3 rounded-lg border bg-card hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer"
+                            className={cn(
+                                "group flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer",
+                                index < taskGroup.length - 1 && "border-b border-border/40"
+                            )}
                             onClick={() => onTaskClick(tarea.id)}
                         >
-                            <div className="flex items-center gap-3 overflow-hidden">
-                                <div onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div onClick={(e) => e.stopPropagation()} className="shrink-0">
                                     <Checkbox
                                         checked={tarea.estado === "Terminada"}
                                         onCheckedChange={(checked) => handleToggleComplete(tarea.id, !!checked)}
+                                        className="h-4 w-4"
                                     />
                                 </div>
-                                <div className="truncate">
+                                <div className="min-w-0 flex-1">
                                     <p className="text-sm font-medium truncate">{tarea.titulo}</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <Badge variant="outline" className="text-[10px] h-4 px-1 capitalize">
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <Badge className={cn("text-[9px] h-4 px-1.5 py-0 border-0", getPriorityBadgeStyles(tarea.prioridad))}>
                                             {tarea.prioridad}
                                         </Badge>
                                         {tarea.doc_comercial_codigo && (
-                                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                            <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
                                                 <ChevronRight className="h-3 w-3" />
                                                 {tarea.doc_comercial_codigo}
                                             </span>
@@ -87,16 +101,16 @@ export function MisTareasLista({ tareas, onTaskClick }: MisTareasListaProps) {
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-4 shrink-0">
+                            <div className="flex items-center gap-3 shrink-0 ml-2">
                                 {tarea.fecha_vencimiento && (
                                     <span className={cn(
-                                        "text-[10px] font-medium px-2 py-0.5 rounded-full",
+                                        "text-[9px] font-medium px-1.5 py-0.5 rounded",
                                         new Date(tarea.fecha_vencimiento) < today ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"
                                     )}>
                                         {new Date(tarea.fecha_vencimiento).toLocaleDateString([], { day: '2-digit', month: 'short' })}
                                     </span>
                                 )}
-                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <ChevronRight className="h-4 w-4" />
                                 </Button>
                             </div>

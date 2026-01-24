@@ -49,46 +49,50 @@ async function headers() {
 
 nextConfig.headers = headers;
 
-export default withSentryConfig(withPWA(nextConfig), {
+// Only wrap with Sentry if auth token is present (no build failures if not configured)
+const sentryConfig = process.env.SENTRY_AUTH_TOKEN
+  ? withSentryConfig(withPWA(nextConfig), {
+      // For all available options, see:
+      // https://github.com/getsentry/sentry-webpack-plugin#options
 
-  // For all available options, see:
-  // https://github.com/getsentry/sentry-webpack-plugin#options
+      org: "nextjs-boilerplate",
+      project: "boilerplate-variant-b",
 
-  org: "nextjs-boilerplate",
-  project: "boilerplate-variant-b",
+      // Only print logs for uploading source maps in CI
+      silent: !process.env.CI,
 
-  // Only print logs for uploading source maps in CI
-  silent: !process.env.CI,
+      // For all available options, see:
+      // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
 
-  // For all available options, see:
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+      webpack: {
+        // Automatically tree-shake Sentry logger statements to reduce bundle size
+        treeshake: {
+          removeDebugLogging: true,
+        },
+        // Automatically annotate React components to show their full name in breadcrumbs and session replay
+        reactComponentAnnotation: {
+          enabled: true,
+        },
+      },
 
-  webpack: {
-    // Automatically tree-shake Sentry logger statements to reduce bundle size
-    treeshake: {
-      removeDebugLogging: true,
-    },
-    // Automatically annotate React components to show their full name in breadcrumbs and session replay
-    reactComponentAnnotation: {
-      enabled: true,
-    },
-  },
+      // Upload a larger set of source maps for prettier stack traces (increases build time)
+      widenClientFileUpload: true,
 
-  // Upload a larger set of source maps for prettier stack traces (increases build time)
-  widenClientFileUpload: true,
+      // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
+      // This can increase your server load as well as your hosting bill.
+      // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-side errors will fail.
+      tunnelRoute: "/monitoring",
 
-  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-  // This can increase your server load as well as your hosting bill.
-  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-side errors will fail.
-  tunnelRoute: "/monitoring",
+      // Hides source maps from generated client bundles
+      sourcemaps: {
+        deleteSourcemapsAfterUpload: true,
+      },
 
-  // Hides source maps from generated client bundles
-  sourcemaps: {
-    deleteSourcemapsAfterUpload: true,
-  },
+      // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers)
+      // automaticVercelMonitors: true,
+    })
+  : withPWA(nextConfig);
 
-  // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers)
-  // automaticVercelMonitors: true,
-});
+export default sentryConfig;
 
 

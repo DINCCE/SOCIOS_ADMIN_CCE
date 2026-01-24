@@ -1,10 +1,16 @@
 "use client"
 
 import * as React from "react"
-import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
-} from "recharts"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+    ChartLegend,
+    ChartLegendContent,
+    type ChartConfig,
+} from "@/components/ui/chart"
 
 interface WeeklyTrendData {
     week: string
@@ -16,63 +22,65 @@ interface WeeklyTrendChartProps {
     data: WeeklyTrendData[]
 }
 
+const chartConfig = {
+    created: {
+        label: "Creadas",
+        color: "var(--chart-2)",
+    },
+    completed: {
+        label: "Completadas",
+        color: "var(--chart-1)",
+    },
+} satisfies ChartConfig
+
 export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
     return (
-        <Card className="h-full">
-            <CardHeader>
-                <CardTitle className="text-lg flex items-center justify-between">
-                    <span>Tendencia Semanal</span>
-                    <span className="text-xs font-normal text-muted-foreground">Últimas 4 semanas</span>
+        <Card className="h-full border-border/50 shadow-sm">
+            <CardHeader className="pb-4">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+                    <span>Tendencia semanal</span>
+                    <span className="text-[10px] font-bold opacity-50">4 semanas</span>
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                            data={data}
-                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                        >
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                            <XAxis
-                                dataKey="week"
-                                fontSize={12}
-                                tickLine={false}
-                                axisLine={false}
-                            />
-                            <YAxis
-                                fontSize={12}
-                                tickLine={false}
-                                axisLine={false}
-                                tickFormatter={(value) => `${value}`}
-                            />
-                            <Tooltip
-                                cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
-                                contentStyle={{
-                                    backgroundColor: 'hsl(var(--background))',
-                                    borderColor: 'hsl(var(--border))',
-                                    borderRadius: '8px',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                                }}
-                                itemStyle={{ fontSize: '12px' }}
-                            />
-                            <Legend verticalAlign="top" height={36} iconType="circle" />
-                            <Bar
-                                name="Creadas"
-                                dataKey="created"
-                                fill="#0ea5e9"
-                                radius={[4, 4, 0, 0]}
-                                barSize={32}
-                            />
-                            <Bar
-                                name="Completadas"
-                                dataKey="completed"
-                                fill="#10b981"
-                                radius={[4, 4, 0, 0]}
-                                barSize={32}
-                            />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
+                <ChartContainer config={chartConfig} className="h-[280px] w-full">
+                    <BarChart
+                        accessibilityLayer
+                        data={data}
+                        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.5} />
+                        <XAxis
+                            dataKey="week"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={12}
+                            fontSize={10}
+                            fontWeight={500}
+                        />
+                        <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={12}
+                            fontSize={10}
+                            fontWeight={500}
+                        />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <ChartLegend content={<ChartLegendContent />} />
+                        <Bar
+                            dataKey="created"
+                            fill="var(--color-created)"
+                            radius={[2, 2, 0, 0]}
+                            barSize={24}
+                        />
+                        <Bar
+                            dataKey="completed"
+                            fill="var(--color-completed)"
+                            radius={[2, 2, 0, 0]}
+                            barSize={24}
+                        />
+                    </BarChart>
+                </ChartContainer>
             </CardContent>
         </Card>
     )

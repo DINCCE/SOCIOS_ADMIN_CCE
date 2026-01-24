@@ -55,7 +55,7 @@ export function MiProductividadCard({ tareas, userId }: MiProductividadCardProps
                 </div>
 
                 <p className="text-xs text-center text-muted-foreground italic pt-2">
-                    "¡Vas muy bien! Estás un 25% por encima de tu promedio."
+                    &quot;¡Vas muy bien! Estás un 25% por encima de tu promedio.&quot;
                 </p>
             </CardContent>
         </Card>

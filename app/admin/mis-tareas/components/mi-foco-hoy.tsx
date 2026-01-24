@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-import { Pin, X, Plus, GripVertical } from "lucide-react"
+import { Target, X, Plus, GripVertical } from "lucide-react"
 import { TareaView } from "@/features/procesos/tareas/columns"
 import { updateUserFocus, getUserFocus } from "@/app/actions/admin/members"
 import { actualizarTarea } from "@/app/actions/tareas"
@@ -61,7 +61,7 @@ export function MiFocoHoy({ userId, organizationId, allTasks }: MiFocoHoyProps) 
     }
 
     const handleRemoveFromFocus = (taskId: string) => {
-        const newIds = currentFocusIds.filter(id => id !== taskId)
+        const newIds = currentFocusIds.filter((id: string) => id !== taskId)
         mutation.mutate({ fecha: today, tareas: newIds })
     }
 
@@ -80,7 +80,7 @@ export function MiFocoHoy({ userId, organizationId, allTasks }: MiFocoHoyProps) 
             <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2 text-xl">
-                        <Pin className="h-5 w-5 text-primary fill-primary/20" />
+                        <Target className="h-5 w-5 text-primary" />
                         MI FOCO HOY
                     </CardTitle>
                     <div className="text-sm font-medium text-muted-foreground">
@@ -91,42 +91,45 @@ export function MiFocoHoy({ userId, organizationId, allTasks }: MiFocoHoyProps) 
             </CardHeader>
             <CardContent className="space-y-4">
                 {focusTasks.length === 0 ? (
-                    <div className="py-8 text-center border-2 border-dashed rounded-xl border-muted-foreground/20">
-                        <p className="text-muted-foreground">No has definido tu foco para hoy.</p>
-                        <p className="text-xs text-muted-foreground mt-1">Elige hasta 3 tareas clave para concentrarte.</p>
+                    <div className="h-[120px] flex flex-col items-center justify-center text-center border border-dashed rounded-lg border-muted">
+                        <p className="text-sm text-muted-foreground">No has definido tu foco para hoy.</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">Elige hasta 3 tareas clave para concentrarte.</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
-                        {focusTasks.map((tarea) => (
+                    <div className="space-y-1">
+                        {focusTasks.map((tarea, index) => (
                             <div
                                 key={tarea.id}
                                 className={cn(
-                                    "flex items-center justify-between p-4 rounded-xl border bg-card/50 backdrop-blur-sm group transition-all hover:shadow-md",
-                                    tarea.estado === "Terminada" && "opacity-60 bg-muted/50"
+                                    "flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-muted/40 group transition-all",
+                                    index < focusTasks.length - 1 && "border-b border-border/30",
+                                    tarea.estado === "Terminada" && "opacity-60 bg-muted/30"
                                 )}
                             >
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
                                     <Checkbox
                                         checked={tarea.estado === "Terminada"}
                                         onCheckedChange={(checked) => handleToggleComplete(tarea.id, !!checked)}
-                                        className="h-5 w-5"
+                                        className="h-4 w-4 shrink-0"
                                     />
-                                    <div>
+                                    <div className="min-w-0 flex-1">
                                         <p className={cn(
-                                            "font-medium leading-none",
+                                            "text-sm font-medium truncate leading-tight",
                                             tarea.estado === "Terminada" && "line-through text-muted-foreground"
                                         )}>
                                             {tarea.titulo}
                                         </p>
-                                        <div className="flex items-center gap-2 mt-1.5">
+                                        <div className="flex items-center gap-1.5 mt-0.5">
                                             <Badge variant="outline" className={cn(
-                                                "text-[10px] uppercase px-1.5 py-0",
-                                                tarea.prioridad === "Alta" || tarea.prioridad === "Urgente" ? "text-destructive border-destructive/20" : "text-muted-foreground"
+                                                "text-[9px] uppercase px-1.5 py-0 h-4 border-0",
+                                                tarea.prioridad === "Alta" || tarea.prioridad === "Urgente"
+                                                    ? "bg-destructive/10 text-destructive"
+                                                    : "bg-muted/60 text-muted-foreground"
                                             )}>
                                                 {tarea.prioridad}
                                             </Badge>
                                             {tarea.codigo_tarea && (
-                                                <span className="text-[10px] text-muted-foreground">
+                                                <span className="text-[9px] text-muted-foreground">
                                                     {tarea.codigo_tarea}
                                                 </span>
                                             )}
@@ -136,10 +139,10 @@ export function MiFocoHoy({ userId, organizationId, allTasks }: MiFocoHoyProps) 
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                                     onClick={() => handleRemoveFromFocus(tarea.id)}
                                 >
-                                    <X className="h-4 w-4 text-muted-foreground" />
+                                    <X className="h-3.5 w-3.5 text-muted-foreground" />
                                 </Button>
                             </div>
                         ))}

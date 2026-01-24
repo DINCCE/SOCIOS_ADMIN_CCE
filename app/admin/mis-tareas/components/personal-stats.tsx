@@ -38,32 +38,32 @@ export function PersonalStats({ tareas }: PersonalStatsProps) {
                 icon={Clock}
                 label="Hoy"
                 value={stats.hoy}
-                color="text-orange-500"
-                bgColor="bg-orange-500/10"
-                borderColor="border-orange-500/20"
+                color="text-chart-4"
+                bgColor="bg-chart-4/10"
+                borderColor="border-chart-4/20"
             />
             <StatCard
                 icon={Calendar}
                 label="Mañana"
                 value={stats.manana}
-                color="text-blue-500"
-                bgColor="bg-blue-500/10"
-                borderColor="border-blue-500/20"
+                color="text-chart-2"
+                bgColor="bg-chart-2/10"
+                borderColor="border-chart-2/20"
             />
             <StatCard
                 icon={Flame}
                 label="Racha"
                 value={`${stats.racha} días`}
-                color="text-orange-600"
-                bgColor="bg-orange-600/10"
-                borderColor="border-orange-600/20"
+                color="text-chart-3"
+                bgColor="bg-chart-3/10"
+                borderColor="border-chart-3/20"
             />
         </div>
     )
 }
 
 interface StatCardProps {
-    icon: any
+    icon: React.ElementType
     label: string
     value: string | number
     color: string
