@@ -5,6 +5,7 @@ import type { LucideIcon } from "lucide-react"
 import { TareaView } from "@/features/procesos/tareas/columns"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { CheckCircle, RotateCcw, Calendar, ChevronRight, Clock, AlertCircle, ListFilter } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { actualizarTarea } from "@/app/actions/tareas"
@@ -31,13 +32,16 @@ export function MisTareasLista({ tareas, onTaskClick }: MisTareasListaProps) {
     const nextWeek = new Date(today)
     nextWeek.setDate(nextWeek.getDate() + 7)
 
-    // Grouping logic
+    // Focus tag constant
+    const FOCO_TAG = "Foco de hoy"
+
+    // Grouping logic - EXCLUDE focus tasks
     const groups = {
-        vencidas: tareas.filter(t => t.estado !== "Terminada" && t.fecha_vencimiento && new Date(t.fecha_vencimiento) < today),
-        hoy: tareas.filter(t => t.estado !== "Terminada" && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= today && new Date(t.fecha_vencimiento) < tomorrow),
-        manana: tareas.filter(t => t.estado !== "Terminada" && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= tomorrow && new Date(t.fecha_vencimiento) < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000)),
-        proximas: tareas.filter(t => t.estado !== "Terminada" && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000) && new Date(t.fecha_vencimiento) < nextWeek),
-        sinFecha: tareas.filter(t => t.estado !== "Terminada" && !t.fecha_vencimiento),
+        vencidas: tareas.filter(t => t.estado !== "Terminada" && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) < today),
+        hoy: tareas.filter(t => t.estado !== "Terminada" && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= today && new Date(t.fecha_vencimiento) < tomorrow),
+        manana: tareas.filter(t => t.estado !== "Terminada" && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= tomorrow && new Date(t.fecha_vencimiento) < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000)),
+        proximas: tareas.filter(t => t.estado !== "Terminada" && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000) && new Date(t.fecha_vencimiento) < nextWeek),
+        sinFecha: tareas.filter(t => t.estado !== "Terminada" && !t.tags?.includes(FOCO_TAG) && !t.fecha_vencimiento),
     }
 
     const handleCompleteTask = async (taskId: string) => {
@@ -101,6 +105,13 @@ export function MisTareasLista({ tareas, onTaskClick }: MisTareasListaProps) {
                             onClick={() => onTaskClick(tarea.id)}
                         >
                             <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                                    <Checkbox
+                                        checked={tarea.estado === "Terminada"}
+                                        onCheckedChange={(checked) => handleCompleteTask(tarea.id, !!checked)}
+                                        className="h-4 w-4"
+                                    />
+                                </div>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-sm font-medium truncate">{tarea.titulo}</p>
                                     <div className="flex items-center gap-2 mt-0.5">
@@ -130,18 +141,6 @@ export function MisTareasLista({ tareas, onTaskClick }: MisTareasListaProps) {
                                         {new Date(tarea.fecha_vencimiento).toLocaleDateString([], { day: '2-digit', month: 'short' })}
                                     </span>
                                 )}
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleCompleteTask(tarea.id)
-                                    }}
-                                    className="h-7 px-3 text-xs font-medium gap-1.5 border-green-200 hover:bg-green-50 hover:border-green-300 hover:text-green-700 dark:border-green-900/50 dark:hover:bg-green-950/30 dark:hover:border-green-800"
-                                >
-                                    <CheckCircle className="h-3.5 w-3.5" />
-                                    Terminar
-                                </Button>
                             </div>
                         </div>
                     ))}

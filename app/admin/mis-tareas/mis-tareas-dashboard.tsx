@@ -100,14 +100,18 @@ export function MisTareasDashboard() {
                         </div>
                     </div>
 
-                    {/* Quick Stats */}
-                    <section>
-                        <PersonalStats tareas={misTareas} />
+                    {/* ZONA 1: HERO - Mi Foco Hoy (Full Width) */}
+                    <section className="mb-8">
+                        <MiFocoHoy
+                            userId={user.id}
+                            organizationId={misTareas[0]?.organizacion_id || ""}
+                            allTasks={misTareas}
+                        />
                     </section>
 
                     {/* Main Content Grid */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Left: Task List (2/3) */}
+                        {/* ZONA 3: Main Content (2/3) */}
                         <div className="lg:col-span-2 space-y-6">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -125,16 +129,14 @@ export function MisTareasDashboard() {
                             />
                         </div>
 
-                        {/* Right: Insights (1/3) */}
+                        {/* ZONA 2: Sidebar (1/3) */}
                         <div className="space-y-6">
-                            {/* Mi Foco Hoy - Compact Sidebar Version */}
+                            {/* Componente A: KPI Grid (Compact 2x2) */}
                             <section>
-                                <MiFocoHoy
-                                    userId={user.id}
-                                    organizationId={misTareas[0]?.organizacion_id || ""}
-                                    allTasks={misTareas}
-                                />
+                                <PersonalStats tareas={misTareas} />
                             </section>
+
+                            {/* Componente B: Rhythm Chart */}
                             <section>
                                 <WeeklyCompletionChart tareas={misTareas} />
                             </section>

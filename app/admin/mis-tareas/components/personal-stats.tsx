@@ -25,7 +25,7 @@ export function PersonalStats({ tareas }: PersonalStatsProps) {
     }
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3">
             <StatCard
                 icon={AlertTriangle}
                 label="Vencidas"
@@ -64,11 +64,11 @@ interface StatCardProps {
 function StatCard({ icon: Icon, label, value, color }: StatCardProps) {
     return (
         <Card className="border shadow-sm">
-            <CardContent className="p-3 flex items-center gap-3">
-                <Icon className="h-5 w-5 text-muted-foreground" />
-                <div>
-                    <p className="text-xs font-medium text-muted-foreground">{label}</p>
-                    <p className={cn("text-lg font-bold", color)}>{value}</p>
+            <CardContent className="p-3 flex items-center gap-2">
+                <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0 flex-1">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
+                    <p className={cn("text-xl font-bold leading-tight", color)}>{value}</p>
                 </div>
             </CardContent>
         </Card>

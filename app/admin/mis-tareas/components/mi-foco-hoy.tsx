@@ -71,7 +71,7 @@ export function MiFocoHoy({ userId, organizationId, allTasks }: MiFocoHoyProps) 
     }
 
     return (
-        <Card className="border-none shadow-none bg-muted/30">
+        <Card className="border border-border bg-slate-50 dark:bg-muted/10 shadow-sm">
             <CardHeader className="pb-3 px-4">
                 <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2 text-sm font-semibold">
