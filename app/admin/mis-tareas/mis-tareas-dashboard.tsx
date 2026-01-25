@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { PageShell } from "@/components/shell/page-shell"
 import { PageContent } from "@/components/shell/page-content"
 import { Button } from "@/components/ui/button"
-import { Plus, ListFilter, CheckSquare, BarChart3, Trophy } from "lucide-react"
+import { Plus, CheckSquare, ListFilter } from "lucide-react"
 import Link from "next/link"
 import { NewTareaSheet } from "@/components/procesos/tareas/new-tarea-sheet"
 import { TareaDetailSheet } from "@/components/procesos/tareas/tarea-detail-sheet"
@@ -16,8 +16,7 @@ import { TareaView } from "@/features/procesos/tareas/columns"
 import { MiFocoHoy } from "./components/mi-foco-hoy"
 import { PersonalStats } from "./components/personal-stats"
 import { MisTareasLista } from "./components/mis-tareas-lista"
-import { MiSemanaCard } from "./components/mi-semana-card"
-import { MiProductividadCard } from "./components/mi-productividad-card"
+import { WeeklyCompletionChart } from "./components/weekly-completion-chart"
 
 export function MisTareasDashboard() {
     const queryClient = useQueryClient()
@@ -94,21 +93,12 @@ export function MisTareasDashboard() {
                             </p>
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="outline" asChild>
+                            <Button variant="outline" size="sm" className="h-8 shadow-sm" asChild>
                                 <Link href="/admin/procesos/tareas">Ver todas</Link>
                             </Button>
                             <NewTareaSheet />
                         </div>
                     </div>
-
-                    {/* Hero Section: Mi Foco Hoy */}
-                    <section>
-                        <MiFocoHoy
-                            userId={user.id}
-                            organizationId={misTareas[0]?.organizacion_id || ""}
-                            allTasks={misTareas}
-                        />
-                    </section>
 
                     {/* Quick Stats */}
                     <section>
@@ -136,20 +126,17 @@ export function MisTareasDashboard() {
                         </div>
 
                         {/* Right: Insights (1/3) */}
-                        <div className="space-y-8">
+                        <div className="space-y-6">
+                            {/* Mi Foco Hoy - Compact Sidebar Version */}
                             <section>
-                                <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-                                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                                    Mi Semana
-                                </h3>
-                                <MiSemanaCard tareas={misTareas} />
+                                <MiFocoHoy
+                                    userId={user.id}
+                                    organizationId={misTareas[0]?.organizacion_id || ""}
+                                    allTasks={misTareas}
+                                />
                             </section>
                             <section>
-                                <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-                                    <Trophy className="h-4 w-4 text-yellow-600/80" />
-                                    Mi Productividad
-                                </h3>
-                                <MiProductividadCard tareas={misTareas} userId={user.id} />
+                                <WeeklyCompletionChart tareas={misTareas} />
                             </section>
                         </div>
                     </div>

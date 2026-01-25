@@ -88,6 +88,7 @@ export async function actualizarTarea(
     oportunidad_id?: string
     asignado_a?: string
     fecha_vencimiento?: string
+    tags?: string[]
     atributos?: Record<string, unknown>
   }
 ) {
@@ -105,6 +106,7 @@ export async function actualizarTarea(
   if (data.oportunidad_id !== undefined) updateData.doc_comercial_id = data.oportunidad_id
   if (data.asignado_a !== undefined) updateData.asignado_id = data.asignado_a
   if (data.fecha_vencimiento !== undefined) updateData.fecha_vencimiento = data.fecha_vencimiento
+  if (data.tags !== undefined) updateData.tags = data.tags
   if (data.atributos !== undefined) updateData.atributos = data.atributos
 
   const { error } = await supabase
@@ -334,7 +336,7 @@ export async function reasignarTareasMasivo(
   }
 
   revalidatePath("/admin/procesos/tareas")
-  revalidatePath("/admin/procesos/tareas/dashboard")
+  revalidatePath("/admin/analitica")
 
   return { success: true, count: tareaIds.length }
 }

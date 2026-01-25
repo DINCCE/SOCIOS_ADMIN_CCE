@@ -31,32 +31,24 @@ export function PersonalStats({ tareas }: PersonalStatsProps) {
                 label="Vencidas"
                 value={stats.vencidas}
                 color="text-destructive"
-                bgColor="bg-destructive/10"
-                borderColor="border-destructive/20"
             />
             <StatCard
                 icon={Clock}
                 label="Hoy"
                 value={stats.hoy}
-                color="text-chart-4"
-                bgColor="bg-chart-4/10"
-                borderColor="border-chart-4/20"
+                color="text-foreground"
             />
             <StatCard
                 icon={Calendar}
                 label="Mañana"
                 value={stats.manana}
-                color="text-chart-2"
-                bgColor="bg-chart-2/10"
-                borderColor="border-chart-2/20"
+                color="text-foreground"
             />
             <StatCard
                 icon={Flame}
                 label="Racha"
                 value={`${stats.racha} días`}
-                color="text-chart-3"
-                bgColor="bg-chart-3/10"
-                borderColor="border-chart-3/20"
+                color="text-foreground"
             />
         </div>
     )
@@ -67,20 +59,16 @@ interface StatCardProps {
     label: string
     value: string | number
     color: string
-    bgColor: string
-    borderColor: string
 }
 
-function StatCard({ icon: Icon, label, value, color, bgColor, borderColor }: StatCardProps) {
+function StatCard({ icon: Icon, label, value, color }: StatCardProps) {
     return (
-        <Card className={cn("border shadow-sm", borderColor)}>
-            <CardContent className="p-4 flex items-center gap-4">
-                <div className={cn("p-2 rounded-lg", bgColor)}>
-                    <Icon className={cn("h-5 w-5", color)} />
-                </div>
+        <Card className="border shadow-sm">
+            <CardContent className="p-3 flex items-center gap-3">
+                <Icon className="h-5 w-5 text-muted-foreground" />
                 <div>
-                    <p className="text-sm font-medium text-muted-foreground">{label}</p>
-                    <p className="text-2xl font-bold">{value}</p>
+                    <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                    <p className={cn("text-lg font-bold", color)}>{value}</p>
                 </div>
             </CardContent>
         </Card>

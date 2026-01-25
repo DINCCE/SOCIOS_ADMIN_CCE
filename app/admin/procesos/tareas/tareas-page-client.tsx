@@ -350,7 +350,7 @@ export function TareasPageClient() {
         actions={
           <div className="flex gap-2">
             <Button variant="outline" asChild>
-              <Link href="/admin/procesos/tareas/dashboard">Ver Dashboard de Equipo</Link>
+              <Link href="/admin/analitica">Ver Dashboard de Equipo</Link>
             </Button>
             <NewTareaSheet />
           </div>

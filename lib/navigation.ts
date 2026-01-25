@@ -35,17 +35,18 @@ export const NAVIGATION_CONFIG: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
-    title: 'Analytics',
+    title: 'Mis Tareas',
+    url: '/admin/mis-tareas',
+    icon: LayoutDashboard,
+  },
+  {
+    title: 'Analítica',
     url: '#',
     icon: PieChart,
     items: [
       {
         title: 'Tareas',
-        url: '/admin/procesos/tareas/dashboard',
-      },
-      {
-        title: 'Mis Tareas',
-        url: '/admin/mis-tareas',
+        url: '/admin/analitica',
       },
     ],
   },

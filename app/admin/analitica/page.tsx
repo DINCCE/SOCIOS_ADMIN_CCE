@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
-import { TareasDashboardEquipo } from "./tareas-dashboard-equipo"
+import { DashTareas1 } from "./dash-tareas1"
 import { PageShell } from "@/components/shell/page-shell"
 import { PageHeader } from "@/components/shell/page-header"
 
@@ -8,7 +8,7 @@ export const metadata = {
     title: "Dashboard de Equipo - Tareas",
 }
 
-export default async function TeamDashboardPage() {
+export default async function AnaliticaPage() {
     const supabase = await createClient()
 
     // Verify user has access
@@ -32,7 +32,7 @@ export default async function TeamDashboardPage() {
                 title="Dashboard de Equipo"
                 description="Vista general de productividad y carga de trabajo"
             />
-            <TareasDashboardEquipo />
+            <DashTareas1 />
         </PageShell>
     )
 }

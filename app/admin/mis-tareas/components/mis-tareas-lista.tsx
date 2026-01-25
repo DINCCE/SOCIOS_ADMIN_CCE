@@ -5,8 +5,7 @@ import type { LucideIcon } from "lucide-react"
 import { TareaView } from "@/features/procesos/tareas/columns"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Calendar, ChevronRight, Clock, AlertCircle, ListFilter } from "lucide-react"
+import { CheckCircle, RotateCcw, Calendar, ChevronRight, Clock, AlertCircle, ListFilter } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { actualizarTarea } from "@/app/actions/tareas"
 import { useQueryClient } from "@tanstack/react-query"
@@ -14,6 +13,12 @@ import { toast } from "sonner"
 
 interface MisTareasListaProps {
     tareas: TareaView[]
+    onTaskClick: (id: string) => void
+}
+
+interface CompletedTaskItemProps {
+    tarea: TareaView
+    onUncomplete: (taskId: string) => void
     onTaskClick: (id: string) => void
 }
 
@@ -35,26 +40,43 @@ export function MisTareasLista({ tareas, onTaskClick }: MisTareasListaProps) {
         sinFecha: tareas.filter(t => t.estado !== "Terminada" && !t.fecha_vencimiento),
     }
 
-    const handleToggleComplete = async (taskId: string, isCompleted: boolean) => {
+    const handleCompleteTask = async (taskId: string) => {
         const result = await actualizarTarea(taskId, {
-            estado: isCompleted ? "Terminada" : "Pendiente"
+            estado: "Terminada"
         })
         if (result.success) {
             queryClient.invalidateQueries({ queryKey: ["mis-tareas"] })
-            if (isCompleted) toast.success("Tarea completada")
+            toast.success("Tarea completada", {
+                action: {
+                    label: "Deshacer",
+                    onClick: () => handleUncompleteTask(taskId)
+                }
+            })
         } else {
-            toast.error("Error al actualizar tarea")
+            toast.error("Error al completar tarea")
         }
     }
 
-    const getPriorityBadgeStyles = (prioridad: string) => {
-        const styles: Record<string, string> = {
-            "Urgente": "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-            "Alta": "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-            "Media": "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-            "Baja": "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+    const handleUncompleteTask = async (taskId: string) => {
+        const result = await actualizarTarea(taskId, {
+            estado: "Pendiente"
+        })
+        if (result.success) {
+            queryClient.invalidateQueries({ queryKey: ["mis-tareas"] })
+            toast.success("Tarea restaurada")
+        } else {
+            toast.error("Error al restaurar tarea")
         }
-        return styles[prioridad] || "bg-muted text-muted-foreground"
+    }
+
+    const getPriorityConfig = (prioridad: string) => {
+        const config: Record<string, string> = {
+            "Urgente": "bg-status-negative",
+            "Alta": "bg-status-negative",
+            "Media": "bg-status-warning",
+            "Baja": "bg-status-neutral"
+        }
+        return config[prioridad] || "bg-status-neutral"
     }
 
     const renderGroup = (title: string, taskGroup: TareaView[], color: string, icon: LucideIcon) => {
@@ -79,17 +101,15 @@ export function MisTareasLista({ tareas, onTaskClick }: MisTareasListaProps) {
                             onClick={() => onTaskClick(tarea.id)}
                         >
                             <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-                                    <Checkbox
-                                        checked={tarea.estado === "Terminada"}
-                                        onCheckedChange={(checked) => handleToggleComplete(tarea.id, !!checked)}
-                                        className="h-4 w-4"
-                                    />
-                                </div>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-sm font-medium truncate">{tarea.titulo}</p>
                                     <div className="flex items-center gap-2 mt-0.5">
-                                        <Badge className={cn("text-[9px] h-4 px-1.5 py-0 border-0", getPriorityBadgeStyles(tarea.prioridad))}>
+                                        <Badge
+                                            variant="metadata-outline"
+                                            dotClassName={getPriorityConfig(tarea.prioridad)}
+                                            showDot
+                                            className="text-[9px] h-4 px-1.5 py-0 gap-1 font-normal"
+                                        >
                                             {tarea.prioridad}
                                         </Badge>
                                         {tarea.doc_comercial_codigo && (
@@ -104,19 +124,70 @@ export function MisTareasLista({ tareas, onTaskClick }: MisTareasListaProps) {
                             <div className="flex items-center gap-3 shrink-0 ml-2">
                                 {tarea.fecha_vencimiento && (
                                     <span className={cn(
-                                        "text-[9px] font-medium px-1.5 py-0.5 rounded",
-                                        new Date(tarea.fecha_vencimiento) < today ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"
+                                        "text-xs font-medium",
+                                        new Date(tarea.fecha_vencimiento) < today ? "text-destructive" : "text-muted-foreground"
                                     )}>
                                         {new Date(tarea.fecha_vencimiento).toLocaleDateString([], { day: '2-digit', month: 'short' })}
                                     </span>
                                 )}
-                                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <ChevronRight className="h-4 w-4" />
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleCompleteTask(tarea.id)
+                                    }}
+                                    className="h-7 px-3 text-xs font-medium gap-1.5 border-green-200 hover:bg-green-50 hover:border-green-300 hover:text-green-700 dark:border-green-900/50 dark:hover:bg-green-950/30 dark:hover:border-green-800"
+                                >
+                                    <CheckCircle className="h-3.5 w-3.5" />
+                                    Terminar
                                 </Button>
                             </div>
                         </div>
                     ))}
                 </div>
+            </div>
+        )
+    }
+
+    function CompletedTaskItem({ tarea, onUncomplete, onTaskClick }: CompletedTaskItemProps) {
+        return (
+            <div
+                className="group flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer"
+                onClick={() => onTaskClick(tarea.id)}
+            >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate line-through text-muted-foreground">
+                            {tarea.titulo}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
+                                <Clock className="h-3 w-3" />
+                                Completada
+                            </span>
+                            {tarea.doc_comercial_codigo && (
+                                <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
+                                    <ChevronRight className="h-3 w-3" />
+                                    {tarea.doc_comercial_codigo}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        onUncomplete(tarea.id)
+                    }}
+                    className="h-7 px-2 text-xs font-medium gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Deshacer
+                </Button>
             </div>
         )
     }
@@ -129,15 +200,65 @@ export function MisTareasLista({ tareas, onTaskClick }: MisTareasListaProps) {
             {renderGroup("Próximos 7 días", groups.proximas, "text-muted-foreground", Calendar)}
             {renderGroup("Sin fecha", groups.sinFecha, "text-muted-foreground", ListFilter)}
 
-            {tareas.filter(t => t.estado !== "Terminada").length === 0 && (
-                <div className="flex flex-col items-center justify-center py-20 text-center opacity-60">
-                    <div className="bg-muted p-4 rounded-full mb-4">
-                        <Clock className="h-8 w-8 text-muted-foreground" />
+            {/* Completadas hoy section */}
+            {(() => {
+                const completedToday = tareas.filter(t => {
+                    if (t.estado !== "Terminada") return false
+                    const completedDate = new Date(t.actualizado_en || t.creado_en)
+                    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+                    return completedDate >= todayStart
+                })
+
+                if (completedToday.length === 0) return null
+
+                return (
+                    <div className="mb-8">
+                        <div className="flex items-center gap-2 px-1 mb-2">
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                Completadas hoy
+                            </h3>
+                            <Badge variant="secondary" className="ml-1 px-1.5 py-0 h-4 text-[9px]">
+                                {completedToday.length}
+                            </Badge>
+                        </div>
+                        <div className="rounded-lg border bg-muted/30 overflow-hidden">
+                            {completedToday.map((tarea) => (
+                                <CompletedTaskItem
+                                    key={tarea.id}
+                                    tarea={tarea}
+                                    onUncomplete={handleUncompleteTask}
+                                    onTaskClick={onTaskClick}
+                                />
+                            ))}
+                        </div>
                     </div>
-                    <h3 className="text-lg font-medium">¡Todo al día!</h3>
-                    <p className="text-sm text-muted-foreground">No tienes tareas pendientes por ahora.</p>
-                </div>
-            )}
+                )
+            })()}
+
+            {(() => {
+                const pendingCount = tareas.filter(t => t.estado !== "Terminada").length
+                const completedTodayCount = tareas.filter(t => {
+                    if (t.estado !== "Terminada") return false
+                    const completedDate = new Date(t.actualizado_en || t.creado_en)
+                    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+                    return completedDate >= todayStart
+                }).length
+
+                // Show empty state only if no pending tasks AND no completed tasks today
+                if (pendingCount === 0 && completedTodayCount === 0) {
+                    return (
+                        <div className="flex flex-col items-center justify-center py-20 text-center opacity-60">
+                            <div className="bg-muted p-4 rounded-full mb-4">
+                                <Clock className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                            <h3 className="text-lg font-medium">¡Todo al día!</h3>
+                            <p className="text-sm text-muted-foreground">No tienes tareas pendientes por ahora.</p>
+                        </div>
+                    )
+                }
+                return null
+            })()}
         </div>
     )
 }
