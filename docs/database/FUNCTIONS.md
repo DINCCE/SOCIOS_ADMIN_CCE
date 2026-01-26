@@ -78,9 +78,15 @@ Checks if the current user has permission to perform an action on a resource wit
 
 **Security:** `SECURITY DEFINER`, `STABLE`
 
+**Permission Logic:**
+1. **Owners**: Automatic access to ALL resources and actions
+2. **Admins**: Automatic access to ALL resources except `config_organizaciones` and `config_organizacion_miembros`
+3. **Other roles**: Must have explicit permission in `config_roles_permisos`
+
 **Usage:**
 ```sql
 SELECT can_user_v2('dm_actores', 'update', 'org-uuid');
+-- Returns true for owners/admins, or checks explicit permissions for other roles
 ```
 
 ---

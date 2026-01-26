@@ -140,10 +140,21 @@ export async function actualizarTarea(
 export async function softDeleteTarea(tarea_id: string) {
   const supabase = await createClient()
 
-  const { error } = await supabase
-    .from('tr_tareas')
-    .update({ eliminado_en: new Date().toISOString() })
-    .eq('id', tarea_id)
+  // Get current user for audit trail
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+  if (userError || !user) {
+    return {
+      success: false,
+      message: 'Usuario no autenticado'
+    }
+  }
+
+  // Use RPC function with SECURITY DEFINER to bypass RLS
+  const { data, error } = await supabase.rpc('soft_delete_tarea_rpc', {
+    p_tarea_id: tarea_id,
+    p_user_id: user.id
+  })
 
   if (error) {
     console.error('Error soft deleting tarea:', error)
@@ -153,11 +164,20 @@ export async function softDeleteTarea(tarea_id: string) {
     }
   }
 
+  // Check if the RPC returned an error
+  if (data && !data.success) {
+    return {
+      success: false,
+      message: data.message || 'Error al eliminar tarea'
+    }
+  }
+
   revalidatePath('/admin/procesos/tareas')
+  revalidatePath('/admin/mis-tareas')
 
   return {
     success: true,
-    message: 'Tarea eliminada correctamente'
+    message: data?.message || 'Tarea eliminada correctamente'
   }
 }
 

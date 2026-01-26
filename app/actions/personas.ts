@@ -547,32 +547,10 @@ export async function softDeletePersona(id: string) {
     }
   }
 
-  // First, get the organizacion_id from the persona
-  const { data: persona, error: fetchError } = await supabase
-    .from('dm_actores')
-    .select('organizacion_id')
-    .eq('id', id)
-    .single()
-
-  if (fetchError) {
-    console.error('Error fetching persona:', fetchError)
-    return {
-      success: false,
-      message: `Error al obtener persona: ${fetchError.message}`,
-      error: fetchError
-    }
-  }
-
-  if (!persona) {
-    return {
-      success: false,
-      message: 'Persona no encontrada'
-    }
-  }
-
   // Use RPC function to soft delete with proper RLS bypass
-  const { error: deleteError } = await supabase.rpc('soft_delete_actor', {
-    p_actor_id: id
+  const { data, error: deleteError } = await supabase.rpc('soft_delete_actor', {
+    p_actor_id: id,
+    p_user_id: user.id
   })
 
   if (deleteError) {
@@ -584,13 +562,21 @@ export async function softDeletePersona(id: string) {
     }
   }
 
+  // Check if the RPC returned an error
+  if (data && !data.success) {
+    return {
+      success: false,
+      message: data.message || 'Error al eliminar persona'
+    }
+  }
+
   // Revalidate pages
   revalidatePath('/admin/socios/actores')
   revalidatePath(`/admin/socios/personas/${id}`)
 
   return {
     success: true,
-    message: 'Persona eliminada correctamente'
+    message: data?.message || 'Persona eliminada correctamente'
   }
 }
 

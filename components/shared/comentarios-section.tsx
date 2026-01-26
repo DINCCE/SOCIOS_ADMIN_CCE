@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
-import { MessageSquare, Send, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { MessageSquare, Send, MoreHorizontal, Pencil, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -21,9 +21,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import {
   crearComentario,
   obtenerComentarios,
+  actualizarComentario,
   eliminarComentario,
   type EntidadTipo,
 } from "@/app/actions/comentarios"
+
+import { useUser } from "@/hooks/use-user"
 
 interface ComentariosSectionProps {
   entidadTipo: EntidadTipo
@@ -44,7 +47,12 @@ export function ComentariosSection({
 }: ComentariosSectionProps) {
   const [nuevoComentario, setNuevoComentario] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editingContent, setEditingContent] = useState("")
   const queryClient = useQueryClient()
+
+  // Get current user
+  const { data: currentUser } = useUser()
 
   const queryKey = ["comentarios", entidadTipo, entidadId]
 
@@ -91,9 +99,43 @@ export function ComentariosSection({
       if (result.success) {
         queryClient.invalidateQueries({ queryKey })
         toast.success("Comentario eliminado")
+      } else {
+        toast.error(result.message || "Error al eliminar")
       }
     } catch {
-      toast.error("Error al eliminar")
+      toast.error("Error inesperado al eliminar")
+    }
+  }
+
+  const handleEditStart = (comentario: typeof comentarios[0]) => {
+    setEditingCommentId(comentario.id)
+    setEditingContent(comentario.contenido)
+  }
+
+  const handleEditCancel = () => {
+    setEditingCommentId(null)
+    setEditingContent("")
+  }
+
+  const handleEditSave = async (comentarioId: string) => {
+    if (!editingContent.trim()) {
+      toast.error("El comentario no puede estar vacío")
+      return
+    }
+
+    try {
+      const result = await actualizarComentario(comentarioId, editingContent.trim())
+
+      if (!result.success) {
+        toast.error(result.message || "Error al actualizar comentario")
+        return
+      }
+
+      queryClient.invalidateQueries({ queryKey })
+      toast.success("Comentario actualizado")
+      handleEditCancel()
+    } catch {
+      toast.error("Error inesperado al actualizar")
     }
   }
 
@@ -126,6 +168,10 @@ export function ComentariosSection({
           </p>
         ) : (
           comentarios.map((comentario) => {
+            // Check if current user is the creator
+            const isOwner = currentUser?.id === comentario.creado_por
+            const isEditing = editingCommentId === comentario.id
+
             // Get initials from name or email (max 2 chars)
             const getInitials = (nombre: string, email?: string) => {
               const name = nombre || email || "U"
@@ -161,34 +207,90 @@ export function ComentariosSection({
                       })}
                     </span>
 
-                    <div className="ml-auto">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <MoreHorizontal className="h-3 w-3" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Pencil className="mr-2 h-3 w-3" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => handleDelete(comentario.id)}
-                          >
-                            <Trash2 className="mr-2 h-3 w-3" />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                    {/* Indicador de edición */}
+                    {comentario.actualizado_en && new Date(comentario.actualizado_en) > new Date(comentario.creado_en) && (
+                      <>
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <span className="text-xs text-muted-foreground italic">
+                          editado {formatDistanceToNow(new Date(comentario.actualizado_en), {
+                            addSuffix: true,
+                            locale: es,
+                          })}
+                        </span>
+                      </>
+                    )}
+
+                    {/* Show menu ONLY for comment creator */}
+                    {isOwner && !isEditing && (
+                      <div className="ml-auto">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                              <MoreHorizontal className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditStart(comentario)}>
+                              <Pencil className="mr-2 h-3 w-3" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => handleDelete(comentario.id)}
+                            >
+                              <Trash2 className="mr-2 h-3 w-3" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Comment text */}
-                  <p className="text-sm text-foreground whitespace-pre-wrap">
-                    {comentario.contenido}
-                  </p>
+                  {/* Comment content - conditional render */}
+                  {isEditing ? (
+                    // Edit mode
+                    <div className="space-y-2">
+                      <Textarea
+                        value={editingContent}
+                        onChange={(e) => setEditingContent(e.target.value)}
+                        className="min-h-[80px] resize-none text-sm"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") handleEditCancel()
+                          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                            e.preventDefault()
+                            handleEditSave(comentario.id)
+                          }
+                        }}
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleEditSave(comentario.id)}
+                          disabled={!editingContent.trim()}
+                        >
+                          Guardar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleEditCancel}
+                        >
+                          <X className="h-3 w-3 mr-1" />
+                          Cancelar
+                        </Button>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Presiona ⌘+Enter para guardar, Esc para cancelar
+                      </p>
+                    </div>
+                  ) : (
+                    // View mode
+                    <p className="text-sm text-foreground whitespace-pre-wrap">
+                      {comentario.contenido}
+                    </p>
+                  )}
                 </div>
               </div>
             )

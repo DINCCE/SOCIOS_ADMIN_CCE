@@ -392,32 +392,75 @@ can_user_v2(p_resource text, p_action text, p_org uuid) RETURNS boolean
 ```sql
 CREATE OR REPLACE FUNCTION public.can_user_v2(p_resource text, p_action text, p_org uuid)
 RETURNS boolean
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE SECURITY DEFINER
 SET search_path TO 'pg_catalog', 'public'
-AS $function$
-  SELECT COALESCE(EXISTS (
+AS $$
+DECLARE
+  v_user_id uuid := auth.uid();
+  v_is_owner boolean := false;
+  v_is_admin boolean := false;
+  v_has_permission boolean := false;
+BEGIN
+  -- Check if user is authenticated
+  IF v_user_id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  -- Check if user is owner (full access to everything)
+  SELECT EXISTS (
+    SELECT 1 FROM config_organizacion_miembros om
+    WHERE om.user_id = v_user_id
+      AND om.organization_id = p_org
+      AND om.eliminado_en IS NULL
+      AND om.role = 'owner'
+  ) INTO v_is_owner;
+
+  IF v_is_owner THEN
+    RETURN true;
+  END IF;
+
+  -- Check if user is admin (full access except org management)
+  IF p_resource NOT IN ('config_organizaciones', 'config_organizacion_miembros') THEN
+    SELECT EXISTS (
+      SELECT 1 FROM config_organizacion_miembros om
+      WHERE om.user_id = v_user_id
+        AND om.organization_id = p_org
+        AND om.eliminado_en IS NULL
+        AND om.role = 'admin'
+    ) INTO v_is_admin;
+
+    IF v_is_admin THEN
+      RETURN true;
+    END IF;
+  END IF;
+
+  -- Check explicit permissions for other roles
+  SELECT EXISTS (
     SELECT 1
-    FROM public.config_organizacion_miembros om
-    JOIN public.config_roles_permisos rp ON rp.role = om.role
-    WHERE om.user_id = (SELECT auth.uid())
+    FROM config_organizacion_miembros om
+    JOIN config_roles_permisos rp ON rp.role = om.role
+    WHERE om.user_id = v_user_id
       AND om.organization_id = p_org
       AND om.eliminado_en IS NULL
       AND rp.resource = p_resource
       AND rp.action = p_action
       AND rp.eliminado_en IS NULL
       AND rp.allow = true
-  ), false);
-$function$;
+  ) INTO v_has_permission;
+
+  RETURN COALESCE(v_has_permission, false);
+END;
+$$;
 ```
 
 **How it Works**:
 
-1. **User Check**: Gets current user ID from `auth.uid()`
-2. **Membership Check**: Finds user's role in `config_organizacion_miembros`
-3. **Permission Check**: Looks up the (role, resource, action) combination in `config_roles_permisos`
-4. **Soft Delete Filter**: Ensures neither membership nor permission is deleted
-5. **Allow Check**: Only returns true if `rp.allow = true`
+1. **Authentication Check**: Returns `false` if user is not authenticated
+2. **Owner Check**: Owners get automatic access to ALL resources and actions
+3. **Admin Check**: Admins get automatic access to all resources EXCEPT organization management tables
+4. **Permission Check**: Other roles must have explicit permissions in `config_roles_permisos`
+5. **Soft Delete Filter**: Ensures membership and permissions are not deleted
 
 **Usage in RLS Policies**:
 
@@ -443,6 +486,12 @@ CREATE POLICY dm_actores_insert ON dm_actores
 - `STABLE`: Returns same result for same inputs within a transaction
 - `SECURITY DEFINER`: Runs with the privileges of the function owner, not the caller
 - `search_path` restricted to `pg_catalog, 'public'`: Prevents schema-based attacks
+
+**Important Note on UPDATE Policies**:
+
+UPDATE policies for business tables (`dm_*`, `tr_*`, `vn_*`) do **NOT** include `WITH CHECK` clauses. This is intentional to allow soft delete operations (setting `eliminado_en`). The `WITH CHECK` clause validates the NEW row after update, which would block soft deletes since the row would no longer pass `eliminado_en IS NULL` filters.
+
+Only configuration tables (`config_organizaciones`, `config_organizacion_miembros`) retain `WITH CHECK` on UPDATE to prevent unauthorized modifications to organization settings.
 
 ---
 

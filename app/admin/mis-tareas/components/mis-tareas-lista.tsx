@@ -6,7 +6,7 @@ import { TareaView } from "@/features/procesos/tareas/columns"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { CheckCircle, RotateCcw, Calendar, ChevronRight, Clock, AlertCircle, ListFilter } from "lucide-react"
+import { CheckCircle, RotateCcw, Calendar, Clock, AlertCircle, ListFilter } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { actualizarTarea } from "@/app/actions/tareas"
 import { useQueryClient } from "@tanstack/react-query"
@@ -15,6 +15,8 @@ import { toast } from "sonner"
 interface MisTareasListaProps {
     tareas: TareaView[]
     onTaskClick: (id: string) => void
+    selectedIds: Set<string>
+    onSelectionChange: (id: string, selected: boolean) => void
 }
 
 interface CompletedTaskItemProps {
@@ -23,7 +25,7 @@ interface CompletedTaskItemProps {
     onTaskClick: (id: string) => void
 }
 
-export function MisTareasLista({ tareas, onTaskClick }: MisTareasListaProps) {
+export function MisTareasLista({ tareas, onTaskClick, selectedIds, onSelectionChange }: MisTareasListaProps) {
     const queryClient = useQueryClient()
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -35,13 +37,19 @@ export function MisTareasLista({ tareas, onTaskClick }: MisTareasListaProps) {
     // Focus tag constant
     const FOCO_TAG = "Foco de hoy"
 
-    // Grouping logic - EXCLUDE focus tasks
+    // Grouping logic - EXCLUDE focus tasks, Terminada and Cancelada
+    const isPendingTask = (t: TareaView) => t.estado !== "Terminada" && t.estado !== "Cancelada"
+
     const groups = {
-        vencidas: tareas.filter(t => t.estado !== "Terminada" && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) < today),
-        hoy: tareas.filter(t => t.estado !== "Terminada" && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= today && new Date(t.fecha_vencimiento) < tomorrow),
-        manana: tareas.filter(t => t.estado !== "Terminada" && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= tomorrow && new Date(t.fecha_vencimiento) < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000)),
-        proximas: tareas.filter(t => t.estado !== "Terminada" && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000) && new Date(t.fecha_vencimiento) < nextWeek),
-        sinFecha: tareas.filter(t => t.estado !== "Terminada" && !t.tags?.includes(FOCO_TAG) && !t.fecha_vencimiento),
+        vencidas: tareas.filter(t => isPendingTask(t) && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) < today),
+        hoy: tareas.filter(t => isPendingTask(t) && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= today && new Date(t.fecha_vencimiento) < tomorrow),
+        manana: tareas.filter(t => isPendingTask(t) && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= tomorrow && new Date(t.fecha_vencimiento) < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000)),
+        proximas: tareas.filter(t => isPendingTask(t) && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000) && new Date(t.fecha_vencimiento) < nextWeek),
+        sinFecha: tareas.filter(t => isPendingTask(t) && !t.tags?.includes(FOCO_TAG) && !t.fecha_vencimiento),
+    }
+
+    const handleToggleSelection = (tareaId: string, checked: boolean | string) => {
+        onSelectionChange(tareaId, checked === true)
     }
 
     const handleCompleteTask = async (taskId: string) => {
@@ -107,9 +115,10 @@ export function MisTareasLista({ tareas, onTaskClick }: MisTareasListaProps) {
                             <div className="flex items-center gap-3 min-w-0 flex-1">
                                 <div onClick={(e) => e.stopPropagation()} className="shrink-0">
                                     <Checkbox
-                                        checked={tarea.estado === "Terminada"}
-                                        onCheckedChange={(checked) => handleCompleteTask(tarea.id, !!checked)}
+                                        checked={selectedIds.has(tarea.id)}
+                                        onCheckedChange={(checked) => handleToggleSelection(tarea.id, checked)}
                                         className="h-4 w-4"
+                                        aria-label="Seleccionar tarea"
                                     />
                                 </div>
                                 <div className="min-w-0 flex-1">
@@ -123,25 +132,29 @@ export function MisTareasLista({ tareas, onTaskClick }: MisTareasListaProps) {
                                         >
                                             {tarea.prioridad}
                                         </Badge>
-                                        {tarea.doc_comercial_codigo && (
-                                            <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
-                                                <ChevronRight className="h-3 w-3" />
-                                                {tarea.doc_comercial_codigo}
+                                        {tarea.fecha_vencimiento && (
+                                            <span className={cn(
+                                                "text-[9px] font-medium",
+                                                new Date(tarea.fecha_vencimiento) < today ? "text-destructive" : "text-muted-foreground"
+                                            )}>
+                                                {new Date(tarea.fecha_vencimiento).toLocaleDateString([], { day: '2-digit', month: 'short' })}
                                             </span>
                                         )}
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3 shrink-0 ml-2">
-                                {tarea.fecha_vencimiento && (
-                                    <span className={cn(
-                                        "text-xs font-medium",
-                                        new Date(tarea.fecha_vencimiento) < today ? "text-destructive" : "text-muted-foreground"
-                                    )}>
-                                        {new Date(tarea.fecha_vencimiento).toLocaleDateString([], { day: '2-digit', month: 'short' })}
-                                    </span>
-                                )}
-                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleCompleteTask(tarea.id)
+                                }}
+                                className="h-7 px-2 text-xs font-medium gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                                <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                                Terminar
+                            </Button>
                         </div>
                     ))}
                 </div>
@@ -166,12 +179,6 @@ export function MisTareasLista({ tareas, onTaskClick }: MisTareasListaProps) {
                                 <Clock className="h-3 w-3" />
                                 Completada
                             </span>
-                            {tarea.doc_comercial_codigo && (
-                                <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
-                                    <ChevronRight className="h-3 w-3" />
-                                    {tarea.doc_comercial_codigo}
-                                </span>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -236,7 +243,7 @@ export function MisTareasLista({ tareas, onTaskClick }: MisTareasListaProps) {
             })()}
 
             {(() => {
-                const pendingCount = tareas.filter(t => t.estado !== "Terminada").length
+                const pendingCount = tareas.filter(t => isPendingTask(t)).length
                 const completedTodayCount = tareas.filter(t => {
                     if (t.estado !== "Terminada") return false
                     const completedDate = new Date(t.actualizado_en || t.creado_en)

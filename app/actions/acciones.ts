@@ -84,16 +84,36 @@ export async function actualizarAccion(
 export async function softDeleteAccion(accion_id: string) {
   const supabase = await createClient()
 
-  const { error } = await supabase
-    .from('dm_acciones')
-    .update({ eliminado_en: new Date().toISOString() })
-    .eq('id', accion_id)
+  // Get authenticated user
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-  if (error) {
-    console.error('Error soft deleting accion:', error)
+  if (userError || !user) {
+    console.error('Error getting user:', userError)
     return {
       success: false,
-      message: `Error al eliminar acción: ${error.message}`
+      message: 'Usuario no autenticado'
+    }
+  }
+
+  // Use RPC function to soft delete with proper RLS bypass
+  const { data, error: deleteError } = await supabase.rpc('soft_delete_dm_acciones_rpc', {
+    p_accion_id: accion_id,
+    p_user_id: user.id
+  })
+
+  if (deleteError) {
+    console.error('Error soft deleting accion:', deleteError)
+    return {
+      success: false,
+      message: `Error al eliminar acción: ${deleteError.message}`
+    }
+  }
+
+  // Check if the RPC returned an error
+  if (data && !data.success) {
+    return {
+      success: false,
+      message: data.message || 'Error al eliminar acción'
     }
   }
 
@@ -101,7 +121,7 @@ export async function softDeleteAccion(accion_id: string) {
 
   return {
     success: true,
-    message: 'Acción eliminada correctamente'
+    message: data?.message || 'Acción eliminada correctamente'
   }
 }
 
@@ -325,16 +345,36 @@ export async function listAsignaciones(
 export async function softDeleteAsignacion(asignacion_id: string) {
   const supabase = await createClient()
 
-  const { error } = await supabase
-    .from('vn_asociados')
-    .update({ eliminado_en: new Date().toISOString() })
-    .eq('id', asignacion_id)
+  // Get authenticated user
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-  if (error) {
-    console.error('Error soft deleting asignacion:', error)
+  if (userError || !user) {
+    console.error('Error getting user:', userError)
     return {
       success: false,
-      message: `Error al eliminar asignación: ${error.message}`
+      message: 'Usuario no autenticado'
+    }
+  }
+
+  // Use RPC function to soft delete with proper RLS bypass
+  const { data, error: deleteError } = await supabase.rpc('soft_delete_asignacion_rpc', {
+    p_asignacion_id: asignacion_id,
+    p_user_id: user.id
+  })
+
+  if (deleteError) {
+    console.error('Error soft deleting asignacion:', deleteError)
+    return {
+      success: false,
+      message: `Error al eliminar asignación: ${deleteError.message}`
+    }
+  }
+
+  // Check if the RPC returned an error
+  if (data && !data.success) {
+    return {
+      success: false,
+      message: data.message || 'Error al eliminar asignación'
     }
   }
 
@@ -342,6 +382,6 @@ export async function softDeleteAsignacion(asignacion_id: string) {
 
   return {
     success: true,
-    message: 'Asignación eliminada correctamente'
+    message: data?.message || 'Asignación eliminada correctamente'
   }
 }

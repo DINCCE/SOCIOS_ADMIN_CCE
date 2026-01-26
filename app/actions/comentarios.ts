@@ -105,23 +105,25 @@ export async function actualizarComentario(
 ) {
   const supabase = await createClient()
 
-  const { error } = await supabase
-    .from('tr_comentarios')
-    .update({
-      contenido,
-      actualizado_en: new Date().toISOString(),
-    })
-    .eq('id', comentario_id)
+  // Usar RPC que bypass RLS y hace validación de ownership
+  const { data, error } = await supabase.rpc('update_comentario', {
+    p_comentario_id: comentario_id,
+    p_contenido: contenido
+  })
 
   if (error) {
     console.error('Error updating comentario:', error)
     return { success: false, message: error.message }
   }
 
+  if (!data?.success) {
+    return { success: false, message: data?.message || 'Error al actualizar' }
+  }
+
   revalidatePath('/admin/procesos/tareas')
   revalidatePath('/admin/procesos/documentos-comerciales')
 
-  return { success: true, message: 'Comentario actualizado correctamente' }
+  return { success: true, message: data?.message || 'Comentario actualizado correctamente' }
 }
 
 /**
@@ -133,18 +135,22 @@ export async function actualizarComentario(
 export async function eliminarComentario(comentario_id: string) {
   const supabase = await createClient()
 
-  const { error } = await supabase
-    .from('tr_comentarios')
-    .update({ eliminado_en: new Date().toISOString() })
-    .eq('id', comentario_id)
+  // Usar RPC que bypass RLS y hace validación de ownership
+  const { data, error } = await supabase.rpc('soft_delete_comentario', {
+    p_comentario_id: comentario_id
+  })
 
   if (error) {
     console.error('Error deleting comentario:', error)
     return { success: false, message: error.message }
   }
 
+  if (!data?.success) {
+    return { success: false, message: data?.message || 'Error al eliminar' }
+  }
+
   revalidatePath('/admin/procesos/tareas')
   revalidatePath('/admin/procesos/documentos-comerciales')
 
-  return { success: true, message: 'Comentario eliminado correctamente' }
+  return { success: true, message: data?.message || 'Comentario eliminado correctamente' }
 }

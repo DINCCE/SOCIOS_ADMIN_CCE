@@ -152,16 +152,36 @@ export async function actualizarDocComercial(
 export async function softDeleteDocComercial(doc_comercial_id: string) {
   const supabase = await createClient()
 
-  const { error } = await supabase
-    .from('tr_doc_comercial')
-    .update({ eliminado_en: new Date().toISOString() })
-    .eq('id', doc_comercial_id)
+  // Get authenticated user
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-  if (error) {
-    console.error('Error soft deleting document:', error)
+  if (userError || !user) {
+    console.error('Error getting user:', userError)
     return {
       success: false,
-      message: `Error al eliminar documento comercial: ${error.message}`
+      message: 'Usuario no autenticado'
+    }
+  }
+
+  // Use RPC function to soft delete with proper RLS bypass
+  const { data, error: deleteError } = await supabase.rpc('soft_delete_doc_comercial_rpc', {
+    p_doc_id: doc_comercial_id,
+    p_user_id: user.id
+  })
+
+  if (deleteError) {
+    console.error('Error soft deleting document:', deleteError)
+    return {
+      success: false,
+      message: `Error al eliminar documento comercial: ${deleteError.message}`
+    }
+  }
+
+  // Check if the RPC returned an error
+  if (data && !data.success) {
+    return {
+      success: false,
+      message: data.message || 'Error al eliminar documento comercial'
     }
   }
 
@@ -169,7 +189,7 @@ export async function softDeleteDocComercial(doc_comercial_id: string) {
 
   return {
     success: true,
-    message: 'Documento comercial eliminado correctamente'
+    message: data?.message || 'Documento comercial eliminado correctamente'
   }
 }
 

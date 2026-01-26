@@ -255,42 +255,37 @@ export async function actualizarEmpresa(
 export async function softDeleteEmpresa(id: string) {
   const supabase = await createClient()
 
-  // First, get the organizacion_id from the empresa
-  const { data: empresa, error: fetchError } = await supabase
-    .from('dm_actores')
-    .select('organizacion_id')
-    .eq('id', id)
-    .single()
+  // Get authenticated user
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-  if (fetchError) {
-    console.error('Error fetching empresa:', fetchError)
+  if (userError || !user) {
+    console.error('Error getting user:', userError)
     return {
       success: false,
-      message: `Error al obtener empresa: ${fetchError.message}`,
-      error: fetchError
+      message: 'Usuario no autenticado'
     }
   }
 
-  if (!empresa) {
+  // Use RPC function to soft delete with proper RLS bypass
+  const { data, error: deleteError } = await supabase.rpc('soft_delete_actor', {
+    p_actor_id: id,
+    p_user_id: user.id
+  })
+
+  if (deleteError) {
+    console.error('Error soft deleting empresa:', deleteError)
     return {
       success: false,
-      message: 'Empresa no encontrada'
+      message: `Error al eliminar empresa: ${deleteError.message}`,
+      error: deleteError
     }
   }
 
-  // Soft delete with organizacion_id filter for RLS compliance
-  const { error } = await supabase
-    .from('dm_actores')
-    .update({ eliminado_en: new Date().toISOString() })
-    .eq('id', id)
-    .eq('organizacion_id', empresa.organizacion_id)
-
-  if (error) {
-    console.error('Error soft deleting empresa:', error)
+  // Check if the RPC returned an error
+  if (data && !data.success) {
     return {
       success: false,
-      message: `Error al eliminar empresa: ${error.message}`,
-      error
+      message: data.message || 'Error al eliminar empresa'
     }
   }
 
@@ -299,6 +294,6 @@ export async function softDeleteEmpresa(id: string) {
 
   return {
     success: true,
-    message: 'Empresa eliminada correctamente'
+    message: data?.message || 'Empresa eliminada correctamente'
   }
 }
