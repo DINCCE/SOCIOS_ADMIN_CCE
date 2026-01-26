@@ -397,7 +397,7 @@ export const columns: ColumnDef<TareaView>[] = [
                 navigator.clipboard.writeText(tarea.id)
               }}
             >
-              Copiar ID: <DataId className="ml-1">{tarea.id.substring(0, 8)}...</DataId>
+              Copiar ID: <DataId className="ml-1">{tarea.id?.substring(0, 8) || 'N/A'}...</DataId>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>

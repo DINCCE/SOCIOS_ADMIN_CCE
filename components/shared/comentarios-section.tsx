@@ -56,6 +56,9 @@ export function ComentariosSection({
     },
   })
 
+  // Determine if we should use scrollable layout (sticky input)
+  const useStickyLayout = compact
+
   const handleSubmit = async () => {
     if (!nuevoComentario.trim()) return
 
@@ -95,14 +98,14 @@ export function ComentariosSection({
   }
 
   return (
-    <div className={className}>
+    <div className={useStickyLayout ? `flex flex-col h-full ${className || ''}` : className}>
       {/* Header */}
       {renderHeader ? (
-        <div className="mb-4">
+        <div className={useStickyLayout ? "shrink-0 mb-3" : "mb-4"}>
           {renderHeader(comentarios.length)}
         </div>
       ) : showHeader && (
-        <div className="flex items-center gap-2 mb-4">
+        <div className={`flex items-center gap-2 ${useStickyLayout ? "shrink-0 mb-3" : "mb-4"}`}>
           <MessageSquare className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold">
             Comentarios ({comentarios.length})
@@ -110,15 +113,15 @@ export function ComentariosSection({
         </div>
       )}
 
-      {/* Lista de comentarios */}
-      <div className="space-y-4 mb-4">
+      {/* Lista de comentarios - Scrollable area when in sticky layout */}
+      <div className={useStickyLayout ? "flex-1 overflow-y-auto space-y-3 pr-1" : "space-y-4 mb-4"}>
         {isLoading ? (
           <>
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
           </>
         ) : comentarios.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
+          <p className={`text-sm text-muted-foreground text-center ${useStickyLayout ? "py-4" : "py-8"}`}>
             No hay comentarios aún. ¡Sé el primero en comentar!
           </p>
         ) : (
@@ -193,37 +196,39 @@ export function ComentariosSection({
         )}
       </div>
 
-      {/* Input nuevo comentario */}
-      <div className="flex gap-2">
-        <Textarea
-          placeholder="Escribe un comentario..."
-          value={nuevoComentario}
-          onChange={(e) => setNuevoComentario(e.target.value)}
-          className={compact
-            ? "min-h-[36px] max-h-32 resize-none bg-muted/30 border-0 focus:ring-1 focus:ring-muted-foreground/20 text-sm"
-            : "min-h-[80px] resize-none"
-          }
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && e.metaKey) {
-              handleSubmit()
+      {/* Input nuevo comentario - Sticky at bottom when in sticky layout */}
+      <div className={useStickyLayout ? "shrink-0 pt-3 mt-3 border-t border-border/40" : ""}>
+        <div className="flex gap-2">
+          <Textarea
+            placeholder="Escribe un comentario..."
+            value={nuevoComentario}
+            onChange={(e) => setNuevoComentario(e.target.value)}
+            className={compact
+              ? "min-h-[36px] max-h-32 resize-none bg-muted/30 border-0 focus:ring-1 focus:ring-muted-foreground/20 text-sm"
+              : "min-h-[80px] resize-none"
             }
-          }}
-          rows={compact ? 1 : undefined}
-        />
-        <Button
-          size="icon"
-          className={compact ? "h-9 w-9 shrink-0" : "shrink-0"}
-          disabled={!nuevoComentario.trim() || isSubmitting}
-          onClick={handleSubmit}
-        >
-          <Send className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
-        </Button>
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && e.metaKey) {
+                handleSubmit()
+              }
+            }}
+            rows={compact ? 1 : undefined}
+          />
+          <Button
+            size="icon"
+            className={compact ? "h-9 w-9 shrink-0" : "shrink-0"}
+            disabled={!nuevoComentario.trim() || isSubmitting}
+            onClick={handleSubmit}
+          >
+            <Send className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+          </Button>
+        </div>
+        {!compact && (
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Presiona ⌘+Enter para enviar
+          </p>
+        )}
       </div>
-      {!compact && (
-        <p className="text-[10px] text-muted-foreground mt-1">
-          Presiona ⌘+Enter para enviar
-        </p>
-      )}
     </div>
   )
 }

@@ -11,7 +11,6 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -45,8 +44,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Input } from "@/components/ui/input"
 import { DatePicker } from "@/components/ui/date-picker"
+import { SingleTagPopover } from "@/components/ui/single-tag-popover"
 
 // Inline editing components
 import { InlineEditableTitle } from "@/components/procesos/tareas/inline-editable-title"
@@ -56,6 +55,7 @@ import { InlineDocumentPopover } from "@/components/procesos/tareas/inline-docum
 
 import { ComentariosSection } from "@/components/shared/comentarios-section"
 import { actualizarTarea, softDeleteTarea } from "@/app/actions/tareas"
+import { toggleTagsForTareas, createAndAssignTagForTareas } from "@/app/actions/tags"
 import { createClient } from "@/lib/supabase/client"
 import type { TareaView } from "@/features/procesos/tareas/columns"
 import { tareasPrioridadOptions, tareasEstadoOptions } from "@/lib/table-filters"
@@ -81,15 +81,35 @@ export function TareaDetailDialog({
   // Local state for fields not handled by inline components
   const [isSaving, setIsSaving] = useState(false)
 
-  // Tags state (not yet in inline component)
-  const [tags, setTags] = useState<string[]>([])
-  const [tagInput, setTagInput] = useState("")
-  const [isSavingTags, setIsSavingTags] = useState(false)
-
   // Date picker state
   const [dateValue, setDateValue] = useState<Date | null | undefined>(undefined)
 
   const queryClient = useQueryClient()
+
+  // Fetch all tareas to get available tags
+  const { data: allTareas = [] } = useQuery({
+    queryKey: ["tareas"],
+    queryFn: async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from("v_tareas_org")
+        .select("tags")
+      if (error) throw error
+      return data as Pick<TareaView, "tags">[]
+    },
+    enabled: open,
+  })
+
+  // Get all unique available tags
+  const availableTags = useMemo(() => {
+    const tagsSet = new Set<string>()
+    allTareas.forEach((tarea) => {
+      if (tarea.tags) {
+        tarea.tags.forEach((tag) => tagsSet.add(tag))
+      }
+    })
+    return Array.from(tagsSet).sort()
+  }, [allTareas])
 
   // Fetch tarea data
   const { data: tarea, isLoading } = useQuery({
@@ -112,7 +132,6 @@ export function TareaDetailDialog({
   // Initialize local state when tarea changes
   useEffect(() => {
     if (tarea) {
-      setTags(tarea.tags || [])
       setDateValue(tarea.fecha_vencimiento ? new Date(tarea.fecha_vencimiento) : null)
     }
   }, [tarea])
@@ -120,8 +139,6 @@ export function TareaDetailDialog({
   // Reset when dialog closes
   useEffect(() => {
     if (!open) {
-      setTags([])
-      setTagInput("")
       setDateValue(undefined)
     }
   }, [open])
@@ -168,51 +185,32 @@ export function TareaDetailDialog({
     }
   }
 
-  const addTag = useCallback((tag: string) => {
-    const trimmedTag = tag.trim().toLowerCase()
-    if (trimmedTag && !tags.includes(trimmedTag)) {
-      setTags([...tags, trimmedTag])
+  // Handle tag toggle for SingleTagPopover
+  const handleToggleTag = useCallback(async (tag: string, add: boolean) => {
+    if (!tareaId) return
+    const result = await toggleTagsForTareas([tareaId], tag, add)
+    if (result.success) {
+      queryClient.invalidateQueries({ queryKey: ["tarea", tareaId] })
+      queryClient.invalidateQueries({ queryKey: ["tareas"] })
+      onUpdated?.()
+    } else {
+      toast.error(result.message)
     }
-    setTagInput("")
-  }, [tags])
+  }, [tareaId, queryClient, onUpdated])
 
-  const removeTag = useCallback((tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove))
-  }, [tags])
-
-  // Auto-save tags
-  useEffect(() => {
-    const saveTags = async () => {
-      if (!tareaId || isSavingTags) return
-
-      const currentTags = tarea?.tags || []
-      if (JSON.stringify(tags) === JSON.stringify(currentTags)) return
-
-      setIsSavingTags(true)
-      try {
-        await actualizarTarea(tareaId, { tags: tags.length > 0 ? tags : undefined })
-        queryClient.invalidateQueries({ queryKey: ["tarea", tareaId] })
-        queryClient.invalidateQueries({ queryKey: ["tareas"] })
-        onUpdated?.()
-      } catch {
-        toast.error("Error al guardar etiquetas")
-      } finally {
-        setIsSavingTags(false)
-      }
+  // Handle tag creation for SingleTagPopover
+  const handleCreateTag = useCallback(async (tag: string) => {
+    if (!tareaId) return
+    const result = await createAndAssignTagForTareas([tareaId], tag)
+    if (result.success) {
+      queryClient.invalidateQueries({ queryKey: ["tarea", tareaId] })
+      queryClient.invalidateQueries({ queryKey: ["tareas"] })
+      onUpdated?.()
+      toast.success(result.message)
+    } else {
+      toast.error(result.message)
     }
-
-    const timer = setTimeout(saveTags, 500)
-    return () => clearTimeout(timer)
-  }, [tags, tareaId, tarea, queryClient, onUpdated, isSavingTags])
-
-  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault()
-      if (tagInput.trim()) {
-        addTag(tagInput)
-      }
-    }
-  }
+  }, [tareaId, queryClient, onUpdated])
 
   // Transform assignee data for InlineAssigneePopover
   const assignedMiembro = useMemo(() => {
@@ -331,7 +329,7 @@ export function TareaDetailDialog({
                     <div className="border-b border-border/40 mb-6" />
 
                     {/* Comments Section */}
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 h-[400px]">
                       <ComentariosSection
                         entidadTipo="tarea"
                         entidadId={tarea.id}
@@ -460,27 +458,13 @@ export function TareaDetailDialog({
                         <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
                           Etiquetas
                         </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {tags.map((tag) => (
-                            <Badge key={tag} variant="secondary" className="text-[10px] bg-secondary/50 h-5 px-2 py-0.5 gap-1">
-                              {tag}
-                              <button
-                                type="button"
-                                onClick={() => removeTag(tag)}
-                                className="ml-0.5 rounded-full hover:bg-background/20 p-0"
-                              >
-                                ×
-                              </button>
-                            </Badge>
-                          ))}
-                          <Input
-                            value={tagInput}
-                            onChange={(e) => setTagInput(e.target.value)}
-                            onKeyDown={handleTagInputKeyDown}
-                            placeholder="+ tag"
-                            className="h-5 w-16 text-[10px] px-1.5"
-                          />
-                        </div>
+                        <SingleTagPopover
+                          availableTags={availableTags}
+                          selectedTags={tarea?.tags || []}
+                          onToggleTag={handleToggleTag}
+                          onCreateTag={handleCreateTag}
+                          disabled={isSaving}
+                        />
                       </div>
 
                       {/* Separator */}
