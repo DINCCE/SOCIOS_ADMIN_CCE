@@ -32,6 +32,7 @@ interface DatePickerProps {
     toYear?: number
     captionLayout?: "label" | "dropdown" | "dropdown-months" | "dropdown-years"
     className?: string
+    dateDisplayFormat?: "PPP" | "dd/MM/yyyy" | "dd MMM yy"
 }
 
 // Custom dropdown component using shadcn Select
@@ -84,6 +85,7 @@ export function DatePicker({
     toYear = new Date().getFullYear(),
     captionLayout = "dropdown",
     className,
+    dateDisplayFormat = "PPP",
 }: DatePickerProps) {
     // Convert value to Date object if it's a string
     const dateValue = React.useMemo(() => {
@@ -95,6 +97,20 @@ export function DatePicker({
         }
         return new Date(dateStr + "T12:00:00")
     }, [value])
+
+    // Format date based on dateDisplayFormat prop
+    const formattedDate = React.useMemo(() => {
+        if (!dateValue) return null
+        switch (dateDisplayFormat) {
+            case "dd/MM/yyyy":
+                return format(dateValue, "dd/MM/yyyy")
+            case "dd MMM yy":
+                return format(dateValue, "dd MMM yy", { locale: es })
+            case "PPP":
+            default:
+                return format(dateValue, "PPP", { locale: es })
+        }
+    }, [dateValue, dateDisplayFormat])
 
     const handleSelect = React.useCallback(
         (date: Date | undefined) => {
@@ -124,8 +140,8 @@ export function DatePicker({
                     )}
                 >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateValue ? (
-                        format(dateValue, "PPP", { locale: es })
+                    {formattedDate ? (
+                        <span>{formattedDate}</span>
                     ) : (
                         <span>{placeholder}</span>
                     )}

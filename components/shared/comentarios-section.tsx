@@ -10,7 +10,6 @@ import { toast } from "sonner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,12 +29,18 @@ interface ComentariosSectionProps {
   entidadTipo: EntidadTipo
   entidadId: string
   className?: string
+  compact?: boolean
+  showHeader?: boolean
+  renderHeader?: (count: number) => React.ReactNode
 }
 
 export function ComentariosSection({
   entidadTipo,
   entidadId,
   className,
+  compact = false,
+  showHeader = true,
+  renderHeader,
 }: ComentariosSectionProps) {
   const [nuevoComentario, setNuevoComentario] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -70,7 +75,7 @@ export function ComentariosSection({
       setNuevoComentario("")
       queryClient.invalidateQueries({ queryKey })
       toast.success("Comentario agregado")
-    } catch (error) {
+    } catch {
       toast.error("Error inesperado")
     } finally {
       setIsSubmitting(false)
@@ -84,7 +89,7 @@ export function ComentariosSection({
         queryClient.invalidateQueries({ queryKey })
         toast.success("Comentario eliminado")
       }
-    } catch (error) {
+    } catch {
       toast.error("Error al eliminar")
     }
   }
@@ -92,12 +97,18 @@ export function ComentariosSection({
   return (
     <div className={className}>
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <MessageSquare className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-semibold">
-          Comentarios ({comentarios.length})
-        </h3>
-      </div>
+      {renderHeader ? (
+        <div className="mb-4">
+          {renderHeader(comentarios.length)}
+        </div>
+      ) : showHeader && (
+        <div className="flex items-center gap-2 mb-4">
+          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">
+            Comentarios ({comentarios.length})
+          </h3>
+        </div>
+      )}
 
       {/* Lista de comentarios */}
       <div className="space-y-4 mb-4">
@@ -111,67 +122,74 @@ export function ComentariosSection({
             No hay comentarios aún. ¡Sé el primero en comentar!
           </p>
         ) : (
-          comentarios.map((comentario: any) => (
-            <div
-              key={comentario.id}
-              className="flex gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-            >
-              <Avatar className="h-8 w-8 shrink-0">
-                <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                  {comentario.creado_por_nombre?.charAt(0)?.toUpperCase() || "?"}
-                </AvatarFallback>
-              </Avatar>
+          comentarios.map((comentario) => {
+            // Get initials from name or email (max 2 chars)
+            const getInitials = (nombre: string, email?: string) => {
+              const name = nombre || email || "U"
+              return name
+                .split(" ")
+                .map((n: string) => n[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2)
+            }
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium">
-                    {comentario.creado_por_nombre || comentario.creado_por_email}
-                  </span>
-                  {comentario.creado_por_cargo && (
-                    <Badge variant="outline" className="text-[10px]">
-                      {comentario.creado_por_cargo}
-                    </Badge>
-                  )}
-                  {comentario.es_interno && (
-                    <Badge variant="secondary" className="text-[10px]">
-                      Interno
-                    </Badge>
-                  )}
-                  <span className="text-xs text-muted-foreground ml-auto">
-                    {formatDistanceToNow(new Date(comentario.creado_en), {
-                      addSuffix: true,
-                      locale: es,
-                    })}
-                  </span>
+            return (
+              <div
+                key={comentario.id}
+                className="flex gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+              >
+                <Avatar className="h-8 w-8 shrink-0">
+                  <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
+                    {getInitials(comentario.creado_por_nombre, comentario.creado_por_email)}
+                  </AvatarFallback>
+                </Avatar>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-6 w-6">
-                        <MoreHorizontal className="h-3 w-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Pencil className="mr-2 h-3 w-3" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => handleDelete(comentario.id)}
-                      >
-                        <Trash2 className="mr-2 h-3 w-3" />
-                        Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <div className="flex-1 min-w-0">
+                  {/* Metadata row: Name + timestamp + menu */}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold">
+                      {comentario.creado_por_nombre || comentario.creado_por_email}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(comentario.creado_en), {
+                        addSuffix: true,
+                        locale: es,
+                      })}
+                    </span>
+
+                    <div className="ml-auto">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                            <MoreHorizontal className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <Pencil className="mr-2 h-3 w-3" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => handleDelete(comentario.id)}
+                          >
+                            <Trash2 className="mr-2 h-3 w-3" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  {/* Comment text */}
+                  <p className="text-sm text-foreground whitespace-pre-wrap">
+                    {comentario.contenido}
+                  </p>
                 </div>
-
-                <p className="text-sm text-foreground whitespace-pre-wrap">
-                  {comentario.contenido}
-                </p>
               </div>
-            </div>
-          ))
+            )
+          })
         )}
       </div>
 
@@ -181,25 +199,31 @@ export function ComentariosSection({
           placeholder="Escribe un comentario..."
           value={nuevoComentario}
           onChange={(e) => setNuevoComentario(e.target.value)}
-          className="min-h-[80px] resize-none"
+          className={compact
+            ? "min-h-[36px] max-h-32 resize-none bg-muted/30 border-0 focus:ring-1 focus:ring-muted-foreground/20 text-sm"
+            : "min-h-[80px] resize-none"
+          }
           onKeyDown={(e) => {
             if (e.key === "Enter" && e.metaKey) {
               handleSubmit()
             }
           }}
+          rows={compact ? 1 : undefined}
         />
         <Button
           size="icon"
-          className="shrink-0"
+          className={compact ? "h-9 w-9 shrink-0" : "shrink-0"}
           disabled={!nuevoComentario.trim() || isSubmitting}
           onClick={handleSubmit}
         >
-          <Send className="h-4 w-4" />
+          <Send className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
         </Button>
       </div>
-      <p className="text-[10px] text-muted-foreground mt-1">
-        Presiona ⌘+Enter para enviar
-      </p>
+      {!compact && (
+        <p className="text-[10px] text-muted-foreground mt-1">
+          Presiona ⌘+Enter para enviar
+        </p>
+      )}
     </div>
   )
 }

@@ -1,8 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+    type ChartConfig,
+} from "@/components/ui/chart"
 import { TareaView } from "@/features/procesos/tareas/columns"
 import { subDays, format, isSameDay, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
@@ -10,6 +16,13 @@ import { es } from "date-fns/locale"
 interface WeeklyCompletionChartProps {
     tareas: TareaView[]
 }
+
+const chartConfig = {
+    completed: {
+        label: "Completadas",
+        color: "var(--chart-1)",
+    },
+} satisfies ChartConfig
 
 export function WeeklyCompletionChart({ tareas }: WeeklyCompletionChartProps) {
     // Calculate last 7 days data
@@ -50,7 +63,7 @@ export function WeeklyCompletionChart({ tareas }: WeeklyCompletionChartProps) {
     }, [weeklyData])
 
     return (
-        <Card className="border-none shadow-none bg-muted/30">
+        <Card className="border border-border shadow-sm bg-card">
             <CardContent className="p-4 space-y-4">
                 {/* Header with KPI */}
                 <div className="flex items-center justify-between">
@@ -65,54 +78,31 @@ export function WeeklyCompletionChart({ tareas }: WeeklyCompletionChartProps) {
                 </div>
 
                 {/* Chart */}
-                <div className="h-32 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div className="h-[140px] w-full">
+                    <ChartContainer config={chartConfig} className="h-full w-full">
                         <BarChart
+                            accessibilityLayer
                             data={weeklyData}
                             margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
-                            barSize={20}
                         >
-                            {/* No grid lines */}
-                            <CartesianGrid stroke="none" />
-
-                            {/* Minimalist XAxis - only day initials */}
+                            <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
                             <XAxis
                                 dataKey="day"
-                                axisLine={false}
                                 tickLine={false}
-                                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                                axisLine={false}
                                 tickMargin={8}
+                                tick={{ fontSize: 10 }}
                             />
-
-                            {/* Hide YAxis */}
                             <YAxis hide />
-
-                            {/* Minimalist Tooltip */}
-                            <Tooltip
-                                content={({ active, payload }) => {
-                                    if (active && payload && payload.length > 0) {
-                                        const data = payload[0].payload
-                                        return (
-                                            <div className="rounded-md border bg-popover px-2.5 py-1 text-xs shadow-md">
-                                                <div className="font-medium text-foreground">{data.completed}</div>
-                                                <div className="text-muted-foreground">{data.fullDate}</div>
-                                            </div>
-                                        )
-                                    }
-                                    return null
-                                }}
-                                cursor={false}
-                            />
-
-                            {/* Bars - using theme colors */}
+                            <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
                             <Bar
                                 dataKey="completed"
-                                fill="hsl(var(--foreground))"
+                                fill="var(--color-completed)"
                                 radius={[4, 4, 0, 0]}
-                                className="fill-foreground"
+                                barSize={20}
                             />
                         </BarChart>
-                    </ResponsiveContainer>
+                    </ChartContainer>
                 </div>
             </CardContent>
         </Card>

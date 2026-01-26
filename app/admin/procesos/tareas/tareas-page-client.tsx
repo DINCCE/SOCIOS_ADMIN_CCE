@@ -42,7 +42,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Skeleton } from '@/components/ui/skeleton'
 import { FloatingActionCapsule } from '@/components/ui/floating-action-capsule'
 import { NewTareaSheet } from '@/components/procesos/tareas/new-tarea-sheet'
-import { TareaDetailSheet } from '@/components/procesos/tareas/tarea-detail-sheet'
+import { TareaDetailDialog } from '@/components/procesos/tareas/tarea-detail-dialog'
 import { columns, type TareaView } from '@/features/procesos/tareas/columns'
 import { tareasPrioridadOptions, tareasEstadoOptions, getTareaTagsOptions, getTareaAsignadoOptions } from '@/lib/table-filters'
 import { calculateDefaultPageSize } from '@/lib/utils/pagination'
@@ -517,8 +517,8 @@ export function TareasPageClient() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Tarea Detail Sheet */}
-      <TareaDetailSheet
+      {/* Tarea Detail Dialog */}
+      <TareaDetailDialog
         tareaId={selectedTareaId}
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}

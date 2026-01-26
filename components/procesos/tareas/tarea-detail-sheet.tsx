@@ -1,24 +1,19 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
 import {
-  Calendar,
-  CheckCircle2,
-  Clock,
-  Edit2,
-  ExternalLink,
   Loader2,
   Trash2,
-  User,
-  FileText,
+  MoreHorizontal,
   Users,
-  Tag,
   X,
-  Search,
   ChevronDown,
+  User,
+  Edit2,
+  FileText,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -27,10 +22,9 @@ import { Button } from "@/components/ui/button"
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
+  SheetClose,
 } from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   DropdownMenu,
@@ -38,6 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,20 +44,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
-
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { DatePicker } from "@/components/ui/date-picker"
 import { cn } from "@/lib/utils"
+import { DatePicker } from "@/components/ui/date-picker"
 
 import { ComentariosSection } from "@/components/shared/comentarios-section"
-import { actualizarTarea, softDeleteTarea, buscarMiembrosOrganizacion, buscarDocumentosComerciales } from "@/app/actions/tareas"
+import { actualizarTarea, softDeleteTarea, buscarMiembrosOrganizacion } from "@/app/actions/tareas"
 import { createClient } from "@/lib/supabase/client"
 import type { TareaView } from "@/features/procesos/tareas/columns"
 import { tareasPrioridadOptions, tareasEstadoOptions } from "@/lib/table-filters"
@@ -78,19 +66,6 @@ interface MiembroOrganizacion {
   nombres: string
   apellidos: string
   email: string
-  telefono?: string
-  cargo?: string
-  role?: string
-}
-
-interface DocumentoComercial {
-  id: string
-  codigo: string
-  tipo: string
-  estado: string
-  titulo?: string
-  fecha_doc: string
-  solicitante_id?: string
 }
 
 const PRIORIDAD_CONFIG: Record<string, { label: string; dotClassName: string }> = {
@@ -125,40 +100,37 @@ export function TareaDetailSheet({
 }: TareaDetailSheetProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [isUpdating, setIsUpdating] = useState(false)
 
-  // Edit mode states
-  const [isEditing, setIsEditing] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [editValues, setEditValues] = useState<Partial<TareaView>>({})
+  // Local state for inline editing
+  const [titleValue, setTitleValue] = useState("")
+  const [descriptionValue, setDescriptionValue] = useState("")
+  const [isSaving, setIsSaving] = useState<string | null>(null)
 
   // Quick update dropdown states
   const [estadoDropdownOpen, setEstadoDropdownOpen] = useState(false)
   const [prioridadDropdownOpen, setPrioridadDropdownOpen] = useState(false)
   const [isQuickUpdating, setIsQuickUpdating] = useState(false)
 
-  // Search states for comboboxes
-  const [miembroSearchQuery, setMiembroSearchQuery] = useState("")
-  const [miembroComboboxOpen, setMiembroComboboxOpen] = useState(false)
-  const [miembroSearchResults, setMiembroSearchResults] = useState<MiembroOrganizacion[]>([])
-  const [isSearchingMiembros, setIsSearchingMiembros] = useState(false)
-  const [selectedMiembro, setSelectedMiembro] = useState<MiembroOrganizacion | null>(null)
-
-  const [documentoSearchQuery, setDocumentoSearchQuery] = useState("")
-  const [documentoComboboxOpen, setDocumentoComboboxOpen] = useState(false)
-  const [documentoSearchResults, setDocumentoSearchResults] = useState<DocumentoComercial[]>([])
-  const [isSearchingDocumentos, setIsSearchingDocumentos] = useState(false)
-  const [selectedDocumento, setSelectedDocumento] = useState<DocumentoComercial | null>(null)
-
   // Tags state
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState("")
-  const [existingTags, setExistingTags] = useState<string[]>([])
+  const [isSavingTags, setIsSavingTags] = useState(false)
 
-  // Get organization ID for searches
+  // Date picker state
+  const [dateValue, setDateValue] = useState<Date | null | undefined>(undefined)
+
+  // Assignee popover state
+  const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false)
+  const [assigneeSearchQuery, setAssigneeSearchQuery] = useState("")
+  const [assigneeSearchResults, setAssigneeSearchResults] = useState<MiembroOrganizacion[]>([])
+  const [isSearchingAssignee, setIsSearchingAssignee] = useState(false)
+
+  // Get organization ID
   const [orgId, setOrgId] = useState<string>("")
 
   const queryClient = useQueryClient()
+  const titleInputRef = useRef<HTMLTextAreaElement>(null)
+  const descriptionInputRef = useRef<HTMLTextAreaElement>(null)
 
   // Fetch tarea data
   const { data: tarea, isLoading } = useQuery({
@@ -178,116 +150,69 @@ export function TareaDetailSheet({
     enabled: !!tareaId && open,
   })
 
-  // Fetch existing tags when tarea or orgId changes
-  useEffect(() => {
-    const fetchExistingTags = async () => {
-      if (!orgId) return
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from("tr_tareas")
-        .select("tags")
-        .eq("organizacion_id", orgId)
-        .not("tags", "is", null)
-        .not("tags", "eq", "{}")
-      if (error) throw error
-      const allTags = data?.flatMap(o => o.tags || []) || []
-      const uniqueTags = Array.from(new Set(allTags))
-      setExistingTags(uniqueTags)
-    }
-    fetchExistingTags()
-  }, [orgId])
-
-  // Initialize edit values and tags when tarea changes
+  // Initialize local state when tarea changes
   useEffect(() => {
     if (tarea) {
-      setEditValues({
-        titulo: tarea.titulo,
-        descripcion: tarea.descripcion,
-        prioridad: tarea.prioridad,
-        estado: tarea.estado,
-        fecha_vencimiento: tarea.fecha_vencimiento ? new Date(tarea.fecha_vencimiento) : undefined,
-        asignado_a: tarea.asignado_id,
-        oportunidad_id: tarea.doc_comercial_id,
-      })
+      setTitleValue(tarea.titulo)
+      setDescriptionValue(tarea.descripcion || "")
       setTags(tarea.tags || [])
       setOrgId(tarea.organizacion_id || "")
+      setDateValue(tarea.fecha_vencimiento ? new Date(tarea.fecha_vencimiento) : null)
     }
   }, [tarea])
 
-  // Debounced search for miembros
+  // Debounced search for assignee
   useEffect(() => {
     const timer = setTimeout(async () => {
-      if (miembroSearchQuery.length >= 2 && orgId) {
-        setIsSearchingMiembros(true)
-        const result = await buscarMiembrosOrganizacion(miembroSearchQuery, orgId)
-        setMiembroSearchResults(result.success ? result.data : [])
-        setIsSearchingMiembros(false)
+      if (assigneeSearchQuery.length >= 2 && orgId) {
+        setIsSearchingAssignee(true)
+        const result = await buscarMiembrosOrganizacion(assigneeSearchQuery, orgId)
+        setAssigneeSearchResults(result.success ? result.data : [])
+        setIsSearchingAssignee(false)
       } else {
-        setMiembroSearchResults([])
+        setAssigneeSearchResults([])
       }
     }, 300)
     return () => clearTimeout(timer)
-  }, [miembroSearchQuery, orgId])
+  }, [assigneeSearchQuery, orgId])
 
-  // Debounced search for documentos
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (documentoSearchQuery.length >= 2 && orgId) {
-        setIsSearchingDocumentos(true)
-        const result = await buscarDocumentosComerciales(documentoSearchQuery, orgId)
-        setDocumentoSearchResults(result.success ? result.data : [])
-        setIsSearchingDocumentos(false)
-      } else {
-        setDocumentoSearchResults([])
-      }
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [documentoSearchQuery, orgId])
-
-  // Sync selectedMiembro with edit value
-  useEffect(() => {
-    if (editValues.asignado_a && !selectedMiembro) {
-      const found = miembroSearchResults.find(m => m.user_id === editValues.asignado_a)
-      if (found) setSelectedMiembro(found)
-    } else if (!editValues.asignado_a && selectedMiembro) {
-      setSelectedMiembro(null)
-    }
-  }, [editValues.asignado_a, miembroSearchResults, selectedMiembro])
-
-  // Sync selectedDocumento with edit value
-  useEffect(() => {
-    if (editValues.oportunidad_id && !selectedDocumento) {
-      const found = documentoSearchResults.find(d => d.id === editValues.oportunidad_id)
-      if (found) setSelectedDocumento(found)
-    } else if (!editValues.oportunidad_id && selectedDocumento) {
-      setSelectedDocumento(null)
-    }
-  }, [editValues.oportunidad_id, documentoSearchResults, selectedDocumento])
-
-  // Reset edit mode when sheet closes
+  // Reset when sheet closes
   useEffect(() => {
     if (!open) {
-      setIsEditing(false)
-      setEditValues({})
-      setSelectedMiembro(null)
-      setSelectedDocumento(null)
-      setMiembroSearchQuery("")
-      setMiembroSearchResults([])
-      setDocumentoSearchQuery("")
-      setDocumentoSearchResults([])
+      setTitleValue("")
+      setDescriptionValue("")
       setTags([])
       setTagInput("")
+      setDateValue(undefined)
+      setAssigneeSearchQuery("")
+      setAssigneeSearchResults([])
     }
   }, [open])
 
-  const handleMarkComplete = async () => {
-    if (!tareaId) return
-    setIsUpdating(true)
+  // Auto-resize textareas
+  const autoResizeTextarea = useCallback((element: HTMLTextAreaElement | null) => {
+    if (!element) return
+    element.style.height = "auto"
+    element.style.height = `${element.scrollHeight}px`
+  }, [])
+
+  // Auto-resize title on change
+  useEffect(() => {
+    autoResizeTextarea(titleInputRef.current)
+  }, [titleValue, autoResizeTextarea])
+
+  // Auto-resize description on change
+  useEffect(() => {
+    autoResizeTextarea(descriptionInputRef.current)
+  }, [descriptionValue, autoResizeTextarea])
+
+  const handleQuickUpdate = useCallback(async (field: string, value: unknown) => {
+    if (!tareaId || isSaving) return
+    setIsSaving(field)
 
     try {
-      const result = await actualizarTarea(tareaId, { estado: "Terminada" })
+      const result = await actualizarTarea(tareaId, { [field]: value })
       if (result.success) {
-        toast.success("Tarea marcada como terminada")
         queryClient.invalidateQueries({ queryKey: ["tarea", tareaId] })
         queryClient.invalidateQueries({ queryKey: ["tareas"] })
         onUpdated?.()
@@ -295,11 +220,11 @@ export function TareaDetailSheet({
         toast.error(result.message)
       }
     } catch {
-      toast.error("Error al actualizar la tarea")
+      toast.error("Error al actualizar")
     } finally {
-      setIsUpdating(false)
+      setIsSaving(null)
     }
-  }
+  }, [tareaId, isSaving, queryClient, onUpdated])
 
   const handleDelete = async () => {
     if (!tareaId) return
@@ -323,102 +248,42 @@ export function TareaDetailSheet({
     }
   }
 
-  const handleQuickUpdate = async (field: string, value: string) => {
-    if (!tareaId) return
-    setIsQuickUpdating(true)
-
-    try {
-      const result = await actualizarTarea(tareaId, { [field]: value })
-      if (result.success) {
-        toast.success(`${field === 'estado' ? 'Estado' : 'Prioridad'} actualizado`)
-        queryClient.invalidateQueries({ queryKey: ["tarea", tareaId] })
-        queryClient.invalidateQueries({ queryKey: ["tareas"] })
-        onUpdated?.()
-      } else {
-        toast.error(result.message)
-      }
-    } catch {
-      toast.error("Error al actualizar")
-    } finally {
-      setIsQuickUpdating(false)
-      setEstadoDropdownOpen(false)
-      setPrioridadDropdownOpen(false)
-    }
-  }
-
-  const handleSave = async () => {
-    if (!tareaId) return
-    setIsSaving(true)
-
-    try {
-      const result = await actualizarTarea(tareaId, {
-        titulo: editValues.titulo,
-        descripcion: editValues.descripcion,
-        prioridad: editValues.prioridad,
-        estado: editValues.estado,
-        fecha_vencimiento: editValues.fecha_vencimiento
-          ? editValues.fecha_vencimiento.toISOString().split('T')[0]
-          : undefined,
-        asignado_a: editValues.asignado_a,
-        oportunidad_id: editValues.oportunidad_id,
-        tags: tags.length > 0 ? tags : undefined,
-      })
-      if (result.success) {
-        toast.success("Tarea actualizada correctamente")
-        queryClient.invalidateQueries({ queryKey: ["tarea", tareaId] })
-        queryClient.invalidateQueries({ queryKey: ["tareas"] })
-        onUpdated?.()
-        setIsEditing(false)
-      } else {
-        toast.error(result.message)
-      }
-    } catch {
-      toast.error("Error al actualizar la tarea")
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleCancelEdit = () => {
-    if (tarea) {
-      setEditValues({
-        titulo: tarea.titulo,
-        descripcion: tarea.descripcion,
-        prioridad: tarea.prioridad,
-        estado: tarea.estado,
-        fecha_vencimiento: tarea.fecha_vencimiento ? new Date(tarea.fecha_vencimiento) : undefined,
-        asignado_a: tarea.asignado_id,
-        oportunidad_id: tarea.doc_comercial_id,
-      })
-      setTags(tarea.tags || [])
-    }
-    setIsEditing(false)
-  }
-
-  const getInitials = (nombre: string) => {
-    return nombre
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2)
-  }
-
-  const getDocumentoDisplay = (doc: DocumentoComercial) => {
-    return `${doc.codigo}${doc.titulo ? ` - ${doc.titulo}` : ""} (${doc.tipo})`
-  }
-
-  const addTag = (tag: string) => {
+  const addTag = useCallback((tag: string) => {
     const trimmedTag = tag.trim().toLowerCase()
     if (trimmedTag && !tags.includes(trimmedTag)) {
       setTags([...tags, trimmedTag])
     }
     setTagInput("")
-  }
+  }, [tags])
 
-  const removeTag = (tagToRemove: string) => {
+  const removeTag = useCallback((tagToRemove: string) => {
     setTags(tags.filter(tag => tag !== tagToRemove))
-  }
+  }, [tags])
+
+  // Auto-save tags
+  useEffect(() => {
+    const saveTags = async () => {
+      if (!tareaId || isSavingTags) return
+
+      const currentTags = tarea?.tags || []
+      if (JSON.stringify(tags) === JSON.stringify(currentTags)) return
+
+      setIsSavingTags(true)
+      try {
+        await actualizarTarea(tareaId, { tags: tags.length > 0 ? tags : undefined })
+        queryClient.invalidateQueries({ queryKey: ["tarea", tareaId] })
+        queryClient.invalidateQueries({ queryKey: ["tareas"] })
+        onUpdated?.()
+      } catch {
+        toast.error("Error al guardar etiquetas")
+      } finally {
+        setIsSavingTags(false)
+      }
+    }
+
+    const timer = setTimeout(saveTags, 500)
+    return () => clearTimeout(timer)
+  }, [tags, tareaId, tarea, queryClient, onUpdated, isSavingTags])
 
   const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" || e.key === ",") {
@@ -429,443 +294,298 @@ export function TareaDetailSheet({
     }
   }
 
+  // Get initials for avatar
+  const getInitials = useCallback((nombre: string, email?: string) => {
+    const name = nombre || email || "U"
+    return name
+      .split(" ")
+      .map((n: string) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
+  }, [])
+
   const prioridadConfig = tarea ? PRIORIDAD_CONFIG[tarea.prioridad] : null
   const estadoConfig = tarea ? ESTADO_CONFIG[tarea.estado] : null
   const PrioridadIcon = tarea ? getIconForValue(tarea.prioridad, tareasPrioridadOptions) : null
   const EstadoIcon = tarea ? getIconForValue(tarea.estado, tareasEstadoOptions) : null
+
+  // Ghost input affordance class
+  const ghostInputClass = "transition-colors rounded-md -ml-2 p-2 hover:bg-muted/50 cursor-text"
 
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent className="sm:max-w-xl w-[90vw] flex flex-col p-0 gap-0 border-l shadow-2xl">
           {/* Header */}
-          <div className="bg-background shrink-0 px-6 py-6 border-b">
-            <SheetHeader className="text-left space-y-3">
-              {isLoading ? (
-                <div className="space-y-3">
-                  <VisuallyHidden>
-                    <SheetTitle>Cargando tarea...</SheetTitle>
-                  </VisuallyHidden>
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-6 w-full" />
-                  <div className="flex gap-2">
-                    <Skeleton className="h-6 w-16" />
-                    <Skeleton className="h-6 w-20" />
-                  </div>
-                </div>
-              ) : tarea ? (
-                <>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono text-muted-foreground">
-                      {tarea.codigo_tarea || "Sin código"}
-                    </span>
-                    {!isEditing ? (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setIsEditing(true)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
-                          Cancelar
-                        </Button>
-                        <Button size="sm" onClick={handleSave} disabled={isSaving}>
-                          {isSaving ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : null}
-                          Guardar
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-
-                  {!isEditing ? (
-                    <SheetTitle className="text-xl font-bold tracking-tight text-foreground">
-                      {tarea.titulo}
-                    </SheetTitle>
-                  ) : (
-                    <Input
-                      value={editValues.titulo || ""}
-                      onChange={(e) => setEditValues({ ...editValues, titulo: e.target.value })}
-                      className="text-xl font-bold tracking-tight h-auto py-2"
-                      placeholder="Título de la tarea"
-                    />
-                  )}
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Prioridad Badge - Clickeable para edición rápida */}
-                    <DropdownMenu open={prioridadDropdownOpen} onOpenChange={setPrioridadDropdownOpen}>
-                      <DropdownMenuTrigger asChild>
-                        <Badge
-                          variant="metadata-outline"
-                          dotClassName={prioridadConfig?.dotClassName}
-                              showDot
-                              className="gap-1 cursor-pointer hover:bg-accent transition-colors"
-                        >
-                          {isQuickUpdating ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <>
-                              {PrioridadIcon && <PrioridadIcon className="h-3 w-3" />}
-                              {prioridadConfig?.label}
-                              <ChevronDown className="h-3 w-3 opacity-50" />
-                            </>
-                          )}
-                        </Badge>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        {tareasPrioridadOptions.map((option) => {
-                          const Icon = option.icon
-                          return (
-                            <DropdownMenuItem
-                              key={option.value}
-                              onClick={() => handleQuickUpdate("prioridad", option.value)}
-                              disabled={isQuickUpdating}
-                            >
-                              <Icon className="mr-2 h-4 w-4" />
-                              {option.label}
-                            </DropdownMenuItem>
-                          )
-                        })}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    {/* Estado Badge - Clickeable para edición rápida */}
-                    <DropdownMenu open={estadoDropdownOpen} onOpenChange={setEstadoDropdownOpen}>
-                      <DropdownMenuTrigger asChild>
-                        <Badge
-                          variant="metadata-outline"
-                          dotClassName={estadoConfig?.dotClassName}
-                              showDot
-                              className="gap-1 cursor-pointer hover:bg-accent transition-colors"
-                        >
-                          {isQuickUpdating ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <>
-                              {EstadoIcon && <EstadoIcon className="h-3 w-3" />}
-                              {estadoConfig?.label}
-                              <ChevronDown className="h-3 w-3 opacity-50" />
-                            </>
-                          )}
-                        </Badge>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        {tareasEstadoOptions.map((option) => {
-                          const Icon = option.icon
-                          return (
-                            <DropdownMenuItem
-                              key={option.value}
-                              onClick={() => handleQuickUpdate("estado", option.value)}
-                              disabled={isQuickUpdating}
-                            >
-                              <Icon className="mr-2 h-4 w-4" />
-                              {option.label}
-                            </DropdownMenuItem>
-                          )
-                        })}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    {/* Fecha de vencimiento - Editable en modo edición */}
-                    {isEditing ? (
-                      <div className="flex items-center gap-2">
-                        <DatePicker
-                          value={editValues.fecha_vencimiento as Date | null | undefined}
-                          onChange={(date) => setEditValues({ ...editValues, fecha_vencimiento: date })}
-                          placeholder="Seleccionar fecha"
-                          fromYear={new Date().getFullYear()}
-                          toYear={new Date().getFullYear() + 5}
-                          className="h-8"
-                        />
-                      </div>
-                    ) : (
-                      tarea.fecha_vencimiento && (
-                        <Badge variant="outline" className="gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(tarea.fecha_vencimiento).toLocaleDateString("es-CO", {
-                            day: "numeric",
-                            month: "short",
-                          })}
-                        </Badge>
-                      )
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <VisuallyHidden>
-                    <SheetTitle>Tarea no encontrada</SheetTitle>
-                  </VisuallyHidden>
-                  <p className="text-muted-foreground">Tarea no encontrada</p>
-                </>
-              )}
-            </SheetHeader>
-          </div>
-
-          {/* Body - Scrollable */}
-          <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="bg-background shrink-0 px-6 py-6 border-b space-y-3">
             {isLoading ? (
-              <div className="space-y-6">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
+              <div className="space-y-3">
+                <VisuallyHidden>
+                  <SheetTitle>Cargando tarea...</SheetTitle>
+                </VisuallyHidden>
+                <Skeleton className="h-7 w-3/4" />
+                <Skeleton className="h-4 w-48" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-7 w-20" />
+                  <Skeleton className="h-7 w-24" />
+                  <Skeleton className="h-7 w-16" />
+                  <Skeleton className="h-7 w-24" />
+                </div>
+                <Skeleton className="h-5 w-32" />
               </div>
             ) : tarea ? (
-              <div className="space-y-8">
-                {/* Descripción */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Descripción
-                  </h4>
-                  {!isEditing ? (
-                    tarea.descripcion ? (
-                      <p className="text-sm text-foreground whitespace-pre-wrap">
-                        {tarea.descripcion}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">Sin descripción</p>
-                    )
-                  ) : (
-                    <Textarea
-                      value={editValues.descripcion || ""}
-                      onChange={(e) => setEditValues({ ...editValues, descripcion: e.target.value })}
-                      placeholder="Detalles adicionales de la tarea..."
-                      className="min-h-[100px]"
-                    />
-                  )}
+              <>
+                {/* Zona 1: Navegación (Top Right) - FIXED: gap-2, no negative margins */}
+                <div className="flex items-center justify-end gap-2">
+                  {/* Close button */}
+                  <SheetClose asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </SheetClose>
+
+                  {/* More menu */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => setShowDeleteDialog(true)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Eliminar Tarea
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
-                <Separator />
+                {/* Zona 2: Encabezado - Header Stack */}
+                {/* Nivel 1: Título - FIXED: Better alignment */}
+                <VisuallyHidden>
+                  <SheetTitle>{tarea.titulo}</SheetTitle>
+                </VisuallyHidden>
+                <textarea
+                  ref={titleInputRef}
+                  value={titleValue}
+                  onChange={(e) => setTitleValue(e.target.value)}
+                  onBlur={() => {
+                    if (titleValue !== tarea.titulo) {
+                      handleQuickUpdate("titulo", titleValue)
+                    }
+                  }}
+                  placeholder="Título de la tarea..."
+                  className={cn(
+                    "w-full resize-none overflow-hidden",
+                    "font-semibold text-xl text-foreground",
+                    "bg-transparent placeholder:text-muted-foreground",
+                    "border-2 border-transparent rounded-md",
+                    "focus:ring-1 focus:ring-ring focus:border-ring",
+                    "transition-all duration-200",
+                    "hover:bg-muted/30 hover:border-border/50",
+                    isSaving === "titulo" && "opacity-60",
+                    "min-h-[2rem] py-1 px-0 focus:px-2 focus:outline-none"
+                  )}
+                  style={{ height: "auto" }}
+                  rows={1}
+                />
 
-                {/* Asignación */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Asignación
-                  </h4>
-                  {!isEditing ? (
-                    tarea.asignado_nombre_completo ? (
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <User className="h-4 w-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">{tarea.asignado_nombre_completo}</p>
-                          <p className="text-xs text-muted-foreground">{tarea.asignado_email}</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">Sin asignar</p>
-                    )
-                  ) : (
-                    <Popover open={miembroComboboxOpen} onOpenChange={setMiembroComboboxOpen}>
+                {/* Nivel 2: ID - Indentado como subtítulo */}
+                <div className="text-xs text-muted-foreground ml-1 pl-1">
+                  {tarea.codigo_tarea || "Sin código"} • Creado {formatDistanceToNow(new Date(tarea.creado_en), { addSuffix: true, locale: es })}
+                </div>
+
+                {/* Nivel 3: Meta Bar - Nueva estructura con títulos para cada campo */}
+                <div className="space-y-3 pt-2">
+                  {/* Fila 1: Prioridad y Estado */}
+                  <div className="flex gap-4 items-start">
+                    {/* Prioridad */}
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
+                        Prioridad
+                      </span>
+                      <DropdownMenu open={prioridadDropdownOpen} onOpenChange={setPrioridadDropdownOpen}>
+                        <DropdownMenuTrigger asChild>
+                          <Badge
+                            variant="metadata-outline"
+                            dotClassName={prioridadConfig?.dotClassName}
+                            showDot
+                            className="gap-1 cursor-pointer hover:bg-accent transition-colors"
+                          >
+                            {isQuickUpdating && isSaving === "prioridad" ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <>
+                                {PrioridadIcon && <PrioridadIcon className="h-3 w-3" />}
+                                {prioridadConfig?.label}
+                                <ChevronDown className="h-3 w-3 opacity-50" />
+                              </>
+                            )}
+                          </Badge>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          {tareasPrioridadOptions.map((option) => {
+                            const Icon = option.icon
+                            return (
+                              <DropdownMenuItem
+                                key={option.value}
+                                onClick={() => handleQuickUpdate("prioridad", option.value)}
+                                disabled={isQuickUpdating}
+                              >
+                                <Icon className="mr-2 h-4 w-4" />
+                                {option.label}
+                              </DropdownMenuItem>
+                            )
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    {/* Estado */}
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
+                        Estado
+                      </span>
+                      <DropdownMenu open={estadoDropdownOpen} onOpenChange={setEstadoDropdownOpen}>
+                        <DropdownMenuTrigger asChild>
+                          <Badge
+                            variant="metadata-outline"
+                            dotClassName={estadoConfig?.dotClassName}
+                            showDot
+                            className="gap-1 cursor-pointer hover:bg-accent transition-colors"
+                          >
+                            {isQuickUpdating && isSaving === "estado" ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <>
+                                {EstadoIcon && <EstadoIcon className="h-3 w-3" />}
+                                {estadoConfig?.label}
+                                <ChevronDown className="h-3 w-3 opacity-50" />
+                              </>
+                            )}
+                          </Badge>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          {tareasEstadoOptions.map((option) => {
+                            const Icon = option.icon
+                            return (
+                              <DropdownMenuItem
+                                key={option.value}
+                                onClick={() => handleQuickUpdate("estado", option.value)}
+                                disabled={isQuickUpdating}
+                              >
+                                <Icon className="mr-2 h-4 w-4" />
+                                {option.label}
+                              </DropdownMenuItem>
+                            )
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  {/* Fila 2: Vencimiento */}
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
+                      Vencimiento
+                    </span>
+                    <div className="w-full max-w-[200px]">
+                      <DatePicker
+                        value={dateValue ? dateValue.toISOString().split('T')[0] : undefined}
+                        onChange={(dateStr) => {
+                          const newDate = dateStr ? new Date(dateStr + "T12:00:00") : null
+                          setDateValue(newDate)
+                          handleQuickUpdate("fecha_vencimiento", dateStr || null)
+                        }}
+                        placeholder="dd/mm/yyyy"
+                        fromYear={new Date().getFullYear()}
+                        toYear={new Date().getFullYear() + 5}
+                        dateDisplayFormat="dd/MM/yyyy"
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Fila 3: Responsable */}
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
+                      Responsable
+                    </span>
+                    <Popover open={assigneePopoverOpen} onOpenChange={setAssigneePopoverOpen}>
                       <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          type="button"
-                          className={cn(
-                            "w-full justify-between h-11 bg-muted/30 border-muted-foreground/20",
-                            !selectedMiembro && "text-muted-foreground"
-                          )}
-                        >
-                          {selectedMiembro ? (
-                            <div className="flex items-center gap-2">
+                        <Button variant="ghost" className="h-8 px-2 -ml-2 gap-2 w-full justify-start">
+                          {tarea.asignado_nombre_completo ? (
+                            <>
                               <Avatar className="h-6 w-6">
                                 <AvatarFallback className="text-[10px]">
-                                  {getInitials(selectedMiembro.nombres || selectedMiembro.email || "U")}
+                                  {getInitials(tarea.asignado_nombre_completo)}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="flex flex-col items-start">
-                                <span className="text-sm font-medium">{selectedMiembro.nombres} {selectedMiembro.apellidos}</span>
-                                <span className="text-xs text-muted-foreground">{selectedMiembro.email}</span>
-                              </div>
-                            </div>
+                              <span className="text-xs truncate">
+                                {tarea.asignado_nombre_completo}
+                              </span>
+                            </>
                           ) : (
-                            <div className="flex items-center gap-2">
-                              <Search className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">Buscar miembro...</span>
-                            </div>
+                            <>
+                              <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
+                                <User className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                              <span className="text-xs text-muted-foreground">Sin asignar</span>
+                            </>
                           )}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[320px] p-0" align="start">
+                      <PopoverContent className="w-[280px] p-0" align="start">
                         <div className="p-2">
                           <Input
-                            placeholder="Escribe al menos 2 caracteres..."
-                            value={miembroSearchQuery}
-                            onChange={(e) => setMiembroSearchQuery(e.target.value)}
+                            placeholder="Buscar miembro..."
+                            value={assigneeSearchQuery}
+                            onChange={(e) => setAssigneeSearchQuery(e.target.value)}
                             className="h-9"
                             autoFocus
                           />
                         </div>
                         <div className="max-h-[200px] overflow-y-auto">
-                          {isSearchingMiembros ? (
+                          {isSearchingAssignee ? (
                             <div className="py-4 text-center text-sm text-muted-foreground">
                               <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
                               Buscando...
                             </div>
-                          ) : miembroSearchResults.length === 0 && miembroSearchQuery.length >= 2 ? (
+                          ) : assigneeSearchResults.length === 0 && assigneeSearchQuery.length >= 2 ? (
                             <div className="py-4 text-center text-sm text-muted-foreground">
                               No se encontraron resultados
                             </div>
-                          ) : miembroSearchResults.length === 0 ? (
+                          ) : assigneeSearchResults.length === 0 ? (
                             <div className="py-4 text-center text-sm text-muted-foreground">
-                              Escribe al menos 2 caracteres para buscar
+                              Escribe al menos 2 caracteres
                             </div>
                           ) : (
-                            miembroSearchResults.map((miembro) => (
+                            assigneeSearchResults.map((miembro) => (
                               <button
                                 key={miembro.user_id}
                                 type="button"
-                                className={cn(
-                                  "w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-accent transition-colors",
-                                  editValues.asignado_a === miembro.user_id && "bg-accent"
-                                )}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-accent transition-colors text-left"
                                 onClick={() => {
-                                  setEditValues({ ...editValues, asignado_a: miembro.user_id })
-                                  setSelectedMiembro(miembro)
-                                  setMiembroSearchQuery("")
-                                  setMiembroComboboxOpen(false)
+                                  handleQuickUpdate("asignado_a", miembro.user_id)
+                                  setAssigneePopoverOpen(false)
+                                  setAssigneeSearchQuery("")
                                 }}
                               >
-                                <Avatar className="h-8 w-8">
-                                  <AvatarFallback className="text-xs font-semibold">
-                                    {getInitials(miembro.nombres || miembro.email || "U")}
+                                <Avatar className="h-6 w-6">
+                                  <AvatarFallback className="text-[10px]">
+                                    {getInitials(miembro.nombres + " " + miembro.apellidos)}
                                   </AvatarFallback>
                                 </Avatar>
-                                <div className="flex flex-col items-start gap-0.5">
-                                  <span className="font-medium">{miembro.nombres} {miembro.apellidos}</span>
-                                  <span className="text-xs text-muted-foreground">{miembro.email}</span>
-                                  {miembro.role && (
-                                    <Badge variant="outline" className="text-[10px] mt-0.5">
-                                      {miembro.role}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                </div>
-
-                <Separator />
-
-                {/* Vinculación */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Vinculación
-                  </h4>
-
-                  {!isEditing ? (
-                    <>
-                      {tarea.doc_comercial_codigo && (
-                        <div className="flex items-center gap-3 p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{tarea.doc_comercial_codigo}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Documento Comercial • {tarea.doc_comercial_estado}
-                            </p>
-                          </div>
-                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      )}
-
-                      {tarea.actor_relacionado_codigo_bp && (
-                        <div className="flex items-center gap-3 p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">
-                              {tarea.actor_relacionado_nombre_completo || tarea.actor_relacionado_codigo_bp}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Actor relacionado
-                            </p>
-                          </div>
-                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      )}
-
-                      {!tarea.doc_comercial_codigo && !tarea.actor_relacionado_codigo_bp && (
-                        <p className="text-sm text-muted-foreground italic">Sin vinculaciones</p>
-                      )}
-                    </>
-                  ) : (
-                    <Popover open={documentoComboboxOpen} onOpenChange={setDocumentoComboboxOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          type="button"
-                          className={cn(
-                            "w-full justify-between h-11 bg-muted/30 border-muted-foreground/20",
-                            !selectedDocumento && "text-muted-foreground"
-                          )}
-                        >
-                          {selectedDocumento ? (
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm">{getDocumentoDisplay(selectedDocumento)}</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <Search className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">Buscar documento...</span>
-                            </div>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[320px] p-0" align="start">
-                        <div className="p-2">
-                          <Input
-                            placeholder="Escribe al menos 2 caracteres..."
-                            value={documentoSearchQuery}
-                            onChange={(e) => setDocumentoSearchQuery(e.target.value)}
-                            className="h-9"
-                            autoFocus
-                          />
-                        </div>
-                        <div className="max-h-[200px] overflow-y-auto">
-                          {isSearchingDocumentos ? (
-                            <div className="py-4 text-center text-sm text-muted-foreground">
-                              <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
-                              Buscando...
-                            </div>
-                          ) : documentoSearchResults.length === 0 && documentoSearchQuery.length >= 2 ? (
-                            <div className="py-4 text-center text-sm text-muted-foreground">
-                              No se encontraron resultados
-                            </div>
-                          ) : documentoSearchResults.length === 0 ? (
-                            <div className="py-4 text-center text-sm text-muted-foreground">
-                              Escribe al menos 2 caracteres para buscar
-                            </div>
-                          ) : (
-                            documentoSearchResults.map((doc) => (
-                              <button
-                                key={doc.id}
-                                type="button"
-                                className={cn(
-                                  "w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-accent transition-colors",
-                                  editValues.oportunidad_id === doc.id && "bg-accent"
-                                )}
-                                onClick={() => {
-                                  setEditValues({ ...editValues, oportunidad_id: doc.id })
-                                  setSelectedDocumento(doc)
-                                  setDocumentoSearchQuery("")
-                                  setDocumentoComboboxOpen(false)
-                                }}
-                              >
-                                <div className="flex flex-col items-start gap-0.5">
-                                  <span className="font-medium">{doc.codigo}</span>
+                                <div className="flex flex-col items-start">
+                                  <span className="font-medium text-xs">
+                                    {miembro.nombres} {miembro.apellidos}
+                                  </span>
                                   <span className="text-xs text-muted-foreground">
-                                    {doc.titulo || doc.tipo} • {doc.estado}
+                                    {miembro.email}
                                   </span>
                                 </div>
                               </button>
@@ -874,84 +594,126 @@ export function TareaDetailSheet({
                         </div>
                       </PopoverContent>
                     </Popover>
-                  )}
-                </div>
+                  </div>
 
-                {/* Etiquetas */}
-                <Separator />
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Etiquetas
-                  </h4>
-                  {!isEditing ? (
-                    tags.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="gap-1">
-                            <Tag className="h-3 w-3" />
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">Sin etiquetas</p>
-                    )
-                  ) : (
-                    <div className="space-y-2">
-                      {/* Selected Tags */}
-                      {tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {tags.map((tag) => (
-                            <Badge key={tag} variant="secondary" className="gap-1 pr-1">
-                              {tag}
-                              <button
-                                type="button"
-                                onClick={() => removeTag(tag)}
-                                className="ml-1 rounded-full hover:bg-background/20 p-0.5"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                      {/* Tag Input */}
-                      <div className="relative">
-                        <Input
-                          value={tagInput}
-                          onChange={(e) => setTagInput(e.target.value)}
-                          onKeyDown={handleTagInputKeyDown}
-                          placeholder={
-                            existingTags.length > 0
-                              ? `Escribe y presiona Enter. Ej: ${existingTags.slice(0, 3).join(", ")}`
-                              : "Escribe y presiona Enter para añadir etiquetas..."
-                          }
-                          className="h-11 bg-muted/30 border-muted-foreground/20"
-                        />
-                        {/* Tag Suggestions */}
-                        {tagInput && existingTags.filter(t => t.includes(tagInput.toLowerCase())).length > 0 && (
-                          <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg">
-                            {existingTags
-                              .filter(t => t.includes(tagInput.toLowerCase()) && !tags.includes(t))
-                              .slice(0, 5)
-                              .map((suggestedTag) => (
-                                <button
-                                  key={suggestedTag}
-                                  type="button"
-                                  onClick={() => addTag(suggestedTag)}
-                                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
-                                >
-                                  {suggestedTag}
-                                </button>
-                              ))}
-                          </div>
-                        )}
-                      </div>
+                  {/* Fila 4: Etiquetas */}
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
+                      Etiquetas
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      {tags.map((tag) => (
+                        <Badge key={tag} variant="secondary" className="text-[10px] bg-secondary/50 h-5 px-2 py-0.5 gap-1">
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => removeTag(tag)}
+                            className="ml-0.5 rounded-full hover:bg-background/20 p-0"
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      ))}
+                      <Input
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={handleTagInputKeyDown}
+                        placeholder="+ tag"
+                        className="h-6 w-20 text-xs px-2"
+                      />
                     </div>
-                  )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <VisuallyHidden>
+                  <SheetTitle>Tarea no encontrada</SheetTitle>
+                </VisuallyHidden>
+                <p className="text-muted-foreground">Tarea no encontrada</p>
+              </>
+            )}
+          </div>
+
+          {/* Zona 3: Cuerpo - Scrollable */}
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            {isLoading ? (
+              <div className="space-y-6">
+                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            ) : tarea ? (
+              <div className="space-y-6">
+                {/* FIXED: Added "DESCRIPCIÓN" section header */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Descripción
+                  </h4>
+                  <textarea
+                    ref={descriptionInputRef}
+                    value={descriptionValue}
+                    onChange={(e) => setDescriptionValue(e.target.value)}
+                    onBlur={() => {
+                      if (descriptionValue !== (tarea.descripcion || "")) {
+                        handleQuickUpdate("descripcion", descriptionValue)
+                      }
+                    }}
+                    placeholder="Agregar una descripción..."
+                    className={cn(
+                      "w-full resize-none overflow-hidden",
+                      "text-sm text-foreground",
+                      "bg-transparent placeholder:text-muted-foreground",
+                      "border-2 border-transparent rounded-md",
+                      "focus:ring-1 focus:ring-ring focus:border-ring",
+                      "transition-all duration-200",
+                      ghostInputClass,
+                      isSaving === "descripcion" && "opacity-60",
+                      "min-h-[80px] focus:outline-none"
+                    )}
+                    style={{ height: "auto" }}
+                    rows={3}
+                  />
                 </div>
 
-                <Separator />
+                {/* FIXED: Redesigned vinculation section with clear hierarchy */}
+                {(tarea.doc_comercial_codigo || tarea.actor_relacionado_codigo_bp) && (
+                  <div className="bg-muted/20 border border-border/50 rounded-md p-3 space-y-2">
+                    {/* Línea 1: Documento (EDITABLE) - Shows edit icon on hover */}
+                    {tarea.doc_comercial_codigo && (
+                      <div className="flex items-center gap-2 group">
+                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <a
+                          href={`/admin/oportunidades/${tarea.doc_comercial_id}`}
+                          className="font-medium text-foreground hover:underline truncate flex-1"
+                        >
+                          {tarea.doc_comercial_codigo}
+                        </a>
+                        <span className="text-xs text-muted-foreground">
+                          {tarea.doc_comercial_tipo}
+                        </span>
+                        {/* Edit indicator - shows on hover */}
+                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-50">
+                          <Edit2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Línea 2: Actor Relacionado (READ-ONLY, inherited) - Static cursor */}
+                    {tarea.actor_relacionado_codigo_bp && (
+                      <div className="flex items-center gap-2 text-sm cursor-default">
+                        <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="text-xs text-muted-foreground truncate flex-1">
+                          {tarea.actor_relacionado_nombre_completo || tarea.actor_relacionado_codigo_bp}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          (heredado)
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* FIXED: Tags section removed from body, now in header */}
 
                 {/* Comentarios */}
                 <ComentariosSection
@@ -961,52 +723,6 @@ export function TareaDetailSheet({
               </div>
             ) : null}
           </div>
-
-          {/* Footer */}
-          {tarea && !isEditing && (
-            <div className="p-6 border-t bg-background shrink-0">
-              {/* Metadata */}
-              <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  Creado{" "}
-                  {formatDistanceToNow(new Date(tarea.creado_en), {
-                    addSuffix: true,
-                    locale: es,
-                  })}
-                </span>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => setShowDeleteDialog(true)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Eliminar
-                </Button>
-
-                <div className="flex-1" />
-
-                {tarea.estado !== "Terminada" && (
-                  <Button
-                    variant="outline"
-                    onClick={handleMarkComplete}
-                    disabled={isUpdating}
-                  >
-                    {isUpdating ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                    )}
-                    Marcar Terminada
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
         </SheetContent>
       </Sheet>
 
