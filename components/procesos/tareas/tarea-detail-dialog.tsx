@@ -243,7 +243,7 @@ export function TareaDetailDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogPortal>
           <DialogOverlay className="backdrop-blur-sm bg-background/40" />
-          <DialogContent className="max-w-5xl h-[85vh] border border-border/50 shadow-2xl rounded-xl overflow-hidden p-0">
+          <DialogContent className="max-w-5xl h-[85vh] border border-border/50 shadow-2xl rounded-xl overflow-hidden p-0 [&>button:last-child]:hidden">
             {/* VisuallyHidden title for accessibility */}
             <VisuallyHidden>
               <DialogTitle>Detalle de Tarea</DialogTitle>
