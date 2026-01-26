@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import {
     ChartContainer,
     ChartTooltip,
-    ChartTooltipContent,
     type ChartConfig,
 } from "@/components/ui/chart"
 import { TareaView } from "@/features/procesos/tareas/columns"
@@ -22,13 +21,59 @@ interface BalanceChartProps {
 const chartConfig = {
     created: {
         label: "Creadas",
-        color: "hsl(var(--chart-2))",
+        color: "var(--chart-2)",
     },
     completed: {
         label: "Terminadas",
-        color: "hsl(var(--chart-1))",
+        color: "var(--chart-1)",
     },
 } satisfies ChartConfig
+
+interface TooltipProps {
+    active?: boolean
+    payload?: Array<{
+        name: string
+        value: number
+        color: string
+        payload: {
+            fullDayName: string
+            formattedDate: string
+        }
+    }>
+}
+
+function BalanceTooltip({ active, payload }: TooltipProps) {
+    if (!active || !payload || !payload.length) {
+        return null
+    }
+
+    const data = payload[0].payload
+    // Capitalize first letter
+    const dayName = data.fullDayName.charAt(0).toUpperCase() + data.fullDayName.slice(1)
+    const created = payload.find(p => p.name === "created")?.value || 0
+    const completed = payload.find(p => p.name === "completed")?.value || 0
+    const balance = completed - created
+
+    return (
+        <div className="rounded-lg border border-border/50 bg-background px-3 py-2 shadow-md">
+            <p className="text-xs font-semibold">{dayName}</p>
+            <p className="text-[10px] text-muted-foreground">{data.formattedDate}</p>
+            <div className="mt-1 space-y-1">
+                <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-[var(--chart-2)]" />
+                    <p className="text-[10px] text-muted-foreground">Creadas: <span className="font-medium text-foreground">{created}</span></p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-[var(--chart-1)]" />
+                    <p className="text-[10px] text-muted-foreground">Terminadas: <span className="font-medium text-foreground">{completed}</span></p>
+                </div>
+                <div className="pt-1 border-t border-border/50">
+                    <p className="text-[10px] text-muted-foreground">Balance: <span className={`font-medium ${balance >= 0 ? 'text-status-positive' : 'text-status-negative'}`}>{balance >= 0 ? '+' : ''}{balance}</span></p>
+                </div>
+            </div>
+        </div>
+    )
+}
 
 export function BalanceChart({ tareas }: BalanceChartProps) {
     // Calculate last 7 days data
@@ -61,7 +106,8 @@ export function BalanceChart({ tareas }: BalanceChartProps) {
 
             days.push({
                 day: dayLabel,
-                fullDate: format(currentDay, "yyyy-MM-dd"),
+                fullDayName: format(currentDay, "EEEE", { locale: es }),
+                formattedDate: format(currentDay, "dd/MM"),
                 created,
                 completed,
                 balance: completed - created,
@@ -161,7 +207,7 @@ export function BalanceChart({ tareas }: BalanceChartProps) {
                                     tick={{ fontSize: 10 }}
                                 />
                                 <YAxis hide />
-                                <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
+                                <ChartTooltip content={<BalanceTooltip />} cursor={false} />
                                 <Bar
                                     dataKey="created"
                                     fill="var(--color-created)"

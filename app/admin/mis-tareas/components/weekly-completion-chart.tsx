@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import {
     ChartContainer,
     ChartTooltip,
-    ChartTooltipContent,
     type ChartConfig,
 } from "@/components/ui/chart"
 import { TareaView } from "@/features/procesos/tareas/columns"
@@ -23,6 +22,38 @@ const chartConfig = {
         color: "var(--chart-1)",
     },
 } satisfies ChartConfig
+
+interface TooltipProps {
+    active?: boolean
+    payload?: Array<{
+        value: number
+        payload: {
+            fullDayName: string
+            formattedDate: string
+        }
+    }>
+}
+
+function CustomTooltip({ active, payload }: TooltipProps) {
+    if (!active || !payload || !payload.length) {
+        return null
+    }
+
+    const data = payload[0].payload
+    // Capitalize first letter
+    const dayName = data.fullDayName.charAt(0).toUpperCase() + data.fullDayName.slice(1)
+
+    return (
+        <div className="rounded-lg border border-border/50 bg-background px-3 py-2 shadow-md">
+            <p className="text-xs font-semibold">{dayName}</p>
+            <p className="text-[10px] text-muted-foreground">{data.formattedDate}</p>
+            <div className="mt-1 flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-[var(--chart-1)]" />
+                <p className="text-xs font-medium">{payload[0].value} tareas</p>
+            </div>
+        </div>
+    )
+}
 
 export function WeeklyCompletionChart({ tareas }: WeeklyCompletionChartProps) {
     // Calculate last 7 days data
@@ -49,7 +80,8 @@ export function WeeklyCompletionChart({ tareas }: WeeklyCompletionChartProps) {
 
             days.push({
                 day: dayLabel,
-                fullDate: format(currentDay, "yyyy-MM-dd"),
+                fullDayName: format(currentDay, "EEEE", { locale: es }),
+                formattedDate: format(currentDay, "dd/MM"),
                 completed,
             })
         }
@@ -94,7 +126,7 @@ export function WeeklyCompletionChart({ tareas }: WeeklyCompletionChartProps) {
                                 tick={{ fontSize: 10 }}
                             />
                             <YAxis hide />
-                            <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
+                            <ChartTooltip content={<CustomTooltip />} cursor={false} />
                             <Bar
                                 dataKey="completed"
                                 fill="var(--color-completed)"

@@ -126,7 +126,7 @@ export function MisTareasFastFilter({
                             onClick={() => toggleFilter("soloHoy")}
                             className={cn(
                                 "w-full justify-start gap-2 h-8 text-xs",
-                                filterState.soloHoy && "bg-orange-500 text-white hover:bg-orange-600"
+                                filterState.soloHoy && "bg-chart-4 text-chart-4-foreground hover:bg-chart-4/90"
                             )}
                         >
                             <Clock className="h-3.5 w-3.5" />
@@ -140,7 +140,7 @@ export function MisTareasFastFilter({
                             onClick={() => toggleFilter("pausadas")}
                             className={cn(
                                 "w-full justify-start gap-2 h-8 text-xs",
-                                filterState.pausadas && "bg-yellow-500 text-white hover:bg-yellow-600"
+                                filterState.pausadas && "bg-chart-5 text-chart-5-foreground hover:bg-chart-5/90"
                             )}
                         >
                             <PauseCircle className="h-3.5 w-3.5" />
@@ -154,7 +154,7 @@ export function MisTareasFastFilter({
                             onClick={() => toggleFilter("enProgreso")}
                             className={cn(
                                 "w-full justify-start gap-2 h-8 text-xs",
-                                filterState.enProgreso && "bg-blue-500 text-white hover:bg-blue-600"
+                                filterState.enProgreso && "bg-chart-3 text-chart-3-foreground hover:bg-chart-3/90"
                             )}
                         >
                             <ArrowRightCircle className="h-3.5 w-3.5" />
@@ -168,7 +168,7 @@ export function MisTareasFastFilter({
                             onClick={() => toggleFilter("proximosDias")}
                             className={cn(
                                 "w-full justify-start gap-2 h-8 text-xs",
-                                filterState.proximosDias && "bg-purple-500 text-white hover:bg-purple-600"
+                                filterState.proximosDias && "bg-chart-2 text-chart-2-foreground hover:bg-chart-2/90"
                             )}
                         >
                             <Circle className="h-3.5 w-3.5" />
@@ -182,7 +182,7 @@ export function MisTareasFastFilter({
                             onClick={() => toggleFilter("terminadas")}
                             className={cn(
                                 "w-full justify-start gap-2 h-8 text-xs",
-                                filterState.terminadas && "bg-green-600 text-white hover:bg-green-700"
+                                filterState.terminadas && "bg-status-positive text-status-positive-foreground hover:bg-status-positive/90"
                             )}
                         >
                             <CheckCircle2 className="h-3.5 w-3.5" />

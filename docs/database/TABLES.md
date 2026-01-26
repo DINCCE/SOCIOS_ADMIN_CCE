@@ -451,6 +451,53 @@ This document provides a comprehensive overview of all tables in the database, t
 **RLS:** Enabled
 **Row Count:** 36
 
+**Triggers:**
+- `trg_tareas_estado_historial`: Automatically records state changes to `tr_estados_historial`
+
+---
+
+#### `tr_estados_historial`
+
+**Purpose:** Unified state change history tracking for tasks and commercial documents. Records who changed what state, when, and how long the previous state lasted.
+
+**Columns:**
+
+| Column | Type | Attributes | Description |
+|--------|------|------------|-------------|
+| `id` | uuid | PK, Default: `gen_random_uuid()` | Unique identifier |
+| `entidad_tipo` | varchar(50) | NOT NULL | Entity type: 'tarea' or 'doc_comercial' |
+| `entidad_id` | uuid | NOT NULL | Reference to entity ID (polyMorphic FK) |
+| `estado_anterior` | varchar(50) | Nullable | Previous state |
+| `estado_nuevo` | varchar(50) | NOT NULL | New state |
+| `cambiado_en` | timestamptz | Default: `now()` | When the change occurred |
+| `usuario_id` | uuid | FK → `auth.users.id` | User who made the change |
+| `organizacion_id` | uuid | NOT NULL | Organization ID |
+| `duracion_segundos` | integer | Nullable | Duration of previous state in seconds |
+
+**Constraints:**
+- `entidad_tipo_valida`: CHECK (`entidad_tipo` IN ('tarea', 'doc_comercial'))
+
+**Indexes:**
+- `idx_estados_historial_entidad`: (entidad_tipo, entidad_id)
+- `idx_estados_historial_org_fecha`: (organizacion_id, cambiado_en DESC)
+- `idx_estados_historial_fecha`: (cambiado_en DESC)
+
+**RLS:** Enabled
+**Policies:**
+- `Ver historial propia organización`: Users can only see their organization's history
+- `Insertar historial via trigger`: INSERT allowed (used by triggers)
+- `No modificar historial`: UPDATE denied (audit trail)
+- `Solo admin puede eliminar historial`: Only owners can DELETE
+
+**Triggers:**
+- `trg_tareas_estado_historial`: On `tr_tareas` UPDATE OF estado → Calls `fn_tr_tareas_registrar_cambio_estado()`
+- `trg_doc_comercial_estado_historial`: On `tr_doc_comercial` UPDATE OF estado → Calls `fn_tr_doc_comercial_registrar_cambio_estado()`
+
+**PolyMorphic Pattern:**
+This table uses a polymorphic foreign key pattern where `entidad_tipo` determines which table `entidad_id` references:
+- `entidad_tipo = 'tarea'` → `entidad_id` references `tr_tareas.id`
+- `entidad_tipo = 'doc_comercial'` → `entidad_id` references `tr_doc_comercial.id`
+
 ---
 
 ## Auth Schema

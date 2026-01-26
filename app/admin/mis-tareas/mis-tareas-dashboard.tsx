@@ -16,7 +16,14 @@ import { FloatingActionCapsule } from "@/components/ui/floating-action-capsule"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { useNotify } from "@/lib/hooks/use-notify"
 import { toggleTagsForTareas, createAndAssignTagForTareas } from "@/app/actions/tags"
-import { softDeleteTarea } from "@/app/actions/tareas"
+import {
+    softDeleteTarea,
+    actualizarPrioridadTareasMasivo,
+    actualizarEstadoTareasMasivo,
+    actualizarFechaVencimientoTareasMasivo,
+    reasignarTareasMasivo
+} from "@/app/actions/tareas"
+import { tareasPrioridadOptions, tareasEstadoOptions } from "@/lib/table-filters"
 
 // Skeletal components (to be implemented)
 import { MiFocoHoy } from "./components/mi-foco-hoy"
@@ -116,6 +123,60 @@ export function MisTareasDashboard() {
             console.error('Error creating tag:', result.message)
         }
         await queryClient.invalidateQueries({ queryKey: ["mis-tareas"] })
+    }
+
+    const handlePrioridadChange = async (prioridad: string) => {
+        const selectedIdsArray = Array.from(selectedIds)
+        const result = await actualizarPrioridadTareasMasivo(
+            selectedIdsArray,
+            prioridad as 'Baja' | 'Media' | 'Alta' | 'Urgente'
+        )
+        if (!result.success) {
+            notifyError({ title: 'Error', description: result.message })
+        } else {
+            notifySuccess({ title: result.message })
+        }
+        await queryClient.invalidateQueries({ queryKey: ["mis-tareas"] })
+        handleClearSelection()
+    }
+
+    const handleEstadoChange = async (estado: string) => {
+        const selectedIdsArray = Array.from(selectedIds)
+        const result = await actualizarEstadoTareasMasivo(
+            selectedIdsArray,
+            estado as 'Pendiente' | 'En Progreso' | 'Terminada' | 'Pausada' | 'Cancelada'
+        )
+        if (!result.success) {
+            notifyError({ title: 'Error', description: result.message })
+        } else {
+            notifySuccess({ title: result.message })
+        }
+        await queryClient.invalidateQueries({ queryKey: ["mis-tareas"] })
+        handleClearSelection()
+    }
+
+    const handleFechaChange = async (fecha: string | null) => {
+        const selectedIdsArray = Array.from(selectedIds)
+        const result = await actualizarFechaVencimientoTareasMasivo(selectedIdsArray, fecha)
+        if (!result.success) {
+            notifyError({ title: 'Error', description: result.message })
+        } else {
+            notifySuccess({ title: result.message })
+        }
+        await queryClient.invalidateQueries({ queryKey: ["mis-tareas"] })
+        handleClearSelection()
+    }
+
+    const handleAsignadoChange = async (miembroId: string) => {
+        const selectedIdsArray = Array.from(selectedIds)
+        const result = await reasignarTareasMasivo(selectedIdsArray, miembroId)
+        if (!result.success) {
+            notifyError({ title: 'Error', description: result.message })
+        } else {
+            notifySuccess({ title: `${result.count} tareas reasignadas correctamente` })
+        }
+        await queryClient.invalidateQueries({ queryKey: ["mis-tareas"] })
+        handleClearSelection()
     }
 
     const handleDelete = async () => {
@@ -366,9 +427,36 @@ export function MisTareasDashboard() {
                                 const tarea = misTareas.find(t => t.id === id)
                                 return tarea?.tags || []
                             })}
+                            prioridadOptions={tareasPrioridadOptions}
+                            selectedRowsPrioridades={Array.from(selectedIds).map(id => {
+                                const tarea = misTareas.find(t => t.id === id)
+                                return tarea?.prioridad ? [tarea.prioridad] : []
+                            })}
+                            estadoOptions={tareasEstadoOptions}
+                            selectedRowsEstados={Array.from(selectedIds).map(id => {
+                                const tarea = misTareas.find(t => t.id === id)
+                                return tarea?.estado ? [tarea.estado] : []
+                            })}
+                            selectedRowsDates={Array.from(selectedIds).map(id => {
+                                const tarea = misTareas.find(t => t.id === id)
+                                return tarea?.fecha_vencimiento || null
+                            })}
+                            selectedRowsAssignees={Array.from(selectedIds).map(id => {
+                                const tarea = misTareas.find(t => t.id === id)
+                                return {
+                                    id: tarea?.asignado_id || null,
+                                    nombre: tarea?.asignado_nombre_completo || null,
+                                    email: tarea?.asignado_email || null
+                                }
+                            })}
+                            organizacionId={misTareas[0]?.organizacion_id || ""}
                             onClearSelection={handleClearSelection}
                             onToggleTag={handleToggleTag}
                             onCreateTag={handleCreateTag}
+                            onPrioridadChange={handlePrioridadChange}
+                            onEstadoChange={handleEstadoChange}
+                            onFechaChange={handleFechaChange}
+                            onAsignadoChange={handleAsignadoChange}
                             onDelete={() => setShowDeleteConfirm(true)}
                         />
                     )}

@@ -360,3 +360,99 @@ export async function reasignarTareasMasivo(
 
   return { success: true, count: tareaIds.length }
 }
+
+/**
+ * Bulk update priority for multiple tasks
+ *
+ * @param tareaIds - Array of task UUIDs
+ * @param prioridad - New priority value (Baja, Media, Alta, Urgente)
+ * @returns Object with { success, message }
+ */
+export async function actualizarPrioridadTareasMasivo(
+  tareaIds: string[],
+  prioridad: 'Baja' | 'Media' | 'Alta' | 'Urgente'
+) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from("tr_tareas")
+    .update({
+      prioridad,
+      actualizado_en: new Date().toISOString()
+    })
+    .in("id", tareaIds)
+
+  if (error) {
+    console.error('Error updating task priority:', error)
+    return { success: false, message: `Error al actualizar prioridad: ${error.message}` }
+  }
+
+  revalidatePath("/admin/procesos/tareas")
+  revalidatePath("/admin/mis-tareas")
+
+  return { success: true, message: `Prioridad actualizada para ${tareaIds.length} tareas` }
+}
+
+/**
+ * Bulk update estado for multiple tasks
+ *
+ * @param tareaIds - Array of task UUIDs
+ * @param estado - New estado value (Pendiente, En Progreso, Terminada, Pausada, Cancelada)
+ * @returns Object with { success, message }
+ */
+export async function actualizarEstadoTareasMasivo(
+  tareaIds: string[],
+  estado: 'Pendiente' | 'En Progreso' | 'Terminada' | 'Pausada' | 'Cancelada'
+) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from("tr_tareas")
+    .update({
+      estado,
+      actualizado_en: new Date().toISOString()
+    })
+    .in("id", tareaIds)
+
+  if (error) {
+    console.error('Error updating task estado:', error)
+    return { success: false, message: `Error al actualizar estado: ${error.message}` }
+  }
+
+  revalidatePath("/admin/procesos/tareas")
+  revalidatePath("/admin/mis-tareas")
+
+  return { success: true, message: `Estado actualizado para ${tareaIds.length} tareas` }
+}
+
+/**
+ * Bulk update fecha_vencimiento for multiple tasks
+ *
+ * @param tareaIds - Array of task UUIDs
+ * @param fechaVencimiento - New fecha_vencimiento value (ISO string or null to clear)
+ * @returns Object with { success, message }
+ */
+export async function actualizarFechaVencimientoTareasMasivo(
+  tareaIds: string[],
+  fechaVencimiento: string | null
+) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from("tr_tareas")
+    .update({
+      fecha_vencimiento: fechaVencimiento,
+      actualizado_en: new Date().toISOString()
+    })
+    .in("id", tareaIds)
+
+  if (error) {
+    console.error('Error updating task fecha_vencimiento:', error)
+    return { success: false, message: `Error al actualizar fecha de vencimiento: ${error.message}` }
+  }
+
+  revalidatePath("/admin/procesos/tareas")
+  revalidatePath("/admin/mis-tareas")
+
+  return { success: true, message: `Fecha de vencimiento actualizada para ${tareaIds.length} tareas` }
+}

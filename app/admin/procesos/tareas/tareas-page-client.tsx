@@ -50,7 +50,13 @@ import { parseDateFilterValue, isDateInRange } from '@/lib/utils/date-helpers'
 import { useDataExport } from '@/lib/hooks/use-data-export'
 import { useNotify } from '@/lib/hooks/use-notify'
 import { toggleTagsForTareas, createAndAssignTagForTareas } from '@/app/actions/tags'
-import { softDeleteTarea } from '@/app/actions/tareas'
+import {
+  softDeleteTarea,
+  actualizarPrioridadTareasMasivo,
+  actualizarEstadoTareasMasivo,
+  actualizarFechaVencimientoTareasMasivo,
+  reasignarTareasMasivo
+} from '@/app/actions/tareas'
 
 export function TareasPageClient() {
   const searchParams = useSearchParams()
@@ -237,6 +243,61 @@ export function TareasPageClient() {
     setSelectedTareaId(tareaId)
     setIsDetailOpen(true)
   }, [])
+
+  // Handlers for bulk editing
+  const handlePrioridadChange = async (prioridad: string) => {
+    const selectedIds = table.getFilteredSelectedRowModel().rows.map(row => row.original.id)
+    const result = await actualizarPrioridadTareasMasivo(
+      selectedIds,
+      prioridad as 'Baja' | 'Media' | 'Alta' | 'Urgente'
+    )
+    if (!result.success) {
+      notifyError({ title: 'Error', description: result.message })
+    } else {
+      notifySuccess({ title: result.message })
+    }
+    await queryClient.invalidateQueries({ queryKey: ['tareas'] })
+    setRowSelection({})
+  }
+
+  const handleEstadoChange = async (estado: string) => {
+    const selectedIds = table.getFilteredSelectedRowModel().rows.map(row => row.original.id)
+    const result = await actualizarEstadoTareasMasivo(
+      selectedIds,
+      estado as 'Pendiente' | 'En Progreso' | 'Terminada' | 'Pausada' | 'Cancelada'
+    )
+    if (!result.success) {
+      notifyError({ title: 'Error', description: result.message })
+    } else {
+      notifySuccess({ title: result.message })
+    }
+    await queryClient.invalidateQueries({ queryKey: ['tareas'] })
+    setRowSelection({})
+  }
+
+  const handleFechaChange = async (fecha: string | null) => {
+    const selectedIds = table.getFilteredSelectedRowModel().rows.map(row => row.original.id)
+    const result = await actualizarFechaVencimientoTareasMasivo(selectedIds, fecha)
+    if (!result.success) {
+      notifyError({ title: 'Error', description: result.message })
+    } else {
+      notifySuccess({ title: result.message })
+    }
+    await queryClient.invalidateQueries({ queryKey: ['tareas'] })
+    setRowSelection({})
+  }
+
+  const handleAsignadoChange = async (miembroId: string) => {
+    const selectedIds = table.getFilteredSelectedRowModel().rows.map(row => row.original.id)
+    const result = await reasignarTareasMasivo(selectedIds, miembroId)
+    if (!result.success) {
+      notifyError({ title: 'Error', description: result.message })
+    } else {
+      notifySuccess({ title: `${result.count} tareas reasignadas correctamente` })
+    }
+    await queryClient.invalidateQueries({ queryKey: ['tareas'] })
+    setRowSelection({})
+  }
 
   const table = useReactTable({
     data: filteredData,
@@ -455,6 +516,29 @@ export function TareasPageClient() {
               totalCount={table.getFilteredRowModel().rows.length}
               availableTags={availableTags}
               selectedRowsTags={table.getFilteredSelectedRowModel().rows.map(row => (row.original as TareaView).tags || [])}
+              prioridadOptions={tareasPrioridadOptions}
+              selectedRowsPrioridades={table.getFilteredSelectedRowModel().rows.map(row => {
+                const tarea = row.original as TareaView
+                return tarea?.prioridad ? [tarea.prioridad] : []
+              })}
+              estadoOptions={tareasEstadoOptions}
+              selectedRowsEstados={table.getFilteredSelectedRowModel().rows.map(row => {
+                const tarea = row.original as TareaView
+                return tarea?.estado ? [tarea.estado] : []
+              })}
+              selectedRowsDates={table.getFilteredSelectedRowModel().rows.map(row => {
+                const tarea = row.original as TareaView
+                return tarea?.fecha_vencimiento || null
+              })}
+              selectedRowsAssignees={table.getFilteredSelectedRowModel().rows.map(row => {
+                const tarea = row.original as TareaView
+                return {
+                  id: tarea?.asignado_id || null,
+                  nombre: tarea?.asignado_nombre_completo || null,
+                  email: tarea?.asignado_email || null
+                }
+              })}
+              organizacionId={initialData[0]?.organizacion_id || ""}
               onClearSelection={() => setRowSelection({})}
               onExport={() => setShowSelectionExport(true)}
               onToggleTag={async (tag: string, add: boolean) => {
@@ -473,6 +557,10 @@ export function TareasPageClient() {
                 }
                 await queryClient.invalidateQueries({ queryKey: ['tareas'] })
               }}
+              onPrioridadChange={handlePrioridadChange}
+              onEstadoChange={handleEstadoChange}
+              onFechaChange={handleFechaChange}
+              onAsignadoChange={handleAsignadoChange}
               onDelete={() => setShowDeleteConfirm(true)}
             />
           )}

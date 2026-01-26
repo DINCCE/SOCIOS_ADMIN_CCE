@@ -1,6 +1,5 @@
 "use client"
 
-import * as React from "react"
 import type { LucideIcon } from "lucide-react"
 import { TareaView } from "@/features/procesos/tareas/columns"
 import { Badge } from "@/components/ui/badge"
@@ -152,7 +151,7 @@ export function MisTareasLista({ tareas, onTaskClick, selectedIds, onSelectionCh
                                 }}
                                 className="h-7 px-2 text-xs font-medium gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
-                                <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                                <CheckCircle className="h-3.5 w-3.5 text-status-positive" />
                                 Terminar
                             </Button>
                         </div>
@@ -169,7 +168,7 @@ export function MisTareasLista({ tareas, onTaskClick, selectedIds, onSelectionCh
                 onClick={() => onTaskClick(tarea.id)}
             >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+                    <CheckCircle className="h-4 w-4 text-status-positive shrink-0" />
                     <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate line-through text-muted-foreground">
                             {tarea.titulo}
@@ -201,8 +200,8 @@ export function MisTareasLista({ tareas, onTaskClick, selectedIds, onSelectionCh
     return (
         <div className="pb-10">
             {renderGroup("Vencidas", groups.vencidas, "text-destructive", AlertCircle)}
-            {renderGroup("Para Hoy", groups.hoy, "text-orange-500", Clock)}
-            {renderGroup("Mañana", groups.manana, "text-blue-500", Calendar)}
+            {renderGroup("Para Hoy", groups.hoy, "text-chart-4", Clock)}
+            {renderGroup("Mañana", groups.manana, "text-chart-3", Calendar)}
             {renderGroup("Próximos 7 días", groups.proximas, "text-muted-foreground", Calendar)}
             {renderGroup("Sin fecha", groups.sinFecha, "text-muted-foreground", ListFilter)}
 
@@ -220,7 +219,7 @@ export function MisTareasLista({ tareas, onTaskClick, selectedIds, onSelectionCh
                 return (
                     <div className="mb-8">
                         <div className="flex items-center gap-2 px-1 mb-2">
-                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <CheckCircle className="h-4 w-4 text-status-positive" />
                             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                                 Completadas hoy
                             </h3>

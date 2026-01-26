@@ -8,6 +8,7 @@ This document describes all the custom functions stored in the Supabase database
 - [Permission & Authorization Functions](#permission--authorization-functions)
 - [Organization Functions](#organization-functions)
 - [Actor Functions](#actor-functions)
+- [Soft Delete Functions](#soft-delete-functions)
 - [Action Assignment Functions](#action-assignment-functions)
 - [Utility Functions](#utility-functions)
 - [Trigger Functions](#trigger-functions)
@@ -245,21 +246,178 @@ Checks if a phone number already exists for an actor within an organization.
 
 ---
 
-### `soft_delete_actor(p_actor_id uuid)`
-Performs soft delete on an actor with permission verification.
+## Soft Delete Functions
+
+Soft delete functions use `SECURITY DEFINER` to bypass RLS and perform explicit permission checks. They accept `p_user_id` as a parameter to work around Supabase SSR + RLS authentication context issues.
+
+### `soft_delete_actor(p_actor_id uuid, p_user_id uuid)`
+Performs soft delete on an actor (person or company) with permission verification.
 
 **Parameters:**
 - `p_actor_id`: Actor UUID to delete
+- `p_user_id`: User UUID performing the action
 
 **Returns:** `jsonb` with success status and message
 
 **Security:** `SECURITY DEFINER` (bypasses RLS)
 
+**Permission Check:** Only `owner` and `admin` roles can soft delete actors
+
 **Usage:**
 ```sql
-SELECT soft_delete_actor('actor-uuid');
+SELECT soft_delete_actor('actor-uuid', 'user-uuid');
 -- Returns: {"success": true, "message": "Actor eliminado correctamente"}
 ```
+
+**Used by:**
+- [app/actions/personas.ts](app/actions/personas.ts) - `softDeletePersona()`
+- [app/actions/empresas.ts](app/actions/empresas.ts) - `softDeleteEmpresa()`
+
+---
+
+### `soft_delete_tarea_rpc(p_tarea_id uuid, p_user_id uuid)`
+Performs soft delete on a task with permission verification.
+
+**Parameters:**
+- `p_tarea_id`: Task UUID to delete
+- `p_user_id`: User UUID performing the action
+
+**Returns:** `jsonb` with success status and message
+
+**Security:** `SECURITY DEFINER` (bypasses RLS)
+
+**Permission Check:** Only `owner` and `admin` roles can soft delete tasks
+
+**Usage:**
+```sql
+SELECT soft_delete_tarea_rpc('tarea-uuid', 'user-uuid');
+-- Returns: {"success": true, "message": "Tarea eliminada correctamente"}
+```
+
+**Used by:**
+- [app/actions/tareas.ts](app/actions/tareas.ts) - `softDeleteTarea()`
+
+---
+
+### `soft_delete_dm_acciones_rpc(p_accion_id uuid, p_user_id uuid)`
+Performs soft delete on an action (share/holding) with permission verification.
+
+**Parameters:**
+- `p_accion_id`: Action UUID to delete
+- `p_user_id`: User UUID performing the action
+
+**Returns:** `jsonb` with success status and message
+
+**Security:** `SECURITY DEFINER` (bypasses RLS)
+
+**Permission Check:** Only `owner` and `admin` roles can soft delete actions
+
+**Usage:**
+```sql
+SELECT soft_delete_dm_acciones_rpc('accion-uuid', 'user-uuid');
+-- Returns: {"success": true, "message": "Acción eliminada correctamente"}
+```
+
+**Used by:**
+- [app/actions/acciones.ts](app/actions/acciones.ts) - `softDeleteAccion()`
+
+---
+
+### `soft_delete_doc_comercial_rpc(p_doc_id uuid, p_user_id uuid)`
+Performs soft delete on a commercial document with permission verification.
+
+**Parameters:**
+- `p_doc_id`: Commercial document UUID to delete
+- `p_user_id`: User UUID performing the action
+
+**Returns:** `jsonb` with success status and message
+
+**Security:** `SECURITY DEFINER` (bypasses RLS)
+
+**Permission Check:** Only `owner` and `admin` roles can soft delete documents
+
+**Usage:**
+```sql
+SELECT soft_delete_doc_comercial_rpc('doc-uuid', 'user-uuid');
+-- Returns: {"success": true, "message": "Documento eliminado correctamente"}
+```
+
+**Used by:**
+- [app/actions/doc-comerciales.ts](app/actions/doc-comerciales.ts) - `softDeleteDocComercial()`
+
+---
+
+### `soft_delete_asignacion_rpc(p_asignacion_id uuid, p_user_id uuid)`
+Performs soft delete on an action assignment with permission verification.
+
+**Parameters:**
+- `p_asignacion_id`: Assignment UUID to delete
+- `p_user_id`: User UUID performing the action
+
+**Returns:** `jsonb` with success status and message
+
+**Security:** `SECURITY DEFINER` (bypasses RLS)
+
+**Permission Check:** Only `owner` and `admin` roles can soft delete assignments
+
+**Usage:**
+```sql
+SELECT soft_delete_asignacion_rpc('asignacion-uuid', 'user-uuid');
+-- Returns: {"success": true, "message": "Asignación eliminada correctamente"}
+```
+
+**Used by:**
+- [app/actions/acciones.ts](app/actions/acciones.ts) - `softDeleteAsignacion()`
+
+---
+
+### `eliminar_relacion_bp(p_relacion_id uuid)`
+Performs soft delete on an actor relationship with permission verification.
+
+**Parameters:**
+- `p_relacion_id`: Relationship UUID to delete
+
+**Returns:** `jsonb` with success status and message
+
+**Security:** `SECURITY DEFINER` (bypasses RLS)
+
+**Permission Check:** Only `owner` and `admin` roles can soft delete relationships
+
+**Note:** Uses `auth.uid()` internally (not the new pattern) - may need updating
+
+**Usage:**
+```sql
+SELECT eliminar_relacion_bp('relacion-uuid');
+-- Returns: {"success": true, "message": "Relación eliminada correctamente"}
+```
+
+**Used by:**
+- [app/actions/relaciones.ts](app/actions/relaciones.ts) - `eliminarRelacion()`
+
+---
+
+### `soft_delete_comentario(p_comentario_id uuid)`
+Performs soft delete on a comment with ownership verification.
+
+**Parameters:**
+- `p_comentario_id`: Comment UUID to delete
+
+**Returns:** `jsonb` with success status and message
+
+**Security:** `SECURITY DEFINER` (bypasses RLS)
+
+**Permission Check:** Only the comment creator can delete their own comments
+
+**Note:** Uses `auth.uid()` internally (not the new pattern) - may need updating
+
+**Usage:**
+```sql
+SELECT soft_delete_comentario('comentario-uuid');
+-- Returns: {"success": true, "message": "Comentario eliminado correctamente"}
+```
+
+**Used by:**
+- [app/actions/comentarios.ts](app/actions/comentarios.ts) - `eliminarComentario()`
 
 ---
 
@@ -564,6 +722,47 @@ Automatically calculates `valor_total` based on net, discount, and tax values.
 
 ---
 
+### `fn_tr_tareas_registrar_cambio_estado()`
+Automatically records state changes for tasks in the unified state history table.
+
+**Returns:** `trigger`
+
+**Security:** `SECURITY DEFINER`
+
+**Triggered on:** AFTER UPDATE OF `estado` on `tr_tareas`
+
+**Behavior:**
+- Only fires when `estado` column actually changes
+- Calculates duration of previous state using last history record or `creado_en` as baseline
+- Inserts record into `tr_estados_historial` with:
+  - `entidad_tipo = 'tarea'`
+  - `entidad_id = NEW.id`
+  - `estado_anterior = OLD.estado`
+  - `estado_nuevo = NEW.estado`
+  - `duracion_segundos = time in previous state`
+  - `usuario_id = COALESCE(NEW.actualizado_por, NEW.creado_por)`
+  - `organizacion_id = NEW.organizacion_id`
+
+**Attached to:** `trg_tareas_estado_historial` trigger
+
+---
+
+### `fn_tr_doc_comercial_registrar_cambio_estado()`
+Automatically records state changes for commercial documents in the unified state history table.
+
+**Returns:** `trigger`
+
+**Security:** `SECURITY DEFINER`
+
+**Triggered on:** AFTER UPDATE OF `estado` on `tr_doc_comercial`
+
+**Behavior:** Same as `fn_tr_tareas_registrar_cambio_estado()` but for commercial documents:
+- `entidad_tipo = 'doc_comercial'`
+
+**Attached to:** `trg_doc_comercial_estado_historial` trigger
+
+---
+
 ### `rls_auto_enable()`
 **Event trigger** that automatically enables RLS on new tables in public schema.
 
@@ -594,14 +793,32 @@ Helper function to check if a policy exists on a table.
 These functions run with the privileges of the function owner, not the caller:
 - All permission/authorization functions
 - Action assignment functions (`vn_asociados_*`)
-- `soft_delete_actor`
+- All soft delete functions (`soft_delete_*`, `eliminar_*`)
 - `get_user_email`
 - Most trigger functions
 
 ### RLS Bypass
 Some `SECURITY DEFINER` functions intentionally bypass Row Level Security:
-- `soft_delete_actor`: To update records user may not have direct access to
+- **Soft delete functions**: To bypass RLS policies that would block soft delete operations
 - `vn_asociados_*`: To manage assignments across organization boundaries
+
+### Supabase SSR + RLS Pattern
+When using Supabase SSR with Next.js Server Actions, `auth.uid()` returns `NULL` in database RLS context. To work around this:
+
+1. **Server Action**: Get user context via `supabase.auth.getUser()`
+2. **RPC Function**: Accept `p_user_id` as explicit parameter
+3. **Permission Check**: Verify role in `config_organizacion_miembros` table
+4. **SECURITY DEFINER**: Bypass RLS and perform operation with elevated privileges
+
+**Example:**
+```typescript
+// Server Action
+const { data: { user } } = await supabase.auth.getUser()
+const { data } = await supabase.rpc('soft_delete_tarea_rpc', {
+  p_tarea_id: tareaId,
+  p_user_id: user.id  // Explicit parameter
+})
+```
 
 ### JWT Requirements
 Functions like `vn_asociados_validar_accion` and `vn_asociados_validar_asociado` require:
@@ -639,11 +856,31 @@ Functions like `vn_asociados_validar_accion` and `vn_asociados_validar_asociado`
 ## Best Practices
 
 1. **Use `can_user_v2()`** in RLS policies for permission checks
-2. **Use `auth.uid()`** or `auth.jwt()` to get current user
+
+2. **Use `auth.uid()`** or `auth.jwt()` to get current user in database functions
+
 3. **Use `SECURITY DEFINER`** carefully - only when needed to bypass RLS
+
 4. **Use `vn_asociados_crear_asignacion`** instead of direct INSERTs for business logic
-5. **Use soft delete functions** (`soft_delete_actor`) instead of direct DELETEs
-6. **Always check organization membership** before granting access
+
+5. **Use soft delete RPC functions** instead of direct UPDATE/DELETE operations
+
+6. **Follow the SSR + RLS pattern** for Server Actions that modify data:
+   - Get user via `supabase.auth.getUser()` in Server Action
+   - Pass `user.id` explicitly to RPC function
+   - RPC function performs permission check internally
+   - Never rely on `auth.uid()` in RLS policies with Supabase SSR
+
+7. **Always check organization membership** before granting access
+
+8. **For soft delete operations**, use the appropriate RPC function:
+   - `soft_delete_actor(p_actor_id, p_user_id)` - For persons and companies
+   - `soft_delete_tarea_rpc(p_tarea_id, p_user_id)` - For tasks
+   - `soft_delete_dm_acciones_rpc(p_accion_id, p_user_id)` - For actions/shares
+   - `soft_delete_doc_comercial_rpc(p_doc_id, p_user_id)` - For commercial documents
+   - `soft_delete_asignacion_rpc(p_asignacion_id, p_user_id)` - For assignments
+   - `eliminar_relacion_bp(p_relacion_id)` - For relationships
+   - `soft_delete_comentario(p_comentario_id)` - For comments (ownership-based)
 
 ---
 

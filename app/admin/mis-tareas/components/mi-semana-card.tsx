@@ -12,8 +12,7 @@ import {
     type ChartConfig,
 } from "@/components/ui/chart"
 import { TareaView } from "@/features/procesos/tareas/columns"
-import { startOfWeek, addDays, format, isSameDay, parseISO } from "date-fns"
-import { es } from "date-fns/locale"
+import { startOfWeek, addDays, isSameDay, parseISO } from "date-fns"
 
 interface MiSemanaCardProps {
     tareas: TareaView[]

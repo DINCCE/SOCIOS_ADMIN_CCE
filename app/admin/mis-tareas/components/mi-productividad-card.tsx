@@ -37,13 +37,13 @@ export function MiProductividadCard({ tareas, userId }: MiProductividadCardProps
 
                 <div className="pt-2 border-t border-muted-foreground/10">
                     <div className="flex items-center gap-2 mb-2">
-                        <Flame className="h-4 w-4 text-orange-600" />
+                        <Flame className="h-4 w-4 text-chart-5" />
                         <span className="text-sm font-medium">Racha de productividad</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                         <div className="bg-background/50 rounded-lg p-2 text-center">
                             <p className="text-[10px] text-muted-foreground uppercase">Actual</p>
-                            <p className="text-xl font-bold text-orange-600">{currentStreak}</p>
+                            <p className="text-xl font-bold text-chart-5">{currentStreak}</p>
                             <p className="text-[10px] text-muted-foreground">días</p>
                         </div>
                         <div className="bg-background/50 rounded-lg p-2 text-center">

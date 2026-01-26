@@ -832,6 +832,168 @@ ORDER BY prioridad DESC, fecha_vencimiento ASC;
 
 ---
 
+### `v_tareas_tiempo_por_estado`
+
+**Purpose:** Provides statistics on how long tasks spend in each state, grouped by organization. Useful for analytics and performance tracking.
+
+**Use Cases:**
+- Analyze average time tasks spend in each state
+- Identify bottlenecks in workflow
+- Track team performance metrics
+- Generate SLA reports
+
+**Structure:**
+
+| # | Field | Type | Description |
+|---|-------|------|-------------|
+| 1 | `organizacion_id` | uuid | Organization ID |
+| 2 | `estado_nuevo` | text | State name (e.g., "Terminada", "En Progreso") |
+| 3 | `numero_cambios` | integer | Number of times this state was entered |
+| 4 | `avg_horas` | numeric | Average hours spent in this state |
+| 5 | `avg_dias` | numeric | Average days spent in this state |
+| 6 | `min_horas` | numeric | Minimum hours spent in this state |
+| 7 | `max_horas` | numeric | Maximum hours spent in this state |
+| 8 | `median_horas` | numeric | Median hours spent in this state |
+
+**SQL Definition:**
+
+```sql
+CREATE VIEW v_tareas_tiempo_por_estado AS
+SELECT
+  h.organizacion_id,
+  h.estado_nuevo,
+  COUNT(*) as numero_cambios,
+  AVG(h.duracion_segundos) / 3600 as avg_horas,
+  AVG(h.duracion_segundos) / 86400 as avg_dias,
+  MIN(h.duracion_segundos) / 3600 as min_horas,
+  MAX(h.duracion_segundos) / 3600 as max_horas,
+  PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY h.duracion_segundos) / 3600 as median_horas
+FROM tr_estados_historial h
+WHERE h.entidad_tipo = 'tarea'
+  AND h.duracion_segundos IS NOT NULL
+GROUP BY h.organizacion_id, h.estado_nuevo;
+```
+
+**Example Query:**
+
+```sql
+-- Get average time per state for an organization
+SELECT
+  estado_nuevo,
+  ROUND(avg_horas::numeric, 2) as avg_horas,
+  ROUND(avg_dias::numeric, 2) as avg_dias,
+  numero_cambios
+FROM v_tareas_tiempo_por_estado
+WHERE organizacion_id = 'org-uuid'
+ORDER BY avg_dias DESC;
+```
+
+---
+
+### `v_doc_comercial_tiempo_por_estado`
+
+**Purpose:** Provides statistics on how long commercial documents spend in each state, grouped by organization. Useful for sales pipeline analysis.
+
+**Use Cases:**
+- Analyze sales cycle duration
+- Track opportunity conversion time
+- Identify slow stages in sales process
+- Generate sales performance reports
+
+**Structure:** Same as `v_tareas_tiempo_por_estado`
+
+**SQL Definition:**
+
+```sql
+CREATE VIEW v_doc_comercial_tiempo_por_estado AS
+SELECT
+  h.organizacion_id,
+  h.estado_nuevo,
+  COUNT(*) as numero_cambios,
+  AVG(h.duracion_segundos) / 3600 as avg_horas,
+  AVG(h.duracion_segundos) / 86400 as avg_dias,
+  MIN(h.duracion_segundos) / 3600 as min_horas,
+  MAX(h.duracion_segundos) / 3600 as max_horas,
+  PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY h.duracion_segundos) / 3600 as median_horas
+FROM tr_estados_historial h
+WHERE h.entidad_tipo = 'doc_comercial'
+  AND h.duracion_segundos IS NOT NULL
+GROUP BY h.organizacion_id, h.estado_nuevo;
+```
+
+---
+
+### `v_tarea_historial_detalle`
+
+**Purpose:** Provides detailed state change history for individual tasks with user information and formatted duration. Ideal for displaying task history in UI.
+
+**Use Cases:**
+- Show task history timeline in UI
+- Audit trail for task state changes
+- Performance analysis per task
+- User accountability tracking
+
+**Structure:**
+
+| # | Field | Type | Description |
+|---|-------|------|-------------|
+| 1 | `id` | uuid | History record ID |
+| 2 | `tarea_id` | uuid | Task ID |
+| 3 | `cambio_estado` | text | Formatted change: "Estado Anterior → Estado Nuevo" |
+| 4 | `horas_en_estado` | numeric | Hours spent in previous state |
+| 5 | `dias_en_estado` | numeric | Days spent in previous state |
+| 6 | `cambiado_en` | timestamptz | When the change occurred |
+| 7 | `cambiado_por_email` | text | Email of user who made the change |
+| 8 | `tarea_titulo` | text | Task title |
+| 9 | `codigo_tarea` | text | Task code |
+
+**SQL Definition:**
+
+```sql
+CREATE VIEW v_tarea_historial_detalle AS
+SELECT
+  h.id,
+  h.entidad_id as tarea_id,
+  h.estado_anterior || ' → ' || h.estado_nuevo as cambio_estado,
+  h.duracion_segundos / 3600 as horas_en_estado,
+  h.duracion_segundos / 86400 as dias_en_estado,
+  h.cambiado_en,
+  u.email as cambiado_por_email,
+  t.titulo as tarea_titulo,
+  t.codigo_tarea
+FROM tr_estados_historial h
+LEFT JOIN auth.users u ON h.usuario_id = u.id
+LEFT JOIN tr_tareas t ON h.entidad_id = t.id
+WHERE h.entidad_tipo = 'tarea'
+ORDER BY h.cambiado_en DESC;
+```
+
+**Example Query:**
+
+```sql
+-- Get complete history for a specific task
+SELECT
+  codigo_tarea,
+  tarea_titulo,
+  cambio_estado,
+  ROUND(horas_en_estado::numeric, 2) as horas,
+  ROUND(dias_en_estado::numeric, 2) as dias,
+  cambiado_en,
+  cambiado_por_email
+FROM v_tarea_historial_detalle
+WHERE tarea_id = 'tarea-uuid'
+ORDER BY cambiado_en;
+```
+
+**Example Output:**
+
+| codigo_tarea | tarea_titulo | cambio_estado | horas | dias | cambiado_en | cambiado_por_email |
+|--------------|--------------|---------------|-------|------|-------------|---------------------|
+| TAR-000001 | Revisar documentación | Pendiente → En Progreso | 24.5 | 1.02 | 2025-01-20 10:00:00 | admin@ejemplo.com |
+| TAR-000001 | Revisar documentación | En Progreso → Terminada | 16.0 | 0.67 | 2025-01-26 18:00:00 | admin@ejemplo.com |
+
+---
+
 ## Design Principles
 
 When creating or updating views, follow these principles:

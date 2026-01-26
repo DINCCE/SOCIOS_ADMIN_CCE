@@ -2,9 +2,12 @@
 
 import * as React from "react"
 import { motion } from "framer-motion"
-import { Download, Tag, Trash2, X, Loader2 } from "lucide-react"
+import { Download, Trash2, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { BulkTagPopover } from "@/components/ui/bulk-tag-popover"
+import { BulkOptionSelectPopover, type OptionSelectProps } from "@/components/ui/bulk-option-select-popover"
+import { BulkAssigneePopover, type BulkAssigneePopoverProps } from "@/components/ui/bulk-assignee-popover"
+import { BulkDatePopover } from "@/components/ui/bulk-date-popover"
 import { cn } from "@/lib/utils"
 
 export interface FloatingActionCapsuleProps {
@@ -14,12 +17,26 @@ export interface FloatingActionCapsuleProps {
   // Opciones para el popover de etiquetas
   availableTags?: string[] // Etiquetas disponibles
   selectedRowsTags?: string[][] // Tags de cada fila seleccionada
-  // Callbacks
+  // Opciones para tareas específicas
+  prioridadOptions?: OptionSelectProps[]
+  selectedRowsPrioridades?: string[][]
+  estadoOptions?: OptionSelectProps[]
+  selectedRowsEstados?: string[][]
+  selectedRowsDates?: (string | null)[]
+  selectedRowsAssignees?: BulkAssigneePopoverProps["selectedRowsAssignees"]
+  organizacionId?: string // Requerido para BulkAssigneePopover
+  // Callbacks generales
   onExport?: () => void | Promise<void>
   onToggleTag?: (tag: string, add: boolean) => Promise<void> | void
   onCreateTag?: (tag: string) => Promise<void> | void
   onDelete?: () => void | Promise<void>
   onClearSelection: () => void
+  // Callbacks específicos de tareas
+  onPrioridadChange?: (value: string) => Promise<void> | void
+  onEstadoChange?: (value: string) => Promise<void> | void
+  onFechaChange?: (date: string | null) => Promise<void> | void
+  onAsignadoChange?: (miembroId: string) => Promise<void> | void
+  onAsignadoUnassign?: () => Promise<void> | void
   className?: string
 }
 
@@ -29,11 +46,25 @@ export function FloatingActionCapsule({
   totalCount,
   availableTags = [],
   selectedRowsTags = [],
+  // Tarea específicas
+  prioridadOptions,
+  selectedRowsPrioridades,
+  estadoOptions,
+  selectedRowsEstados,
+  selectedRowsDates,
+  selectedRowsAssignees,
+  organizacionId,
+  // Callbacks
   onExport,
   onToggleTag,
   onCreateTag,
   onDelete,
   onClearSelection,
+  onPrioridadChange,
+  onEstadoChange,
+  onFechaChange,
+  onAsignadoChange,
+  onAsignadoUnassign,
   className,
 }: FloatingActionCapsuleProps) {
   const [loadingAction, setLoadingAction] = React.useState<string | null>(null)
@@ -50,6 +81,11 @@ export function FloatingActionCapsule({
       setLoadingAction(null)
     }
   }
+
+  // Determinar si es una vista de tareas (tiene acciones específicas de tareas)
+  const isTaskView = Boolean(
+    onPrioridadChange || onEstadoChange || onFechaChange || onAsignadoChange
+  )
 
   return (
     <motion.div
@@ -98,9 +134,10 @@ export function FloatingActionCapsule({
           </span>
         </div>
 
-        {/* ZONE B - Primary Action (center) */}
-        <div className="flex items-center px-2">
-          {onToggleTag ? (
+        {/* ZONE B - Primary Actions (center) */}
+        <div className="flex items-center gap-1 px-2">
+          {/* Etiquetar (siempre disponible para tareas) */}
+          {onToggleTag && (
             <BulkTagPopover
               selectedIds={selectedIds}
               currentTags={availableTags}
@@ -109,53 +146,100 @@ export function FloatingActionCapsule({
               onCreateTag={onCreateTag || (() => {})}
               disabled={loadingAction !== null}
             />
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={loadingAction !== null || !onToggleTag}
-              className="h-8 gap-2 text-background hover:bg-background/20 opacity-50 cursor-not-allowed"
-              aria-label="Etiquetar no disponible"
-            >
-              <Tag className="h-4 w-4" />
-              <span>Etiquetar</span>
-            </Button>
+          )}
+
+          {/* Acciones específicas de tareas */}
+          {isTaskView && (
+            <>
+              {/* Prioridad */}
+              {onPrioridadChange && prioridadOptions && selectedRowsPrioridades && (
+                <BulkOptionSelectPopover
+                  selectedIds={selectedIds}
+                  selectedRowsValues={selectedRowsPrioridades}
+                  options={prioridadOptions}
+                  onSelect={onPrioridadChange}
+                  disabled={loadingAction !== null}
+                  placeholder="Prioridad"
+                  triggerLabel="Prioridad"
+                />
+              )}
+
+              {/* Estado */}
+              {onEstadoChange && estadoOptions && selectedRowsEstados && (
+                <BulkOptionSelectPopover
+                  selectedIds={selectedIds}
+                  selectedRowsValues={selectedRowsEstados}
+                  options={estadoOptions}
+                  onSelect={onEstadoChange}
+                  disabled={loadingAction !== null}
+                  placeholder="Estado"
+                  triggerLabel="Estado"
+                />
+              )}
+
+              {/* Fecha de vencimiento */}
+              {onFechaChange && selectedRowsDates && (
+                <BulkDatePopover
+                  selectedIds={selectedIds}
+                  selectedRowsDates={selectedRowsDates}
+                  onSelectDate={onFechaChange}
+                  disabled={loadingAction !== null}
+                  placeholder="Vencimiento"
+                />
+              )}
+
+              {/* Responsable */}
+              {onAsignadoChange && selectedRowsAssignees && organizacionId && (
+                <BulkAssigneePopover
+                  selectedIds={selectedIds}
+                  selectedRowsAssignees={selectedRowsAssignees}
+                  organizacionId={organizacionId}
+                  onAssign={onAsignadoChange}
+                  onUnassign={onAsignadoUnassign}
+                  disabled={loadingAction !== null}
+                />
+              )}
+            </>
           )}
         </div>
 
         {/* ZONE C - Secondary Actions (right) */}
         <div className="flex items-center gap-1 pl-2 pr-3 border-l border-background/20">
           {/* Export */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleAction("export", onExport)}
-            disabled={loadingAction !== null}
-            className="h-8 w-8 text-background hover:bg-background/20"
-            aria-label="Exportar selección"
-          >
-            {loadingAction === "export" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-          </Button>
+          {onExport && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleAction("export", onExport)}
+              disabled={loadingAction !== null}
+              className="h-8 w-8 text-background hover:bg-background/20"
+              aria-label="Exportar selección"
+            >
+              {loadingAction === "export" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+            </Button>
+          )}
 
           {/* Delete - with destructive hover */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleAction("delete", onDelete)}
-            disabled={loadingAction !== null}
-            className="h-8 w-8 text-background hover:bg-destructive hover:text-destructive-foreground"
-            aria-label="Eliminar selección"
-          >
-            {loadingAction === "delete" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="h-4 w-4" />
-            )}
-          </Button>
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleAction("delete", onDelete)}
+              disabled={loadingAction !== null}
+              className="h-8 w-8 text-background hover:bg-destructive hover:text-destructive-foreground"
+              aria-label="Eliminar selección"
+            >
+              {loadingAction === "delete" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </motion.div>
