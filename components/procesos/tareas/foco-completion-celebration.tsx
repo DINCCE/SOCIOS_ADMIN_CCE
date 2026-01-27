@@ -10,11 +10,107 @@ interface CelebrationProps {
     taskCount: number
 }
 
-type CelebrationType = "fireworks" | "earthquake" | "explosion"
+type CelebrationType = "fireworks" | "earthquake" | "explosion" | "aurora" | "meteor"
+
+// 70 frases inspiradoras de Cal Newport, GTD, Deep Work - una por celebración
+const DEEP_WORK_MESSAGES: readonly string[] = [
+    // Cal Newport - Deep Work
+    "El trabajo profundo es cada vez más rare y valioso.",
+    "La capacidad de concentrarse es un superpoder.",
+    "Cada tarea completada es capacidad mental construida.",
+    "Lo profundo es lo que mueve al mundo.",
+    "Tu atención es tu recurso más escaso.",
+    "Hoy practicaste el arte de la concentración.",
+    "El trabajo superficial es fácil. Lo profundo requiere valentía.",
+    "Construiste tu capacidad para trabajo difícil.",
+    "Distraerse es fácil. Enfocarse es un logro.",
+    "Tu cerebro se fortalece con cada tarea profunda.",
+    "La calidad de tu trabajo = tiempo invertido × intensidad de concentración",
+    "Has dominado el arte de lo profundo hoy.",
+    "La calidez de la tecnología no puede reemplazar la profundidad.",
+    "Tu mente es para cosas importantes, no triviales.",
+    "Hoy invertiste en tu capital intelectual.",
+    "Las herramientas son auxiliares, tú eres el arquitecto.",
+    "Lo mediocre abunda. Lo profundo escasea. Y tú lo hiciste.",
+    "Cada tarea completada es una victoria contra lo superficial.",
+    "Tu capacidad de enfoque es tu ventaja competitiva.",
+    "El trabajo profundo es significativo. Y hoy fue significativo.",
+    "Productividad sin intención es ruido.",
+    "Hoy no procesaste información. Creaste valor.",
+    "La soledad y la concentración son aliados. Hoy los utilizaste.",
+    "Tu cerebro está diseñado para la profundidad, no la distracción.",
+    "Reclamaste tu mente hoy. Eso vale mucho.",
+    "Lo valioso requiere concentración sin interrupción.",
+    "Hoy no estabas disponible. Estabas enfocado. Eso es poder.",
+    "La felicidad proviene de la creación profunda, no el consumo superficial.",
+
+    // David Allen - GTD
+    "Tu mente es para tener ideas, no para mantenerlas.",
+    "Has completado el ciclo. Tu mente está más libre.",
+    "Una mente como el agua es el objetivo. Hoy te acercaste.",
+    "Capturar, aclarar, organizar, reflexionar, hacer. Lo hiciste.",
+    "Tu sistema funcionó. Las tareas están completadas.",
+    "Lo próximo se define por lo que completaste hoy.",
+    "Has cerrado circuitos abiertos. Eso libera energía mental.",
+    "Tu sistema externo funcionó. Tu mente descansó.",
+    "Completar permite crear. Hoy estás listo para crear.",
+    "No hay cosas pendientes en tu mente. Solo logros.",
+    "Has procesado tu mundo. Ahora puedes vivir en él.",
+    "El vacío mental permite la claridad. Hoy tuviste claridad.",
+    "Tu bandeja de entrada está vacía en lo importante.",
+    "Completar es el primer paso de la creación.",
+    "Tu sistema te sirvió. Le diste sentido a tus tareas.",
+    "Lo que capturas, lo procesas. Lo procesado, se completó.",
+    "Has aclarado tu mundo. Eso es productividad real.",
+    "Tu mente está para tener ideas brillantes, no tareas pendientes.",
+    "Has organizado tu realidad. Ahora puedes disfrutarla.",
+    "Completado es mejor que perfecto. Hoy completaste.",
+    "La revisión semanal empieza con las tareas de hoy.",
+    "Has definido lo próximo. Has ejecutado. Has completado.",
+    "Tu external brain funcionó. Tu mente creativa floreció.",
+
+    // Filosofía de productividad y enfoque
+    "Lo importante es más importante que lo urgente.",
+    "Has priorizado lo esencial. Eso es liderazgo personal.",
+    "Menos pero mejor. Hoy lo demostraste.",
+    "La excelencia no es un acto, es un hábito.",
+    "Tu inversión hoy compone interés mañana.",
+    "Pequeñas victorias hoy, grandes logros mañana.",
+    "Has ejecutado en lo fundamental. Olvida lo trivial.",
+    "La calidad de tus tareas define la calidad de tu vida.",
+    "Hoy no fuiste eficiente. Fuiste efectivo.",
+    "El progreso real es silencioso. Lo escuchaste hoy.",
+    "Has avanzado en lo que realmente importa.",
+    "Tus acciones hoy son el embudo de tu mañana.",
+    "La abundancia viene de enfocarse en lo esencial.",
+    "Has eliminado lo urgente para hacer lo importante.",
+    "Tu energía finita se invirtió en lo infinito.",
+    "Comenzaste donde estás. Usaste lo que tenes. Hiciste.",
+    "La constancia es la superpotencia que ejercitaste hoy.",
+    "El momento de actuar es ahora. Tú actuaste.",
+    "Tu atención es tu moneda más valiosa. La gastaste bien.",
+    "El éxito es la suma de pequeñas acciones completadas.",
+    "No dejaste para mañana lo que avanzaste hoy.",
+    "Has reducido el ruido para aumentar el impacto.",
+    "Tu mejor recurso es tu enfoque. Lo usaste bien.",
+    "Progresar es mejor que planear. Hoy progresaste.",
+    "La acción sobre la perfección. Hoy actuaste.",
+    "Un objetivo a la vez, con claridad. Lo lograste.",
+    "Hoy resolviste algo importante. Eso es suficiente.",
+    "Tu logro de hoy construye tu mañana.",
+    "Simplificaste, priorizaste, ejecutaste. Luego celebramos.",
+    "Calidad sobre cantidad en todo. Hoy elegiste calidad.",
+    "Las tareas pendientes drenan energía. Las completadas, liberan.",
+    "Termina hoy y descansa tranquilo. Lo lograste."
+] as const
+
+function getRandomDeepWorkMessage(): string {
+    return DEEP_WORK_MESSAGES[Math.floor(Math.random() * DEEP_WORK_MESSAGES.length)]
+}
 
 // Helper to get random celebration type
 function getRandomCelebrationType(): CelebrationType {
-    const types: CelebrationType[] = ["fireworks", "earthquake", "explosion"]
+    const types: CelebrationType[] = ["fireworks", "earthquake", "explosion", "aurora", "meteor"]
     return types[Math.floor(Math.random() * types.length)]
 }
 
@@ -38,6 +134,7 @@ export function FocoCompletionCelebration({ open, onClose, taskCount }: Celebrat
 // Internal component that gets a random type on mount
 function CelebrationContent({ taskCount, onClose }: { taskCount: number; onClose: () => void }) {
     const celebrationType = getRandomCelebrationType()
+    const message = getRandomDeepWorkMessage()
 
     useEffect(() => {
         // Auto-close after animation
@@ -61,9 +158,11 @@ function CelebrationContent({ taskCount, onClose }: { taskCount: number; onClose
 
             {/* Celebration Content - Full screen overlay */}
             <div className="fixed inset-0 z-50 pointer-events-none overflow-hidden">
-                {celebrationType === "fireworks" && <FireworksCelebration taskCount={taskCount} onClose={onClose} />}
-                {celebrationType === "earthquake" && <EarthquakeCelebration taskCount={taskCount} onClose={onClose} />}
-                {celebrationType === "explosion" && <ExplosionCelebration taskCount={taskCount} onClose={onClose} />}
+                {celebrationType === "fireworks" && <FireworksCelebration taskCount={taskCount} message={message} onClose={onClose} />}
+                {celebrationType === "earthquake" && <EarthquakeCelebration taskCount={taskCount} message={message} onClose={onClose} />}
+                {celebrationType === "explosion" && <ExplosionCelebration taskCount={taskCount} message={message} onClose={onClose} />}
+                {celebrationType === "aurora" && <AuroraCelebration taskCount={taskCount} message={message} onClose={onClose} />}
+                {celebrationType === "meteor" && <MeteorCelebration taskCount={taskCount} message={message} onClose={onClose} />}
             </div>
         </>
     )
@@ -72,7 +171,7 @@ function CelebrationContent({ taskCount, onClose }: { taskCount: number; onClose
 // ============================================================================
 // VARIANT 1: REALISTIC FIREWORKS - Canvas-based with physics, trails, and flashes
 // ============================================================================
-function FireworksCelebration({ taskCount, onClose }: { taskCount: number; onClose: () => void }) {
+function FireworksCelebration({ taskCount, message, onClose }: { taskCount: number; message: string; onClose: () => void }) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
 
     useEffect(() => {
@@ -82,7 +181,6 @@ function FireworksCelebration({ taskCount, onClose }: { taskCount: number; onClo
         const ctx = canvas.getContext("2d")
         if (!ctx) return
 
-        // Set canvas size
         const resizeCanvas = () => {
             canvas.width = window.innerWidth
             canvas.height = window.innerHeight
@@ -90,7 +188,6 @@ function FireworksCelebration({ taskCount, onClose }: { taskCount: number; onClo
         resizeCanvas()
         window.addEventListener("resize", resizeCanvas)
 
-        // Firework classes
         class Particle {
             x: number
             y: number
@@ -117,11 +214,8 @@ function FireworksCelebration({ taskCount, onClose }: { taskCount: number; onClo
             }
 
             update() {
-                // Add current position to trail
                 this.trail.push({ x: this.x, y: this.y, alpha: this.alpha })
                 if (this.trail.length > 10) this.trail.shift()
-
-                // Physics with gravity
                 this.vy += 0.05
                 this.vx *= 0.99
                 this.vy *= 0.99
@@ -131,7 +225,6 @@ function FireworksCelebration({ taskCount, onClose }: { taskCount: number; onClo
             }
 
             draw(ctx: CanvasRenderingContext2D) {
-                // Draw trail
                 for (let i = 0; i < this.trail.length; i++) {
                     const t = this.trail[i]
                     const trailAlpha = (i / this.trail.length) * this.alpha * 0.5
@@ -140,8 +233,6 @@ function FireworksCelebration({ taskCount, onClose }: { taskCount: number; onClo
                     ctx.fillStyle = this.hexToRgba(this.color, trailAlpha)
                     ctx.fill()
                 }
-
-                // Draw particle with glow
                 ctx.beginPath()
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
                 ctx.fillStyle = this.hexToRgba(this.color, this.alpha)
@@ -185,16 +276,13 @@ function FireworksCelebration({ taskCount, onClose }: { taskCount: number; onClo
 
             update() {
                 if (!this.exploded) {
-                    // Rising phase
                     this.trail.push({ x: this.x, y: this.y })
                     if (this.trail.length > 15) this.trail.shift()
-
                     this.y -= 8
                     if (this.y <= this.targetY) {
                         this.explode()
                     }
                 } else {
-                    // Update particles
                     this.particles = this.particles.filter(p => {
                         p.update()
                         return !p.isDead()
@@ -204,18 +292,15 @@ function FireworksCelebration({ taskCount, onClose }: { taskCount: number; onClo
 
             explode() {
                 this.exploded = true
-                // Create explosion particles
                 for (let i = 0; i < 80; i++) {
                     this.particles.push(new Particle(this.x, this.y, this.color))
                 }
-                // Add flash effect
                 ctx.fillStyle = `rgba(255, 255, 255, 0.3)`
                 ctx.fillRect(0, 0, canvas.width, canvas.height)
             }
 
             draw(ctx: CanvasRenderingContext2D) {
                 if (!this.exploded) {
-                    // Draw trail
                     for (let i = 0; i < this.trail.length; i++) {
                         const t = this.trail[i]
                         ctx.beginPath()
@@ -223,8 +308,6 @@ function FireworksCelebration({ taskCount, onClose }: { taskCount: number; onClo
                         ctx.fillStyle = `rgba(255, 200, 100, ${i / this.trail.length * 0.8})`
                         ctx.fill()
                     }
-
-                    // Draw rocket
                     ctx.beginPath()
                     ctx.arc(this.x, this.y, 3, 0, Math.PI * 2)
                     ctx.fillStyle = "#FFF"
@@ -233,7 +316,6 @@ function FireworksCelebration({ taskCount, onClose }: { taskCount: number; onClo
                     ctx.fill()
                     ctx.shadowBlur = 0
                 } else {
-                    // Draw particles
                     this.particles.forEach(p => p.draw(ctx))
                 }
             }
@@ -246,21 +328,17 @@ function FireworksCelebration({ taskCount, onClose }: { taskCount: number; onClo
         let fireworks: Firework[] = []
         let animationFrame: number
 
-        // Launch fireworks periodically
         const launchInterval = setInterval(() => {
             if (fireworks.length < 15) {
                 fireworks.push(new Firework())
             }
         }, 300)
 
-        // Stop launching after 3 seconds
         setTimeout(() => {
             clearInterval(launchInterval)
         }, 3000)
 
-        // Animation loop
         const animate = () => {
-            // Semi-transparent black for trail effect
             ctx.fillStyle = "rgba(0, 0, 0, 0.15)"
             ctx.fillRect(0, 0, canvas.width, canvas.height)
 
@@ -284,54 +362,54 @@ function FireworksCelebration({ taskCount, onClose }: { taskCount: number; onClo
 
     return (
         <>
-            <canvas
-                ref={canvasRef}
-                className="absolute inset-0 w-full h-full"
-            />
+            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
-            {/* Message overlay */}
             <motion.div
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.5, type: "spring" }}
                 className="absolute inset-0 flex items-center justify-center pointer-events-auto"
             >
-                <div className="text-center">
+                <div className="text-center max-w-2xl px-6">
                     <motion.div
                         initial={{ scale: 0 }}
-                        animate={{ scale: 1, rotate: [0, -10, 10, -5, 5, 0] }}
+                        animate={{ scale: 1, rotate: [0, -5, 5, 0] }}
                         transition={{ delay: 0.7, duration: 0.5 }}
-                        className="text-9xl mb-6"
+                        className="text-8xl mb-8"
                     >
-                        🎆
+                        ✨
                     </motion.div>
                     <motion.h2
-                        initial={{ y: 50, opacity: 0 }}
+                        initial={{ y: 30, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.8 }}
-                        className="text-5xl font-black text-white mb-4 drop-shadow-2xl"
+                        className="text-4xl md:text-5xl font-bold text-white mb-6 drop-shadow-2xl"
                     >
-                        ¡BOOM! ¡LO LOGRASTE!
+                        Completado
                     </motion.h2>
                     <motion.p
-                        initial={{ y: 50, opacity: 0 }}
+                        initial={{ y: 30, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 1 }}
-                        className="text-xl text-white/80 mb-8"
+                        transition={{ delay: 0.9 }}
+                        className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed"
                     >
-                        {taskCount} {taskCount === 1 ? 'tarea completada' : 'tareas completadas'} • El cielo celebra contigo
+                        {message}
+                    </motion.p>
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 1.1 }}
+                        className="text-sm text-white/60 mb-8"
+                    >
+                        {taskCount} {taskCount === 1 ? 'tarea completada' : 'tareas completadas'}
                     </motion.p>
                     <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: 1.2, type: "spring" }}
                     >
-                        <Button
-                            size="lg"
-                            onClick={onClose}
-                            className="bg-white text-black hover:bg-white/90 shadow-2xl"
-                        >
-                            ¡Increíble!
+                        <Button size="lg" onClick={onClose} className="bg-white text-black hover:bg-white/90 shadow-xl">
+                            Continuar
                         </Button>
                     </motion.div>
                 </div>
@@ -343,7 +421,7 @@ function FireworksCelebration({ taskCount, onClose }: { taskCount: number; onClo
 // ============================================================================
 // VARIANT 2: EARTHQUAKE CONFETTI - Screen shake + falling confetti rain
 // ============================================================================
-function EarthquakeCelebration({ taskCount, onClose }: { taskCount: number; onClose: () => void }) {
+function EarthquakeCelebration({ taskCount, message, onClose }: { taskCount: number; message: string; onClose: () => void }) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
 
     useEffect(() => {
@@ -356,10 +434,7 @@ function EarthquakeCelebration({ taskCount, onClose }: { taskCount: number; onCl
         canvas.width = window.innerWidth
         canvas.height = window.innerHeight
 
-        // Add shake effect to body
         document.body.style.animation = "shake 0.5s infinite"
-
-        // Remove shake after animation
         setTimeout(() => {
             document.body.style.animation = ""
         }, 4000)
@@ -396,7 +471,7 @@ function EarthquakeCelebration({ taskCount, onClose }: { taskCount: number; onCl
                 this.oscillation += this.oscillationSpeed
                 this.x += this.vx + Math.sin(this.oscillation) * 2
                 this.y += this.vy
-                this.vy += 0.05 // gravity
+                this.vy += 0.05
                 this.rotation += this.rotationSpeed
             }
 
@@ -404,11 +479,9 @@ function EarthquakeCelebration({ taskCount, onClose }: { taskCount: number; onCl
                 ctx.save()
                 ctx.translate(this.x, this.y)
                 ctx.rotate((this.rotation * Math.PI) / 180)
-
                 ctx.fillStyle = this.color
                 ctx.shadowBlur = 5
                 ctx.shadowColor = this.color
-
                 if (this.shape === "square") {
                     ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size)
                 } else {
@@ -416,7 +489,6 @@ function EarthquakeCelebration({ taskCount, onClose }: { taskCount: number; onCl
                     ctx.arc(0, 0, this.size / 2, 0, Math.PI * 2)
                     ctx.fill()
                 }
-
                 ctx.restore()
             }
 
@@ -427,28 +499,23 @@ function EarthquakeCelebration({ taskCount, onClose }: { taskCount: number; onCl
 
         let confetti: Confetti[] = []
 
-        // Spawn confetti continuously
         const spawnInterval = setInterval(() => {
             for (let i = 0; i < 5; i++) {
                 confetti.push(new Confetti())
             }
         }, 50)
 
-        // Stop spawning after 3 seconds
         setTimeout(() => {
             clearInterval(spawnInterval)
         }, 3000)
 
-        // Animation loop
         const animate = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height)
-
             confetti = confetti.filter(c => {
                 c.update()
                 c.draw(ctx)
                 return !c.isOffScreen()
             })
-
             requestAnimationFrame(animate)
         }
 
@@ -462,28 +529,17 @@ function EarthquakeCelebration({ taskCount, onClose }: { taskCount: number; onCl
 
     return (
         <>
-            <style>{`
-                @keyframes shake {
-                    0%, 100% { transform: translateX(0); }
-                    10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
-                    20%, 40%, 60%, 80% { transform: translateX(8px); }
-                }
-            `}</style>
+            <style>{`@keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); } 20%, 40%, 60%, 80% { transform: translateX(8px); } }`}</style>
 
-            <canvas
-                ref={canvasRef}
-                className="absolute inset-0 w-full h-full"
-            />
+            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
-            {/* Shake effect overlay */}
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: [0, 0.3, 0.3, 0] }}
                 transition={{ times: [0, 0.1, 0.9, 1], duration: 4 }}
-                className="absolute inset-0 bg-red-500/10 mix-blend-overlay"
+                className="absolute inset-0 bg-orange-500/10 mix-blend-overlay"
             />
 
-            {/* Message overlay */}
             <motion.div
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -491,49 +547,49 @@ function EarthquakeCelebration({ taskCount, onClose }: { taskCount: number; onCl
                 className="absolute inset-0 flex items-center justify-center pointer-events-auto"
             >
                 <motion.div
-                    animate={{
-                        x: [0, -5, 5, -3, 3, 0],
-                        y: [0, 3, -3, 2, -2, 0]
-                    }}
+                    animate={{ x: [0, -5, 5, -3, 3, 0], y: [0, 3, -3, 2, -2, 0] }}
                     transition={{ duration: 0.5, repeat: 4, repeatDelay: 0.5 }}
-                    className="text-center"
+                    className="text-center max-w-2xl px-6"
                 >
                     <motion.div
                         initial={{ scale: 0, rotate: -180 }}
                         animate={{ scale: 1, rotate: 0 }}
                         transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
-                        className="text-9xl mb-6"
+                        className="text-8xl mb-8"
                     >
-                        🌪️
+                        🎯
                     </motion.div>
                     <motion.h2
-                        initial={{ y: 50, opacity: 0 }}
+                        initial={{ y: 30, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.6 }}
-                        className="text-6xl font-black text-white mb-4 drop-shadow-2xl"
-                        style={{ textShadow: "4px 4px 0 #FF6B6B, -2px -2px 0 #4ECDC4" }}
+                        className="text-4xl md:text-5xl font-bold text-white mb-6 drop-shadow-2xl"
                     >
-                        ¡TERREMOTO DE ÉXITO!
+                        Foco Completado
                     </motion.h2>
                     <motion.p
-                        initial={{ y: 50, opacity: 0 }}
+                        initial={{ y: 30, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.7 }}
-                        className="text-2xl text-white font-bold mb-8"
+                        className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed"
                     >
-                        Completaste {taskCount} {taskCount === 1 ? 'tarea' : 'tareas'} • ¡La tierra se mueve!
+                        {message}
+                    </motion.p>
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.9 }}
+                        className="text-sm text-white/60 mb-8"
+                    >
+                        {taskCount} {taskCount === 1 ? 'tarea completada' : 'tareas completadas'}
                     </motion.p>
                     <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        transition={{ delay: 0.9, type: "spring" }}
+                        transition={{ delay: 1, type: "spring" }}
                     >
-                        <Button
-                            size="lg"
-                            onClick={onClose}
-                            className="bg-gradient-to-r from-red-500 to-orange-500 text-white hover:from-red-600 hover:to-orange-600 shadow-2xl text-lg px-8"
-                        >
-                            🎉 ¡FUE MÁXIMO!
+                        <Button size="lg" onClick={onClose} className="bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 shadow-xl">
+                            Continuar
                         </Button>
                     </motion.div>
                 </motion.div>
@@ -545,7 +601,7 @@ function EarthquakeCelebration({ taskCount, onClose }: { taskCount: number; onCl
 // ============================================================================
 // VARIANT 3: EXPLOSION - Shockwave, expanding rings, and component distortion
 // ============================================================================
-function ExplosionCelebration({ taskCount, onClose }: { taskCount: number; onClose: () => void }) {
+function ExplosionCelebration({ taskCount, message, onClose }: { taskCount: number; message: string; onClose: () => void }) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
 
     useEffect(() => {
@@ -558,9 +614,8 @@ function ExplosionCelebration({ taskCount, onClose }: { taskCount: number; onClo
         canvas.width = window.innerWidth
         canvas.height = window.innerHeight
 
-        // Add screen pulse effect
         const pulseInterval = setInterval(() => {
-            document.body.style.filter = "brightness(1.2) saturate(1.2)"
+            document.body.style.filter = "brightness(1.15) saturate(1.1)"
             setTimeout(() => {
                 document.body.style.filter = ""
             }, 100)
@@ -598,7 +653,6 @@ function ExplosionCelebration({ taskCount, onClose }: { taskCount: number; onClo
 
             draw(ctx: CanvasRenderingContext2D) {
                 if (this.alpha <= 0) return
-
                 ctx.save()
                 ctx.beginPath()
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2)
@@ -644,7 +698,7 @@ function ExplosionCelebration({ taskCount, onClose }: { taskCount: number; onClo
             update() {
                 this.x += this.vx
                 this.y += this.vy
-                this.vy += 0.3 // gravity
+                this.vy += 0.3
                 this.vx *= 0.98
                 this.vy *= 0.98
                 this.rotation += this.rotationSpeed
@@ -716,46 +770,36 @@ function ExplosionCelebration({ taskCount, onClose }: { taskCount: number; onClo
         let debris: Debris[] = []
         let stars: StarParticle[] = []
 
-        // Initial explosion
         setTimeout(() => {
-            // Create shockwaves
             for (let i = 0; i < 5; i++) {
                 setTimeout(() => {
                     shockwaves.push(new Shockwave())
                 }, i * 200)
             }
-
-            // Create debris
             for (let i = 0; i < 50; i++) {
                 debris.push(new Debris())
             }
-
-            // Create star burst
             for (let i = 0; i < 100; i++) {
                 stars.push(new StarParticle())
             }
         }, 300)
 
-        // Animation loop
         const animate = () => {
             ctx.fillStyle = "rgba(0, 0, 0, 0.1)"
             ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-            // Update and draw shockwaves
             shockwaves = shockwaves.filter(sw => {
                 sw.update()
                 sw.draw(ctx)
                 return !sw.isDead()
             })
 
-            // Update and draw debris
             debris = debris.filter(d => {
                 d.update()
                 d.draw(ctx)
                 return !d.isDead()
             })
 
-            // Update and draw stars
             stars = stars.filter(s => {
                 s.update()
                 s.draw(ctx)
@@ -775,12 +819,8 @@ function ExplosionCelebration({ taskCount, onClose }: { taskCount: number; onClo
 
     return (
         <>
-            <canvas
-                ref={canvasRef}
-                className="absolute inset-0 w-full h-full"
-            />
+            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
-            {/* Flash effect on explosion */}
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: [0, 1, 0] }}
@@ -788,60 +828,490 @@ function ExplosionCelebration({ taskCount, onClose }: { taskCount: number; onClo
                 className="absolute inset-0 bg-white pointer-events-none"
             />
 
-            {/* Message overlay */}
             <motion.div
                 initial={{ scale: 0 }}
-                animate={{ scale: [0, 1.5, 1] }}
+                animate={{ scale: [0, 1.3, 1] }}
                 transition={{ delay: 0.5, duration: 0.5 }}
                 className="absolute inset-0 flex items-center justify-center pointer-events-auto"
             >
                 <motion.div
-                    animate={{
-                        scale: [1, 1.1, 1],
-                        rotate: [0, 2, -2, 0]
-                    }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="text-center"
+                    animate={{ scale: [1, 1.05, 1], rotate: [0, 1, -1, 0] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                    className="text-center max-w-2xl px-6"
                 >
                     <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.7, type: "spring", stiffness: 300, damping: 10 }}
-                        className="text-9xl mb-6"
+                        className="text-8xl mb-8"
                     >
-                        💥
+                        💫
                     </motion.div>
                     <motion.h2
-                        initial={{ y: 100, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.8, type: "spring", stiffness: 100 }}
-                        className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 mb-4"
-                        style={{ filter: "drop-shadow(4px 4px 0 rgba(255,255,255,0.5))" }}
-                    >
-                        ¡EXPLOSIÓN DE LOGROS!
-                    </motion.h2>
-                    <motion.p
                         initial={{ y: 50, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.9 }}
-                        className="text-2xl text-white font-bold mb-8"
+                        transition={{ delay: 0.8, type: "spring", stiffness: 100 }}
+                        className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-white to-yellow-200 mb-6"
+                        style={{ filter: "drop-shadow(0 0 20px rgba(255,255,255,0.5))" }}
                     >
-                        {taskCount} {taskCount === 1 ? 'meta aplastada' : 'metas aplastadas'}
+                        Logro Alcanzado
+                    </motion.h2>
+                    <motion.p
+                        initial={{ y: 30, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.9 }}
+                        className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed"
+                    >
+                        {message}
+                    </motion.p>
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 1.1 }}
+                        className="text-sm text-white/60 mb-8"
+                    >
+                        {taskCount} {taskCount === 1 ? 'tarea completada' : 'tareas completadas'}
                     </motion.p>
                     <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        transition={{ delay: 1.1, type: "spring" }}
+                        transition={{ delay: 1.2, type: "spring" }}
                     >
-                        <Button
-                            size="lg"
-                            onClick={onClose}
-                            className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white hover:opacity-90 shadow-2xl text-lg px-8"
-                        >
-                            🚀 ¡PODEROSO!
+                        <Button size="lg" onClick={onClose} className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white hover:opacity-90 shadow-xl">
+                            Continuar
                         </Button>
                     </motion.div>
                 </motion.div>
+            </motion.div>
+        </>
+    )
+}
+
+// ============================================================================
+// VARIANT 4: AURORA BOREALIS - Flowing waves of light across the screen
+// ============================================================================
+function AuroraCelebration({ taskCount, message, onClose }: { taskCount: number; message: string; onClose: () => void }) {
+    const canvasRef = useRef<HTMLCanvasElement>(null)
+
+    useEffect(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return
+
+        canvas.width = window.innerWidth
+        canvas.height = window.innerHeight
+
+        class Wave {
+            y: number
+            amplitude: number
+            frequency: number
+            speed: number
+            color: string
+            phase: number
+
+            constructor() {
+                this.y = Math.random() * canvas.height * 0.6 + canvas.height * 0.2
+                this.amplitude = Math.random() * 80 + 40
+                this.frequency = Math.random() * 0.01 + 0.005
+                this.speed = Math.random() * 0.02 + 0.01
+                const colors = ["rgba(0, 255, 128,", "rgba(0, 200, 255,", "rgba(128, 0, 255,", "rgba(0, 255, 200,"]
+                this.color = colors[Math.floor(Math.random() * colors.length)]
+                this.phase = Math.random() * Math.PI * 2
+            }
+
+            update(time: number) {
+                this.phase += this.speed
+            }
+
+            draw(ctx: CanvasRenderingContext2D, time: number) {
+                ctx.beginPath()
+                for (let x = 0; x < canvas.width; x += 5) {
+                    const y = this.y + Math.sin(x * this.frequency + time * this.speed + this.phase) * this.amplitude
+                    if (x === 0) {
+                        ctx.moveTo(x, y)
+                    } else {
+                        ctx.lineTo(x, y)
+                    }
+                }
+                ctx.strokeStyle = this.color + "0.6)"
+                ctx.lineWidth = 40
+                ctx.lineCap = "round"
+                ctx.shadowBlur = 30
+                ctx.shadowColor = this.color + "0.8)"
+                ctx.stroke()
+            }
+        }
+
+        const waves: Wave[] = []
+        for (let i = 0; i < 5; i++) {
+            waves.push(new Wave())
+        }
+
+        class Star {
+            x: number
+            y: number
+            size: number
+            twinkle: number
+            twinkleSpeed: number
+
+            constructor() {
+                this.x = Math.random() * canvas.width
+                this.y = Math.random() * canvas.height * 0.7
+                this.size = Math.random() * 2 + 1
+                this.twinkle = Math.random() * Math.PI * 2
+                this.twinkleSpeed = Math.random() * 0.05 + 0.02
+            }
+
+            update() {
+                this.twinkle += this.twinkleSpeed
+            }
+
+            draw(ctx: CanvasRenderingContext2D) {
+                const alpha = (Math.sin(this.twinkle) + 1) / 2 * 0.8 + 0.2
+                ctx.beginPath()
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`
+                ctx.shadowBlur = 10
+                ctx.shadowColor = "white"
+                ctx.fill()
+            }
+        }
+
+        const stars: Star[] = []
+        for (let i = 0; i < 100; i++) {
+            stars.push(new Star())
+        }
+
+        const startTime = Date.now()
+        const animate = () => {
+            const time = Date.now() - startTime
+
+            // Dark gradient background
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
+            gradient.addColorStop(0, "#0a0a20")
+            gradient.addColorStop(0.5, "#0f0f30")
+            gradient.addColorStop(1, "#1a1a40")
+            ctx.fillStyle = gradient
+            ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+            // Draw stars
+            stars.forEach(star => {
+                star.update()
+                star.draw(ctx)
+            })
+
+            // Draw waves
+            waves.forEach(wave => {
+                wave.update(time)
+                wave.draw(ctx, time)
+            })
+
+            requestAnimationFrame(animate)
+        }
+
+        animate()
+
+        return () => {}
+    }, [])
+
+    return (
+        <>
+            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 1 }}
+                className="absolute inset-0 flex items-center justify-center pointer-events-auto"
+            >
+                <div className="text-center max-w-2xl px-6">
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.7, type: "spring", stiffness: 150 }}
+                        className="text-8xl mb-8"
+                    >
+                        🌌
+                    </motion.div>
+                    <motion.h2
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.8 }}
+                        className="text-4xl md:text-5xl font-bold text-white mb-6"
+                        style={{ textShadow: "0 0 40px rgba(100, 255, 200, 0.5)" }}
+                    >
+                        Profundidad Alcanzada
+                    </motion.h2>
+                    <motion.p
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.9 }}
+                        className="text-xl md:text-2xl text-white/80 mb-8 leading-relaxed"
+                    >
+                        {message}
+                    </motion.p>
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 1.1 }}
+                        className="text-sm text-white/50 mb-8"
+                    >
+                        {taskCount} {taskCount === 1 ? 'tarea completada' : 'tareas completadas'}
+                    </motion.p>
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 1.2, type: "spring" }}
+                    >
+                        <Button size="lg" onClick={onClose} className="bg-white/10 backdrop-blur text-white hover:bg-white/20 border border-white/20 shadow-xl">
+                            Continuar
+                        </Button>
+                    </motion.div>
+                </div>
+            </motion.div>
+        </>
+    )
+}
+
+// ============================================================================
+// VARIANT 5: METEOR SHOWER - Meteors falling with glowing trails
+// ============================================================================
+function MeteorCelebration({ taskCount, message, onClose }: { taskCount: number; message: string; onClose: () => void }) {
+    const canvasRef = useRef<HTMLCanvasElement>(null)
+
+    useEffect(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return
+
+        canvas.width = window.innerWidth
+        canvas.height = window.innerHeight
+
+        class Meteor {
+            x: number
+            y: number
+            vx: number
+            vy: number
+            length: number
+            alpha: number
+            color: string
+
+            constructor() {
+                this.x = Math.random() * canvas.width * 0.8 + canvas.width * 0.1
+                this.y = -100
+                const angle = Math.PI / 4 + (Math.random() - 0.5) * 0.3
+                const speed = Math.random() * 10 + 15
+                this.vx = Math.cos(angle) * speed
+                this.vy = Math.sin(angle) * speed
+                this.length = Math.random() * 100 + 80
+                this.alpha = 1
+                const colors = ["#FFD700", "#00CED1", "#FF69B4", "#7B68EE", "#00FF7F"]
+                this.color = colors[Math.floor(Math.random() * colors.length)]
+            }
+
+            update() {
+                this.x += this.vx
+                this.y += this.vy
+                this.alpha -= 0.005
+            }
+
+            draw(ctx: CanvasRenderingContext2D) {
+                if (this.alpha <= 0) return
+
+                // Trail gradient
+                const gradient = ctx.createLinearGradient(
+                    this.x, this.y,
+                    this.x - this.vx * 10, this.y - this.vy * 10
+                )
+                gradient.addColorStop(0, this.color)
+                gradient.addColorStop(1, "transparent")
+
+                ctx.save()
+                ctx.strokeStyle = gradient
+                ctx.lineWidth = 3
+                ctx.lineCap = "round"
+                ctx.shadowBlur = 20
+                ctx.shadowColor = this.color
+                ctx.globalAlpha = this.alpha
+
+                ctx.beginPath()
+                ctx.moveTo(this.x, this.y)
+                ctx.lineTo(this.x - this.vx * 10, this.y - this.vy * 10)
+                ctx.stroke()
+
+                // Bright head
+                ctx.beginPath()
+                ctx.arc(this.x, this.y, 4, 0, Math.PI * 2)
+                ctx.fillStyle = "#FFF"
+                ctx.fill()
+
+                ctx.restore()
+            }
+
+            isDead(): boolean {
+                return this.alpha <= 0 || this.y > canvas.height + 100
+            }
+        }
+
+        class ImpactParticle {
+            x: number
+            y: number
+            vx: number
+            vy: number
+            alpha: number
+            size: number
+
+            constructor(x: number, y: number) {
+                this.x = x
+                this.y = y
+                const angle = Math.random() * Math.PI * 2
+                const speed = Math.random() * 5 + 2
+                this.vx = Math.cos(angle) * speed
+                this.vy = Math.sin(angle) * speed
+                this.alpha = 1
+                this.size = Math.random() * 4 + 2
+            }
+
+            update() {
+                this.x += this.vx
+                this.y += this.vy
+                this.vy += 0.1
+                this.alpha -= 0.02
+            }
+
+            draw(ctx: CanvasRenderingContext2D) {
+                if (this.alpha <= 0) return
+                ctx.beginPath()
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
+                ctx.fillStyle = `rgba(255, 255, 200, ${this.alpha})`
+                ctx.shadowBlur = 10
+                ctx.shadowColor = "gold"
+                ctx.fill()
+            }
+
+            isDead(): boolean {
+                return this.alpha <= 0
+            }
+        }
+
+        let meteors: Meteor[] = []
+        let particles: ImpactParticle[] = []
+
+        // Spawn meteors
+        const spawnInterval = setInterval(() => {
+            meteors.push(new Meteor())
+        }, 200)
+
+        setTimeout(() => {
+            clearInterval(spawnInterval)
+        }, 3000)
+
+        const animate = () => {
+            // Clear with fade effect
+            ctx.fillStyle = "rgba(10, 10, 30, 0.2)"
+            ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+            // Draw stars background
+            for (let i = 0; i < 50; i++) {
+                const x = (i * 137) % canvas.width
+                const y = (i * 97) % canvas.height
+                const twinkle = Math.sin(Date.now() * 0.001 + i) * 0.5 + 0.5
+                ctx.beginPath()
+                ctx.arc(x, y, 1, 0, Math.PI * 2)
+                ctx.fillStyle = `rgba(255, 255, 255, ${twinkle * 0.5})`
+                ctx.fill()
+            }
+
+            // Update and draw meteors
+            meteors = meteors.filter(meteor => {
+                meteor.update()
+                meteor.draw(ctx)
+
+                // Create impact particles when meteor reaches bottom
+                if (meteor.y > canvas.height - 100 && meteor.alpha > 0.5) {
+                    for (let i = 0; i < 5; i++) {
+                        particles.push(new ImpactParticle(meteor.x, canvas.height - 50))
+                    }
+                }
+
+                return !meteor.isDead()
+            })
+
+            // Update and draw particles
+            particles = particles.filter(p => {
+                p.update()
+                p.draw(ctx)
+                return !p.isDead()
+            })
+
+            requestAnimationFrame(animate)
+        }
+
+        animate()
+
+        return () => {
+            clearInterval(spawnInterval)
+        }
+    }, [])
+
+    return (
+        <>
+            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="absolute inset-0 flex items-center justify-center pointer-events-auto"
+            >
+                <div className="text-center max-w-2xl px-6">
+                    <motion.div
+                        initial={{ scale: 0, rotate: -30 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ delay: 0.7, type: "spring", stiffness: 200 }}
+                        className="text-8xl mb-8"
+                    >
+                        🌠
+                    </motion.div>
+                    <motion.h2
+                        initial={{ y: 30, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.8 }}
+                        className="text-4xl md:text-5xl font-bold text-white mb-6"
+                        style={{ textShadow: "0 0 30px rgba(255, 215, 0, 0.5)" }}
+                    >
+                        Impacto Generado
+                    </motion.h2>
+                    <motion.p
+                        initial={{ y: 30, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.9 }}
+                        className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed"
+                    >
+                        {message}
+                    </motion.p>
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 1.1 }}
+                        className="text-sm text-white/60 mb-8"
+                    >
+                        {taskCount} {taskCount === 1 ? 'tarea completada' : 'tareas completadas'}
+                    </motion.p>
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 1.2, type: "spring" }}
+                    >
+                        <Button size="lg" onClick={onClose} className="bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:opacity-90 shadow-xl">
+                            Continuar
+                        </Button>
+                    </motion.div>
+                </div>
             </motion.div>
         </>
     )

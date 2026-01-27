@@ -193,7 +193,7 @@ export function MisTareasLista({ tareas, onTaskClick, selectedIds, onSelectionCh
                                 className="h-7 px-2 text-xs font-medium gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                                 <CheckCircle className="h-3.5 w-3.5 text-status-positive" />
-                                Terminar
+                                Completar
                             </Button>
                         </div>
                     ))}

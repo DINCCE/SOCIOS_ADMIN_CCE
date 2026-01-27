@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   PieChart,
   Settings2,
+  Target,
   Users,
 } from 'lucide-react'
 
@@ -37,7 +38,7 @@ export const NAVIGATION_CONFIG: NavItem[] = [
   {
     title: 'Mis Tareas',
     url: '/admin/mis-tareas',
-    icon: LayoutDashboard,
+    icon: Target,
   },
   {
     title: 'Analítica',

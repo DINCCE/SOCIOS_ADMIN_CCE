@@ -496,6 +496,7 @@ export function MisTareasDashboard() {
                             userId={user.id}
                             organizationId={misTareas[0]?.organizacion_id || ""}
                             allTasks={misTareas}
+                            onTaskClick={handleTareaClick}
                         />
                     </section>
 

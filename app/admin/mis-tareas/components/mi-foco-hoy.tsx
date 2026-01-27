@@ -4,10 +4,9 @@ import React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Target, Plus, Sparkles } from "lucide-react"
+import { Target, Plus, Sparkles, CheckCircle, X, RotateCcw } from "lucide-react"
 import { TareaView } from "@/features/procesos/tareas/columns"
 import { crearTarea, actualizarTarea } from "@/app/actions/tareas"
 import { useQueryClient } from "@tanstack/react-query"
@@ -30,9 +29,10 @@ interface MiFocoHoyProps {
     userId: string
     organizationId: string
     allTasks: TareaView[]
+    onTaskClick: (taskId: string) => void
 }
 
-export function MiFocoHoy({ userId, organizationId, allTasks }: MiFocoHoyProps) {
+export function MiFocoHoy({ userId, organizationId, allTasks, onTaskClick }: MiFocoHoyProps) {
     const queryClient = useQueryClient()
     const today = new Date().toISOString().split('T')[0]
 
@@ -41,6 +41,15 @@ export function MiFocoHoy({ userId, organizationId, allTasks }: MiFocoHoyProps) 
         t.tags?.includes(FOCO_TAG) &&
         t.fecha_vencimiento?.startsWith(today)
     )
+
+    // Sort: pending first, then completed
+    const sortedFocusTasks = [...focusTasks].sort((a, b) => {
+        const aCompleted = a.estado === "Terminada"
+        const bCompleted = b.estado === "Terminada"
+        if (aCompleted && !bCompleted) return 1
+        if (!aCompleted && bCompleted) return -1
+        return 0
+    })
 
     const completedFocusCount = focusTasks.filter(t => t.estado === "Terminada").length
     const progress = focusTasks.length > 0 ? (completedFocusCount / focusTasks.length) * 100 : 0
@@ -109,12 +118,13 @@ export function MiFocoHoy({ userId, organizationId, allTasks }: MiFocoHoyProps) 
                     <EmptyFocusState />
                 ) : (
                     <div className="space-y-1">
-                        {focusTasks.map((tarea) => (
+                        {sortedFocusTasks.map((tarea) => (
                             <FocusTaskItem
                                 key={tarea.id}
                                 tarea={tarea}
                                 onToggleComplete={handleToggleComplete}
                                 onRemoveTag={handleRemoveTag}
+                                onTaskClick={onTaskClick}
                             />
                         ))}
                     </div>
@@ -161,31 +171,29 @@ interface FocusTaskItemProps {
     tarea: TareaView
     onToggleComplete: (taskId: string, isCompleted: boolean) => void
     onRemoveTag: (taskId: string) => void
+    onTaskClick: (taskId: string) => void
 }
 
-function FocusTaskItem({ tarea, onToggleComplete, onRemoveTag }: FocusTaskItemProps) {
+function FocusTaskItem({ tarea, onToggleComplete, onRemoveTag, onTaskClick }: FocusTaskItemProps) {
     const [isHovered, setIsHovered] = React.useState(false)
+    const isCompleted = tarea.estado === "Terminada"
 
     return (
         <div
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
+            onClick={() => onTaskClick(tarea.id)}
             className={cn(
-                "flex items-center justify-between px-3 py-2.5 rounded-lg transition-all",
+                "flex items-center justify-between px-3 py-2.5 rounded-lg transition-all cursor-pointer",
                 "bg-background/50 border border-transparent hover:border-border/50",
-                tarea.estado === "Terminada" && "opacity-60"
+                isCompleted && "opacity-60"
             )}
         >
             <div className="flex items-center gap-3 min-w-0 flex-1">
-                <Checkbox
-                    checked={tarea.estado === "Terminada"}
-                    onCheckedChange={(checked) => onToggleComplete(tarea.id, !!checked)}
-                    className="h-4 w-4 shrink-0"
-                />
                 <div className="min-w-0 flex-1">
                     <p className={cn(
                         "text-sm font-medium truncate leading-tight",
-                        tarea.estado === "Terminada" && "line-through text-muted-foreground"
+                        isCompleted && "line-through text-muted-foreground"
                     )}>
                         {tarea.titulo}
                     </p>
@@ -196,17 +204,55 @@ function FocusTaskItem({ tarea, onToggleComplete, onRemoveTag }: FocusTaskItemPr
                     )}
                 </div>
             </div>
-            <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                    "h-7 w-7 transition-all shrink-0",
-                    isHovered ? "opacity-100" : "opacity-0"
+            <div className="flex items-center gap-1 shrink-0">
+                {!isCompleted ? (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            onToggleComplete(tarea.id, true)
+                        }}
+                        className={cn(
+                            "h-7 px-2 text-xs font-medium gap-1 transition-opacity shrink-0",
+                            isHovered ? "opacity-100" : "opacity-0"
+                        )}
+                    >
+                        <CheckCircle className="h-3.5 w-3.5 text-status-positive" />
+                        Completar
+                    </Button>
+                ) : (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            onToggleComplete(tarea.id, false)
+                        }}
+                        className={cn(
+                            "h-7 px-2 text-xs font-medium gap-1 transition-opacity shrink-0",
+                            isHovered ? "opacity-100" : "opacity-0"
+                        )}
+                    >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Deshacer
+                    </Button>
                 )}
-                onClick={() => onRemoveTag(tarea.id)}
-            >
-                <span className="text-xs text-muted-foreground">×</span>
-            </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                        "h-7 w-7 transition-all shrink-0",
+                        isHovered ? "opacity-100" : "opacity-0"
+                    )}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        onRemoveTag(tarea.id)
+                    }}
+                >
+                    <X className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+            </div>
         </div>
     )
 }
