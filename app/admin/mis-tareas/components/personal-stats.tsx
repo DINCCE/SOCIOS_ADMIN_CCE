@@ -9,6 +9,23 @@ interface PersonalStatsProps {
     tareas: TareaView[]
 }
 
+/**
+ * Parse a date string (yyyy-MM-dd) correctly, avoiding timezone issues
+ * Database stores dates as DATE type without timezone, so we parse as local date
+ */
+function parseLocalDate(dateStr: string): Date | null {
+    if (!dateStr) return null
+
+    // Parse the date string manually to avoid timezone conversion
+    // Expected format: yyyy-MM-dd
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (!match) return null
+
+    const [, year, month, day] = match
+    // Create date using local time (month is 0-indexed in JS)
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+}
+
 export function PersonalStats({ tareas }: PersonalStatsProps) {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -18,9 +35,21 @@ export function PersonalStats({ tareas }: PersonalStatsProps) {
     dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1)
 
     const stats = {
-        vencidas: tareas.filter(t => t.estado !== "Terminada" && t.fecha_vencimiento && new Date(t.fecha_vencimiento) < today).length,
-        hoy: tareas.filter(t => t.estado !== "Terminada" && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= today && new Date(t.fecha_vencimiento) < tomorrow).length,
-        manana: tareas.filter(t => t.estado !== "Terminada" && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= tomorrow && new Date(t.fecha_vencimiento) < dayAfterTomorrow).length,
+        vencidas: tareas.filter(t => {
+            if ((t.estado === "Terminada" || t.estado === "Cancelada") || !t.fecha_vencimiento) return false
+            const vencimiento = parseLocalDate(t.fecha_vencimiento)
+            return vencimiento && vencimiento < today
+        }).length,
+        hoy: tareas.filter(t => {
+            if ((t.estado === "Terminada" || t.estado === "Cancelada") || !t.fecha_vencimiento) return false
+            const vencimiento = parseLocalDate(t.fecha_vencimiento)
+            return vencimiento && vencimiento >= today && vencimiento < tomorrow
+        }).length,
+        manana: tareas.filter(t => {
+            if ((t.estado === "Terminada" || t.estado === "Cancelada") || !t.fecha_vencimiento) return false
+            const vencimiento = parseLocalDate(t.fecha_vencimiento)
+            return vencimiento && vencimiento >= tomorrow && vencimiento < dayAfterTomorrow
+        }).length,
         racha: 5, // Mocked for now, will implement logic later
     }
 

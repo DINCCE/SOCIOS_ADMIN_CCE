@@ -24,6 +24,23 @@ interface CompletedTaskItemProps {
     onTaskClick: (id: string) => void
 }
 
+/**
+ * Parse a date string (yyyy-MM-dd) correctly, avoiding timezone issues
+ * Database stores dates as DATE type without timezone, so we parse as local date
+ */
+function parseLocalDate(dateStr: string): Date | null {
+  if (!dateStr) return null
+
+  // Parse the date string manually to avoid timezone conversion
+  // Expected format: yyyy-MM-dd
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!match) return null
+
+  const [, year, month, day] = match
+  // Create date using local time (month is 0-indexed in JS)
+  return new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+}
+
 export function MisTareasLista({ tareas, onTaskClick, selectedIds, onSelectionChange }: MisTareasListaProps) {
     const queryClient = useQueryClient()
     const now = new Date()
@@ -40,10 +57,10 @@ export function MisTareasLista({ tareas, onTaskClick, selectedIds, onSelectionCh
     const isPendingTask = (t: TareaView) => t.estado !== "Terminada" && t.estado !== "Cancelada"
 
     const groups = {
-        vencidas: tareas.filter(t => isPendingTask(t) && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) < today),
-        hoy: tareas.filter(t => isPendingTask(t) && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= today && new Date(t.fecha_vencimiento) < tomorrow),
-        manana: tareas.filter(t => isPendingTask(t) && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= tomorrow && new Date(t.fecha_vencimiento) < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000)),
-        proximas: tareas.filter(t => isPendingTask(t) && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && new Date(t.fecha_vencimiento) >= new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000) && new Date(t.fecha_vencimiento) < nextWeek),
+        vencidas: tareas.filter(t => isPendingTask(t) && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && parseLocalDate(t.fecha_vencimiento) && parseLocalDate(t.fecha_vencimiento)! < today),
+        hoy: tareas.filter(t => isPendingTask(t) && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && parseLocalDate(t.fecha_vencimiento) && parseLocalDate(t.fecha_vencimiento)! >= today && parseLocalDate(t.fecha_vencimiento)! < tomorrow),
+        manana: tareas.filter(t => isPendingTask(t) && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && parseLocalDate(t.fecha_vencimiento) && parseLocalDate(t.fecha_vencimiento)! >= tomorrow && parseLocalDate(t.fecha_vencimiento)! < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000)),
+        proximas: tareas.filter(t => isPendingTask(t) && !t.tags?.includes(FOCO_TAG) && t.fecha_vencimiento && parseLocalDate(t.fecha_vencimiento) && parseLocalDate(t.fecha_vencimiento)! >= new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000) && parseLocalDate(t.fecha_vencimiento)! < nextWeek),
         sinFecha: tareas.filter(t => isPendingTask(t) && !t.tags?.includes(FOCO_TAG) && !t.fecha_vencimiento),
     }
 
@@ -90,6 +107,17 @@ export function MisTareasLista({ tareas, onTaskClick, selectedIds, onSelectionCh
         return config[prioridad] || "bg-status-neutral"
     }
 
+    const getEstadoConfig = (estado: string) => {
+        const config: Record<string, string> = {
+            "Pendiente": "bg-status-neutral",
+            "En Progreso": "bg-status-warning",
+            "Terminada": "bg-status-positive",
+            "Pausada": "bg-status-negative",
+            "Cancelada": "bg-status-negative"
+        }
+        return config[estado] || "bg-status-neutral"
+    }
+
     const renderGroup = (title: string, taskGroup: TareaView[], color: string, icon: LucideIcon) => {
         if (taskGroup.length === 0) return null
         const Icon = icon
@@ -121,8 +149,21 @@ export function MisTareasLista({ tareas, onTaskClick, selectedIds, onSelectionCh
                                     />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-medium truncate">{tarea.titulo}</p>
-                                    <div className="flex items-center gap-2 mt-0.5">
+                                    <div className="flex items-baseline gap-1.5">
+                                        <p className="text-sm font-medium truncate">{tarea.titulo}</p>
+                                        {tarea.fecha_vencimiento && (() => {
+                                            const fechaDate = parseLocalDate(tarea.fecha_vencimiento)
+                                            return fechaDate && (
+                                                <span className={cn(
+                                                    "text-xs font-normal text-muted-foreground shrink-0",
+                                                    fechaDate < today && "text-destructive"
+                                                )}>
+                                                    {fechaDate.toLocaleDateString([], { day: '2-digit', month: 'short' })}
+                                                </span>
+                                            )
+                                        })()}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 mt-1">
                                         <Badge
                                             variant="metadata-outline"
                                             dotClassName={getPriorityConfig(tarea.prioridad)}
@@ -131,14 +172,14 @@ export function MisTareasLista({ tareas, onTaskClick, selectedIds, onSelectionCh
                                         >
                                             {tarea.prioridad}
                                         </Badge>
-                                        {tarea.fecha_vencimiento && (
-                                            <span className={cn(
-                                                "text-[9px] font-medium",
-                                                new Date(tarea.fecha_vencimiento) < today ? "text-destructive" : "text-muted-foreground"
-                                            )}>
-                                                {new Date(tarea.fecha_vencimiento).toLocaleDateString([], { day: '2-digit', month: 'short' })}
-                                            </span>
-                                        )}
+                                        <Badge
+                                            variant="metadata-outline"
+                                            dotClassName={getEstadoConfig(tarea.estado)}
+                                            showDot
+                                            className="text-[9px] h-4 px-1.5 py-0 gap-1 font-normal"
+                                        >
+                                            {tarea.estado}
+                                        </Badge>
                                     </div>
                                 </div>
                             </div>

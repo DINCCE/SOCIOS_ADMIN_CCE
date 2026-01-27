@@ -1,0 +1,141 @@
+{
+  "results": [
+    {
+      "entity_type": "actor",
+      "entity_id": "550e8400-e29b-41d4-a716-446655440001",
+      "title": "Juan Pérez González",
+      "subtitle": "ID: 12345678",
+      "route": "/admin/socios/personas/550e8400-e29b-41d4-a716-446655440001",
+      "metadata": {
+        "tipo_actor": "persona",
+        "estado": "activo",
+        "tags": ["cliente", "vip"],
+        "ciudad": "Bogotá",
+        "created_at": "2024-01-15T10:30:00Z"
+      }
+    },
+    {
+      "entity_type": "actor",
+      "entity_id": "550e8400-e29b-41d4-a716-446655440002",
+      "title": "Empresa Colombiana de Tecnología S.A.S.",
+      "subtitle": "BP: EMP-2024-001",
+      "route": "/admin/socios/personas/550e8400-e29b-41d4-a716-446655440002",
+      "metadata": {
+        "tipo_actor": "empresa",
+        "estado": "activo",
+        "tags": ["proveedor", "tecnología"],
+        "ciudad": "Medellín",
+        "created_at": "2024-02-01T09:00:00Z"
+      }
+    },
+    {
+      "entity_type": "tarea",
+      "entity_id": "550e8400-e29b-41d4-a716-446655440003",
+      "title": "Revisar contrato de servicios",
+      "subtitle": "TAR-2024-0156",
+      "route": "/admin/procesos/tareas/550e8400-e29b-41d4-a716-446655440003",
+      "metadata": {
+        "estado": "En Progreso",
+        "prioridad": "Alta",
+        "fecha_vencimiento": "2024-02-15",
+        "asignado": "María López",
+        "tags": ["legal", "urgente"],
+        "codigo_tarea": "TAR-2024-0156"
+      }
+    },
+    {
+      "entity_type": "accion",
+      "entity_id": "550e8400-e29b-41d4-a716-446655440004",
+      "title": "ACC-2024-0001",
+      "subtitle": "Juan Pérez González",
+      "route": "/admin/procesos/acciones/550e8400-e29b-41d4-a716-446655440004",
+      "metadata": {
+        "estado": "emitida",
+        "organizacion": "Socios Admin Org",
+        "propietario": "Juan Pérez González",
+        "precio_adquisicion": 500000
+      }
+    },
+    {
+      "entity_type": "documento",
+      "entity_id": "550e8400-e29b-41d4-a716-446655440005",
+      "title": "Oportunidad de consultoría ERP",
+      "subtitle": "DOC-2024-0042",
+      "route": "/admin/procesos/documentos-comerciales/550e8400-e29b-41d4-a716-446655440005",
+      "metadata": {
+        "estado": "negociación",
+        "tipo_documento": "oportunidad",
+        "valor_total": 45000000,
+        "solicitante": "Juan Pérez González"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "create-persona",
+      "type": "create",
+      "label": "Crear Persona",
+      "icon": "UserPlus",
+      "shortcut": "> crear persona",
+      "description": "Create a new person record"
+    },
+    {
+      "id": "create-empresa",
+      "type": "create",
+      "label": "Crear Empresa",
+      "icon": "Building",
+      "shortcut": "> crear empresa",
+      "description": "Create a new company record"
+    },
+    {
+      "id": "create-tarea",
+      "type": "create",
+      "label": "Crear Tarea",
+      "icon": "CheckCircle",
+      "shortcut": "> crear tarea",
+      "description": "Create a new task"
+    },
+    {
+      "id": "nav-mis-tareas",
+      "type": "navigation",
+      "label": "Ver Mis Tareas",
+      "icon": "LayoutList",
+      "shortcut": "> mis tareas",
+      "route": "/admin/mis-tareas"
+    },
+    {
+      "id": "nav-personas",
+      "type": "navigation",
+      "label": "Ver Personas",
+      "icon": "Users",
+      "shortcut": "> personas",
+      "route": "/admin/socios/personas"
+    },
+    {
+      "id": "nav-settings",
+      "type": "navigation",
+      "label": "Configuración",
+      "icon": "Settings",
+      "shortcut": "> configuración",
+      "route": "/admin/settings"
+    }
+  ],
+  "recent": [
+    {
+      "entity_type": "actor",
+      "entity_id": "550e8400-e29b-41d4-a716-446655440001",
+      "title": "Juan Pérez González",
+      "subtitle": "ID: 12345678",
+      "route": "/admin/socios/personas/550e8400-e29b-41d4-a716-446655440001",
+      "viewed_at": "2024-01-27T10:30:00Z"
+    },
+    {
+      "entity_type": "tarea",
+      "entity_id": "550e8400-e29b-41d4-a716-446655440003",
+      "title": "Revisar contrato de servicios",
+      "subtitle": "TAR-2024-0156",
+      "route": "/admin/procesos/tareas/550e8400-e29b-41d4-a716-446655440003",
+      "viewed_at": "2024-01-27T09:15:00Z"
+    }
+  ]
+}

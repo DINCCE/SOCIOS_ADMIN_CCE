@@ -232,6 +232,15 @@ export function TareasPageClient() {
     setHasMounted(true)
   }, [])
 
+  // Check for id in searchParams to open detail automatically
+  React.useEffect(() => {
+    const taskId = searchParams.get('id')
+    if (taskId) {
+      setSelectedTareaId(taskId)
+      setIsDetailOpen(true)
+    }
+  }, [searchParams])
+
   // Update page size dynamically based on data count
   React.useEffect(() => {
     const newSize = calculateDefaultPageSize(filteredData.length)

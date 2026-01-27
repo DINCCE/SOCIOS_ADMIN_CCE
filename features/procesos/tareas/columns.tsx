@@ -74,6 +74,23 @@ const PRIORIDAD_CONFIG: Record<
 
 type VencimientoStatus = 'futuro' | 'proximo' | 'hoy' | 'vencido'
 
+/**
+ * Parse a date string (yyyy-MM-dd) correctly, avoiding timezone issues
+ * Database stores dates as DATE type without timezone, so we parse as local date
+ */
+function parseLocalDate(dateStr: string): Date | null {
+  if (!dateStr) return null
+
+  // Parse the date string manually to avoid timezone conversion
+  // Expected format: yyyy-MM-dd
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!match) return null
+
+  const [, year, month, day] = match
+  // Create date using local time (month is 0-indexed in JS)
+  return new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+}
+
 const VENCIMIENTO_CONFIG: Record<VencimientoStatus, { className: string; label: (dias: number) => string }> = {
   futuro: {
     className: 'text-slate-600',
@@ -98,8 +115,8 @@ function getVencimientoInfo(fechaVencimiento: string): { status: VencimientoStat
     const hoy = new Date()
     hoy.setHours(0, 0, 0, 0)
 
-    const vencimiento = new Date(fechaVencimiento)
-    if (isNaN(vencimiento.getTime())) {
+    const vencimiento = parseLocalDate(fechaVencimiento)
+    if (!vencimiento || isNaN(vencimiento.getTime())) {
       return { status: 'futuro', dias: 999 }
     }
     vencimiento.setHours(0, 0, 0, 0)
@@ -224,11 +241,12 @@ export const columns: ColumnDef<TareaView>[] = [
         return <span>-</span>
       }
 
-      const fechaFormateada = new Date(fecha).toLocaleDateString('es-CO', {
+      const fechaDate = parseLocalDate(fecha)
+      const fechaFormateada = fechaDate?.toLocaleDateString('es-CO', {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
-      })
+      }) ?? fecha
 
       const { status, dias } = getVencimientoInfo(fecha)
       const config = VENCIMIENTO_CONFIG[status]

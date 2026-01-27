@@ -323,7 +323,7 @@ export async function actualizarPersona(id: string, data: Record<string, unknown
 
 /**
  * Update persona identity data (EditIdentityForm)
- * Updates: business_partners (document, names) + personas (biographical data)
+ * Updates: dm_actores direct fields + perfil_identidad JSONB
  *
  * @param id - The UUID of the persona
  * @param data - Identity form data
@@ -336,7 +336,7 @@ export async function updatePersonaIdentity(
     numero_documento: string
     fecha_expedicion?: string | null
     lugar_expedicion?: string | null // Legacy text field (backward compatibility)
-    lugar_expedicion_id?: string | null // New FK to geographic_locations
+    lugar_expedicion_id?: string | null // New FK to config_ciudades
     primer_nombre: string
     segundo_nombre?: string | null
     primer_apellido: string
@@ -344,37 +344,51 @@ export async function updatePersonaIdentity(
     genero: string
     fecha_nacimiento: string
     lugar_nacimiento?: string | null // Legacy text field (backward compatibility)
-    lugar_nacimiento_id?: string | null // New FK to geographic_locations
+    lugar_nacimiento_id?: string | null // New FK to config_ciudades
     nacionalidad?: string | null
     estado_civil?: string | null
   }
 ) {
   const supabase = await createClient()
 
-  // All identity fields are in personas table (CTI pattern)
+  // Get current perfil_identidad to preserve other fields
+  const { data: current } = await supabase
+    .from('dm_actores')
+    .select('perfil_identidad')
+    .eq('id', id)
+    .single()
+
+  const currentPerfil = (current?.perfil_identidad as Record<string, any>) || {}
+
+  // Update direct fields and perfil_identidad JSONB
   const { error } = await supabase
     .from('dm_actores')
     .update({
+      // Direct fields (1:1 mapping)
       tipo_documento: data.tipo_documento,
-      numero_documento: data.numero_documento,
-      fecha_expedicion: data.fecha_expedicion,
-      lugar_expedicion: data.lugar_expedicion, // Legacy field (backward compatibility)
-      lugar_expedicion_id: data.lugar_expedicion_id, // New FK to geographic_locations
+      num_documento: data.numero_documento,
       primer_nombre: data.primer_nombre,
       segundo_nombre: data.segundo_nombre,
       primer_apellido: data.primer_apellido,
       segundo_apellido: data.segundo_apellido,
-      genero: data.genero,
+      genero_actor: data.genero,
       fecha_nacimiento: data.fecha_nacimiento,
-      lugar_nacimiento: data.lugar_nacimiento, // Legacy field (backward compatibility)
-      lugar_nacimiento_id: data.lugar_nacimiento_id, // New FK to geographic_locations
-      nacionalidad: data.nacionalidad,
       estado_civil: data.estado_civil,
+      // JSONB: perfil_identidad (merge with existing data)
+      perfil_identidad: {
+        ...currentPerfil,
+        nacionalidad: data.nacionalidad,
+        fecha_expedicion: data.fecha_expedicion,
+        lugar_expedicion: data.lugar_expedicion,
+        lugar_expedicion_id: data.lugar_expedicion_id,
+        lugar_nacimiento: data.lugar_nacimiento,
+        lugar_nacimiento_id: data.lugar_nacimiento_id,
+      },
     })
     .eq('id', id)
 
   if (error) {
-    console.error('Error updating personas identity:', error)
+    console.error('Error updating persona identity:', error)
     return {
       success: false,
       message: `Error al actualizar datos de identidad: ${error.message}`,
@@ -393,7 +407,7 @@ export async function updatePersonaIdentity(
 
 /**
  * Update persona profile data (EditProfileForm)
- * Updates: business_partners (status, contact) + personas (professional, dates)
+ * Updates: dm_actores direct fields + perfil_preferencias, perfil_profesional_corporativo, perfil_redes JSONB
  *
  * @param id - The UUID of the persona
  * @param data - Profile form data
@@ -407,9 +421,7 @@ export async function updatePersonaProfile(
     fecha_aniversario?: string | null
     nivel_educacion?: string | null
     profesion?: string | null
-    sector_industria?: string | null
-    empresa_actual?: string | null
-    cargo_actual?: string | null
+    ocupacion?: string | null
     linkedin_url?: string | null
     email_principal?: string | null
     telefono_principal?: string | null
@@ -418,53 +430,62 @@ export async function updatePersonaProfile(
     instagram?: string | null
     twitter?: string | null
     facebook?: string | null
+    whatsapp?: string | null
   }
 ) {
   const supabase = await createClient()
 
-  // 1. Update business_partners (status and primary contact only)
-  const { error: bpError } = await supabase
+  // Get current JSONB profiles to preserve other fields
+  const { data: current } = await supabase
+    .from('dm_actores')
+    .select('perfil_preferencias, perfil_profesional_corporativo, perfil_redes')
+    .eq('id', id)
+    .single()
+
+  const currentPreferencias = (current?.perfil_preferencias as Record<string, any>) || {}
+  const currentProfesional = (current?.perfil_profesional_corporativo as Record<string, any>) || {}
+  const currentRedes = (current?.perfil_redes as Record<string, any>) || {}
+
+  // Update all fields in a single query
+  const { error } = await supabase
     .from('dm_actores')
     .update({
-      estado: data.estado,
+      // Direct fields (1:1 mapping)
+      estado_actor: data.estado,
       email_principal: data.email_principal,
       telefono_principal: data.telefono_principal,
-    })
-    .eq('id', id)
-
-  if (bpError) {
-    console.error('Error updating business_partners:', bpError)
-    return {
-      success: false,
-      message: `Error al actualizar estado: ${bpError.message}`,
-    }
-  }
-
-  // 2. Update personas (professional profile, dates, secondary contact, social networks)
-  const { error: personaError } = await supabase
-    .from('dm_actores')
-    .update({
-      fecha_socio: data.fecha_socio,
-      fecha_aniversario: data.fecha_aniversario,
-      nivel_educacion: data.nivel_educacion,
-      profesion: data.profesion,
-      sector_industria: data.sector_industria,
-      empresa_actual: data.empresa_actual,
-      cargo_actual: data.cargo_actual,
       email_secundario: data.email_secundario,
       telefono_secundario: data.telefono_secundario,
-      linkedin_url: data.linkedin_url,
-      instagram_handle: data.instagram,
-      twitter_handle: data.twitter,
-      facebook_url: data.facebook,
+      // JSONB: perfil_preferencias (merge with existing data)
+      perfil_preferencias: {
+        ...currentPreferencias,
+        fecha_socio: data.fecha_socio,
+        fecha_aniversario: data.fecha_aniversario,
+      },
+      // JSONB: perfil_profesional_corporativo (merge with existing data)
+      perfil_profesional_corporativo: {
+        ...currentProfesional,
+        nivel_educacion: data.nivel_educacion,
+        profesion: data.profesion,
+        ocupacion: data.ocupacion,
+      },
+      // JSONB: perfil_redes (merge with existing data)
+      perfil_redes: {
+        ...currentRedes,
+        linkedin: data.linkedin_url,
+        facebook: data.facebook,
+        instagram: data.instagram,
+        twitter: data.twitter,
+        whatsapp: data.whatsapp,
+      },
     })
     .eq('id', id)
 
-  if (personaError) {
-    console.error('Error updating personas:', personaError)
+  if (error) {
+    console.error('Error updating persona profile:', error)
     return {
       success: false,
-      message: `Error al actualizar perfil: ${personaError.message}`,
+      message: `Error al actualizar perfil: ${error.message}`,
     }
   }
 
@@ -480,7 +501,7 @@ export async function updatePersonaProfile(
 
 /**
  * Update persona security data (EditSecurityForm)
- * Updates: personas (medical info and emergency contact)
+ * Updates: dm_actores perfil_salud and perfil_contacto JSONB
  *
  * @param id - The UUID of the persona
  * @param data - Security form data
@@ -497,19 +518,37 @@ export async function updatePersonaSecurity(
 ) {
   const supabase = await createClient()
 
-  // Update personas (medical and emergency contact fields)
+  // Get current JSONB profiles to preserve other fields
+  const { data: current } = await supabase
+    .from('dm_actores')
+    .select('perfil_salud, perfil_contacto')
+    .eq('id', id)
+    .single()
+
+  const currentSalud = (current?.perfil_salud as Record<string, any>) || {}
+  const currentContacto = (current?.perfil_contacto as Record<string, any>) || {}
+
+  // Update JSONB profiles (merge with existing data)
   const { error } = await supabase
     .from('dm_actores')
     .update({
-      tipo_sangre: data.tipo_sangre,
-      eps: data.eps,
-      contacto_emergencia_id: data.contacto_emergencia_id,
-      relacion_emergencia: data.relacion_emergencia,
+      // JSONB: perfil_salud (merge with existing data)
+      perfil_salud: {
+        ...currentSalud,
+        tipo_sangre: data.tipo_sangre,
+        eps: data.eps,
+      },
+      // JSONB: perfil_contacto (merge with existing data)
+      perfil_contacto: {
+        ...currentContacto,
+        contacto_emergencia_id: data.contacto_emergencia_id,
+        relacion_emergencia: data.relacion_emergencia,
+      },
     })
     .eq('id', id)
 
   if (error) {
-    console.error('Error updating personas security:', error)
+    console.error('Error updating persona security:', error)
     return {
       success: false,
       message: `Error al actualizar datos de seguridad: ${error.message}`,

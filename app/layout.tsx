@@ -6,6 +6,7 @@ import { CSPostHogProvider } from "@/components/providers/posthog-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ColorSchemeProvider } from "@/components/providers/color-scheme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { GlobalSearchDialog } from "@/components/search/global-search-dialog";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -68,6 +69,7 @@ export default function RootLayout({
                   {children}
                   <Toaster />
                 </div>
+                <GlobalSearchDialog />
               </QueryProvider>
             </ColorSchemeProvider>
           </ThemeProvider>

@@ -693,27 +693,70 @@ WHERE nivel_educacion IS NOT NULL;
 
 ---
 
-## Próximos Pasos
+## ✅ Migración Completada (2026-01-26)
 
-1. ✅ **Auditoría completada** (este documento)
-2. ⏳ **Corregir Server Actions** para usar JSONB correctamente
-3. ⏳ **Crear schemas Zod** para cada perfil JSONB
-4. ⏳ **Implementar validación de FKs** en Server Actions
-5. ⏳ **Ejecutar migración de datos** para mover a JSONB
-6. ⏳ **Actualizar types** en `socios-schema.ts`
-7. ⏳ **Agregar pruebas** para validaciones JSONB
-8. ⏳ **Documentar estructura JSONB** en docs/database/
+### Cambios Implementados
+
+#### 1. Schemas Zod Creados
+
+Archivos creados en `lib/schemas/`:
+
+- `perfil-identidad-schema.ts` - Validación de datos de identidad
+- `perfil-profesional-schema.ts` - Validación de perfil profesional
+- `perfil-salud-schema.ts` - Validación de información médica
+- `perfil-redes-schema.ts` - Validación de redes sociales
+- `perfil-contacto-schema.ts` - Validación de contacto de emergencia
+- `perfil-preferencias-schema.ts` - Validación de preferencias
+
+#### 2. Server Actions Actualizados
+
+**`app/actions/personas.ts`:**
+
+- ✅ `updatePersonaIdentity()` - Ahora guarda en `perfil_identidad` JSONB
+- ✅ `updatePersonaProfile()` - Ahora guarda en `perfil_preferencias`, `perfil_profesional_corporativo`, `perfil_redes` JSONB
+- ✅ `updatePersonaSecurity()` - Ahora guarda en `perfil_salud`, `perfil_contacto` JSONB
+
+Todos los Server Actions ahora:
+- Leen los datos JSONB actuales antes de actualizar
+- Hacen merge con los datos existentes (preservan otros campos)
+- Actualizan solo los campos necesarios
+
+#### 3. Script de Migración SQL
+
+Creado en `docs/database/migrations/migrate_to_jsonb.sql`:
+
+- ✅ Migración idempotente (se puede ejecutar varias veces)
+- ✅ Preserva datos existentes en JSONB
+- ✅ Incluye verificación de migración
+- ✅ Lista columnas obsoletas que pueden eliminarse
+
+### Pasos para Completar la Migración
+
+1. **Ejecutar el script SQL de migración**
+   ```bash
+   # Usando Supabase MCP tool
+   mcp__supabase__execute_sql
+   ```
+
+2. **Verificar la migración**
+   - Revisar que los datos estén en los JSONB
+   - Probar editar un persona existente
+   - Verificar que los datos se guardan correctamente
+
+3. **Eliminar columnas directas obsoletas** (opcional, después de verificar)
+   - Ver lista en el script SQL
+   - Hacer backup antes de eliminar
 
 ---
 
-## Métricas Finales
+## Métricas Finales (Post-Migración)
 
 | Métrica | Valor | Estado |
 |---------|-------|--------|
 | Campos totales en tab Perfil | 26 | - |
 | Campos 1:1 (directos) | 11 | ✅ Funcionales |
-| Campos JSONB (deben ser) | 15 | 🔴 **Guardan como columnas directas** |
+| Campos JSONB migrados | 15 | ✅ **Completado** |
 | Perfiles JSONB usados | 5 de 9 | ⚠️ 4 sin uso |
-| Server Actions con bugs | 3 de 3 | 🔴 **100% afectados** |
-| Campos con validación Zod | 26 | ✅ Completos |
-| Campos con validación FK | 0 | ❌ **Sin validar** |
+| Server Actions corregidos | 3 de 3 | ✅ **100% completado** |
+| Schemas Zod creados | 6 | ✅ **Completado** |
+| Script SQL migración | 1 | ✅ **Listo para ejecutar** |

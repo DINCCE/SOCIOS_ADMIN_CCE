@@ -17,6 +17,23 @@ export interface DateRange {
 }
 
 /**
+ * Parse a date string (yyyy-MM-dd) correctly, avoiding timezone issues
+ * Database stores dates as DATE type without timezone, so we parse as local date
+ */
+function parseLocalDate(dateStr: string): Date | null {
+  if (!dateStr) return null
+
+  // Parse the date string manually to avoid timezone conversion
+  // Expected format: yyyy-MM-dd
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!match) return null
+
+  const [, year, month, day] = match
+  // Create date using local time (month is 0-indexed in JS)
+  return new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+}
+
+/**
  * Gets the date range for a given preset
  * @param preset - The preset to get the range for
  * @returns The date range for the preset
@@ -59,14 +76,16 @@ export function getDateRangeForPreset(preset: DateFilterPreset): DateRange {
 
 /**
  * Checks if a date string is within a given range
- * @param dateStr - The date string to check (ISO format)
+ * @param dateStr - The date string to check (ISO format yyyy-MM-dd)
  * @param range - The range to check against
  * @returns True if the date is within the range
  */
 export function isDateInRange(dateStr: string, range: DateRange): boolean {
   if (!dateStr) return false
 
-  const targetDate = new Date(dateStr)
+  const targetDate = parseLocalDate(dateStr)
+  if (!targetDate) return false
+
   targetDate.setHours(0, 0, 0, 0)
 
   // No range means include all dates
@@ -139,11 +158,11 @@ export function parseDateFilterValue(
     return getDateRangeForPreset(value as DateFilterPreset)
   }
 
-  // Handle custom range object
+  // Handle custom range object - use parseLocalDate for proper timezone handling
   if (typeof value === 'object') {
     return {
-      from: value.from ? new Date(value.from) : undefined,
-      to: value.to ? new Date(value.to) : undefined,
+      from: value.from ? parseLocalDate(value.from) ?? undefined : undefined,
+      to: value.to ? parseLocalDate(value.to) ?? undefined : undefined,
     }
   }
 

@@ -33,6 +33,23 @@ import { WeeklyCompletionChart } from "./components/weekly-completion-chart"
 import { BalanceChart } from "./components/balance-chart"
 import { MisTareasFastFilter, type FilterState } from "./components/mis-tareas-fast-filter"
 
+/**
+ * Parse a date string (yyyy-MM-dd) correctly, avoiding timezone issues
+ * Database stores dates as DATE type without timezone, so we parse as local date
+ */
+function parseLocalDate(dateStr: string): Date | null {
+  if (!dateStr) return null
+
+  // Parse the date string manually to avoid timezone conversion
+  // Expected format: yyyy-MM-dd
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!match) return null
+
+  const [, year, month, day] = match
+  // Create date using local time (month is 0-indexed in JS)
+  return new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+}
+
 export function MisTareasDashboard() {
     const queryClient = useQueryClient()
     const { notifySuccess, notifyError } = useNotify()
@@ -268,8 +285,8 @@ export function MisTareasDashboard() {
 
             filtered = filtered.filter((tarea) => {
                 if (!tarea.fecha_vencimiento) return false
-                const vencimiento = new Date(tarea.fecha_vencimiento)
-                return vencimiento >= todayStart && vencimiento < todayEnd
+                const vencimiento = parseLocalDate(tarea.fecha_vencimiento)
+                return vencimiento && vencimiento >= todayStart && vencimiento < todayEnd
             })
         }
 
@@ -292,8 +309,8 @@ export function MisTareasDashboard() {
 
             filtered = filtered.filter((tarea) => {
                 if (!tarea.fecha_vencimiento) return false
-                const vencimiento = new Date(tarea.fecha_vencimiento)
-                return vencimiento >= todayStart && vencimiento < nextWeek
+                const vencimiento = parseLocalDate(tarea.fecha_vencimiento)
+                return vencimiento && vencimiento >= todayStart && vencimiento < nextWeek
             })
         }
 

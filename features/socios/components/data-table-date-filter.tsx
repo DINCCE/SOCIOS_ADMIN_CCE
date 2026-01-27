@@ -213,6 +213,8 @@ export function DataTableDateFilter<TData, TValue>({
                 onChange={(date) =>
                   setCustomFrom(date ? new Date(date) : undefined)
                 }
+                fromYear={new Date().getFullYear()}
+                toYear={new Date().getFullYear() + 5}
               />
               <DatePicker
                 placeholder="Hasta"
@@ -220,6 +222,8 @@ export function DataTableDateFilter<TData, TValue>({
                 onChange={(date) =>
                   setCustomTo(date ? new Date(date) : undefined)
                 }
+                fromYear={new Date().getFullYear()}
+                toYear={new Date().getFullYear() + 5}
               />
               <Button
                 size="sm"

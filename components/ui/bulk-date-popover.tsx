@@ -3,19 +3,17 @@
 import * as React from "react"
 import { Calendar, Loader2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { DatePicker } from "@/components/ui/date-picker"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
 
 export interface BulkDatePopoverProps {
   selectedIds: string[]
-  selectedRowsDates: (string | null)[] // Fechas de cada fila seleccionada
+  selectedRowsDates: (string | null)[]
   onSelectDate: (date: string | null) => Promise<void> | void
   disabled?: boolean
   placeholder?: string
@@ -24,10 +22,8 @@ export interface BulkDatePopoverProps {
 /**
  * BulkDatePopover - Popover para modificar fecha de vencimiento en batch
  *
- * Features:
- * - Calendar picker for date selection
- * - Option to clear date (set to null)
- * - Shows predominant date if most tasks share the same date
+ * Uses the approved DatePicker component
+ * Format: yyyy-MM-dd (PostgreSQL date type, no timezone issues)
  */
 export function BulkDatePopover({
   selectedIds,
@@ -37,48 +33,33 @@ export function BulkDatePopover({
   placeholder = "Fecha",
 }: BulkDatePopoverProps) {
   const [open, setOpen] = React.useState(false)
-  const [date, setDate] = React.useState<Date | undefined>(undefined)
+  const [date, setDate] = React.useState<string | undefined>(undefined)
   const [isSaving, setIsSaving] = React.useState(false)
 
-  // Get predominant date (most common non-null date)
-  const getPredominantDate = (): Date | null => {
-    if (selectedIds.length === 0) return null
-
-    const dateCount = new Map<string, number>()
+  // Get predominant date for display
+  const predominantDate = React.useMemo(() => {
+    if (selectedRowsDates.length === 0) return undefined
+    const dateCounts = new Map<string, number>()
     selectedRowsDates.forEach((d) => {
-      if (d) {
-        dateCount.set(d, (dateCount.get(d) || 0) + 1)
-      }
+      if (d) dateCounts.set(d, (dateCounts.get(d) || 0) + 1)
     })
-
     let maxCount = 0
-    let predominantDateStr: string | null = null
-
-    dateCount.forEach((count, dateStr) => {
+    let predDate: string | undefined
+    dateCounts.forEach((count, d) => {
       if (count > maxCount) {
         maxCount = count
-        predominantDateStr = dateStr
+        predDate = d
       }
     })
+    return predDate
+  }, [selectedRowsDates])
 
-    if (!predominantDateStr) return null
-    return new Date(predominantDateStr)
-  }
-
-  const predominantDate = getPredominantDate()
-
-  const handleSelectDate = async (selectedDate: Date | undefined) => {
+  const handleSelectDate = async (selectedDate: string | undefined) => {
     if (disabled || isSaving) return
 
     setIsSaving(true)
     try {
-      // Convert to ISO string at 8PM UTC to preserve the selected date across all timezones
-      // 8PM UTC = 3PM EST (UTC-5), 2PM CST (UTC-6), 1PM MST (UTC-7), 12PM PST (UTC-8)
-      // This ensures the date is always the same regardless of timezone
-      const isoDate = selectedDate
-        ? `${selectedDate.getFullYear().toString().padStart(4, '0')}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}T20:00:00.000Z`
-        : null
-      await onSelectDate(isoDate)
+      await onSelectDate(selectedDate || null)
       setOpen(false)
       setDate(undefined)
     } catch (error) {
@@ -127,22 +108,21 @@ export function BulkDatePopover({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-auto p-0 shadow-xl"
+        className="w-auto p-0 shadow-xl z-50"
         align="center"
         side="top"
         sideOffset={10}
       >
         <div className="p-3">
-          <CalendarComponent
-            mode="single"
-            selected={date}
-            onSelect={handleSelectDate}
-            initialFocus
-            disabled={(date) =>
-              isSaving ||
-              date < new Date(new Date().setHours(0, 0, 0, 0))
-            }
-            locale={es}
+          <DatePicker
+            value={date || predominantDate}
+            onChange={handleSelectDate}
+            disabled={disabled || isSaving}
+            placeholder={placeholder}
+            dateDisplayFormat="dd MMM yyyy"
+            className="border-0 shadow-none p-0"
+            fromYear={new Date().getFullYear()}
+            toYear={new Date().getFullYear() + 5}
           />
           <div className="mt-3 pt-3 border-t">
             <button
