@@ -54,7 +54,9 @@ export function useGlobalSearch({
       })
 
       if (error) {
-        console.error('Search error:', error)
+        // Log meaningful error info - handle empty error objects gracefully
+        const errorMsg = error.message || error.details || JSON.stringify(error)
+        console.error('Search error:', errorMsg)
         throw error
       }
 
