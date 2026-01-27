@@ -71,3 +71,37 @@ export function extractPersonaProfiles(raw: RawProfileData) {
     estado_vital: validVitalStatus,
   }
 }
+
+/**
+ * Extract company-specific fields from dm_actores JSONB columns
+ * Returns a safe object with null fallbacks for all nested fields
+ */
+export function extractCompanyProfiles(raw: RawProfileData) {
+  return {
+    // Company legal data from perfil_profesional_corporativo
+    tipo_sociedad: extractJsonbField(raw.perfil_profesional_corporativo, 'tipo_sociedad', null),
+    fecha_constitucion: extractJsonbField(raw.perfil_profesional_corporativo, 'fecha_constitucion', null),
+    ciudad_constitucion: extractJsonbField(raw.perfil_profesional_corporativo, 'ciudad_constitucion', null),
+    pais_constitucion: extractJsonbField(raw.perfil_profesional_corporativo, 'pais_constitucion', null),
+    numero_registro: extractJsonbField(raw.perfil_profesional_corporativo, 'numero_registro', null),
+    codigo_ciiu: extractJsonbField(raw.perfil_profesional_corporativo, 'codigo_ciiu', null),
+    sector_industria: extractJsonbField(raw.perfil_profesional_corporativo, 'sector_industria', null),
+    actividad_economica: extractJsonbField(raw.perfil_profesional_corporativo, 'actividad_economica', null),
+    tamano_empresa: extractJsonbField(raw.perfil_profesional_corporativo, 'tamano_empresa', null),
+    representante_legal_id: extractJsonbField(raw.perfil_profesional_corporativo, 'representante_legal_id', null),
+    cargo_representante: extractJsonbField(raw.perfil_profesional_corporativo, 'cargo_representante', null),
+
+    // Business metrics from perfil_profesional_corporativo
+    ingresos_anuales: extractJsonbField(raw.perfil_profesional_corporativo, 'ingresos_anuales', null),
+    numero_empleados: extractJsonbField(raw.perfil_profesional_corporativo, 'numero_empleados', null),
+
+    // Digital presence from perfil_redes
+    website: extractJsonbField(raw.perfil_redes, 'website', null),
+    logo_url: extractJsonbField(raw.perfil_redes, 'logo_url', null),
+    linkedin_url: extractJsonbField(raw.perfil_redes, 'linkedin', null),
+    facebook_url: extractJsonbField(raw.perfil_redes, 'facebook', null),
+    instagram_handle: extractJsonbField(raw.perfil_redes, 'instagram', null),
+    twitter_handle: extractJsonbField(raw.perfil_redes, 'twitter', null),
+    whatsapp: extractJsonbField(raw.perfil_redes, 'whatsapp', null),
+  }
+}
