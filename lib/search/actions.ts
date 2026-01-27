@@ -13,6 +13,9 @@ import {
   LayoutList,
   Users,
   Settings,
+  FileText,
+  Handshake,
+  BarChart3,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -27,11 +30,14 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   LayoutList,
   Users,
   Settings,
+  FileText,
+  Handshake,
+  BarChart3,
 }
 
 /**
  * Quick actions available in the command palette
- * These appear when the user types ">" or when no search query is active
+ * These appear when the user types "/" or when no search query is active
  */
 export const SEARCH_ACTIONS: SearchAction[] = [
   // Create actions
@@ -40,46 +46,100 @@ export const SEARCH_ACTIONS: SearchAction[] = [
     type: 'create',
     label: 'Crear Persona',
     icon: 'UserPlus',
-    shortcut: '> crear persona',
+    shortcut: '/ crear persona',
   },
   {
     id: 'create-empresa',
     type: 'create',
     label: 'Crear Empresa',
     icon: 'Building2',
-    shortcut: '> crear empresa',
+    shortcut: '/ crear empresa',
   },
   {
     id: 'create-tarea',
     type: 'create',
     label: 'Crear Tarea',
     icon: 'CheckCircle2',
-    shortcut: '> crear tarea',
+    shortcut: '/ crear tarea',
+  },
+  {
+    id: 'create-doc-comercial',
+    type: 'create',
+    label: 'Crear Documento Comercial',
+    icon: 'FileText',
+    shortcut: '/ crear documento',
+  },
+  {
+    id: 'asignar-accion',
+    type: 'create',
+    label: 'Asignar Acción',
+    icon: 'Handshake',
+    shortcut: '/ asignar acción',
   },
 
   // Navigation actions
   {
     id: 'nav-mis-tareas',
     type: 'navigation',
-    label: 'Ver Mis Tareas',
+    label: 'Mis Tareas',
     icon: 'LayoutList',
-    shortcut: '> mis tareas',
+    shortcut: '/ mis tareas',
     route: '/admin/mis-tareas',
   },
   {
     id: 'nav-personas',
     type: 'navigation',
-    label: 'Ver Personas',
+    label: 'Personas',
     icon: 'Users',
-    shortcut: '> personas',
+    shortcut: '/ personas',
     route: '/admin/socios/personas',
+  },
+  {
+    id: 'nav-empresas',
+    type: 'navigation',
+    label: 'Empresas',
+    icon: 'Building2',
+    shortcut: '/ empresas',
+    route: '/admin/socios/empresas',
+  },
+  {
+    id: 'nav-acciones',
+    type: 'navigation',
+    label: 'Acciones',
+    icon: 'Handshake',
+    shortcut: '/ acciones',
+    route: '/admin/procesos/acciones',
+  },
+  {
+    id: 'nav-documentos',
+    type: 'navigation',
+    label: 'Documentos Comerciales',
+    icon: 'FileText',
+    shortcut: '/ documentos',
+    route: '/admin/procesos/documentos-comerciales',
+  },
+  {
+    id: 'nav-tareas',
+    type: 'navigation',
+    label: 'Todas las Tareas',
+    icon: 'CheckCircle2',
+    shortcut: '/ tareas',
+    route: '/admin/procesos/tareas',
+  },
+  {
+    id: 'nav-analitica',
+    type: 'navigation',
+    label: 'Analítica',
+    icon: 'BarChart3',
+    shortcut: '/ analítica',
+    route: '/admin/analitica',
   },
   {
     id: 'nav-settings',
     type: 'navigation',
     label: 'Configuración',
     icon: 'Settings',
-    shortcut: '> configuración',
+    shortcut: '/ configuración',
     route: '/admin/settings',
   },
 ]
@@ -87,8 +147,9 @@ export const SEARCH_ACTIONS: SearchAction[] = [
 /**
  * Command mode trigger character
  * When user types this, switch to command/action mode
+ * Using "/" like Notion for commands
  */
-export const COMMAND_MODE_TRIGGER = '>'
+export const COMMAND_MODE_TRIGGER = '/'
 
 /**
  * Check if a query string is in command mode

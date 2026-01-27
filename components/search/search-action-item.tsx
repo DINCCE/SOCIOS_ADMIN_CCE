@@ -29,9 +29,13 @@ interface SearchActionItemProps {
 export function SearchActionItem({ action, isSelected, onSelect }: SearchActionItemProps) {
   const Icon = ICON_MAP[action.icon]
 
+  // Include label and shortcut in value for cmdk filtering
+  // Add "command" keyword so all actions show when typing ">"
+  const filterValue = `command ${action.label} ${action.shortcut || ''}`.toLowerCase()
+
   return (
     <CommandItem
-      value={action.id}
+      value={filterValue}
       onSelect={onSelect}
       className={cn(
         // Base layout - consistent with SearchResultItem

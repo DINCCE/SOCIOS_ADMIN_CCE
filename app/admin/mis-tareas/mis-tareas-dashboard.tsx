@@ -29,9 +29,77 @@ import { tareasPrioridadOptions, tareasEstadoOptions } from "@/lib/table-filters
 import { MiFocoHoy } from "./components/mi-foco-hoy"
 import { PersonalStats } from "./components/personal-stats"
 import { MisTareasLista } from "./components/mis-tareas-lista"
-import { WeeklyCompletionChart } from "./components/weekly-completion-chart"
 import { BalanceChart } from "./components/balance-chart"
 import { MisTareasFastFilter, type FilterState } from "./components/mis-tareas-fast-filter"
+
+// 50 mensajes motivacionales - uno por día del año (basado en día del año 1-365, cicla cada 365 días)
+const MOTIVATIONAL_MESSAGES: readonly string[] = [
+    "Cada tarea completada es un paso adelante.",
+    "El secreto del progreso es empezar.",
+    "Haz de hoy un día productivo.",
+    "Pequeños pasos logran grandes metas.",
+    "Tu futuro te lo construyes hoy.",
+    "La acción elimina la ansiedad.",
+    "Enfócate en lo importante, el resto espera.",
+    "Cada 'terminado' es una victoria pequeña.",
+    "El momento de actuar es ahora.",
+    "Disciplina es hacer lo necesario, no lo fácil.",
+    "Prioriza lo que realmente importa.",
+    "Tu eficiencia de hoy define tu mañana.",
+    "Comienza donde estás, usa lo que tengas.",
+    "Un día a la vez, una tarea a la vez.",
+    "El éxito es la suma de pequeñas acciones.",
+    "No dejes para mañana lo que puedes avanzar hoy.",
+    "Cada decisión cuenta, hazla contar.",
+    "Concéntrate en el progreso, no en la perfección.",
+    "Tu mejor recurso es tu enfoque.",
+    "Termina lo que empiezas, eso es progreso.",
+    "La constancia vence al talento.",
+    "Hazlo ahora, tú mismo se lo agradecerás.",
+    "Prioriza bien, vivirás mejor.",
+    "Cada tarea completada libera mente.",
+    "El mejor momento fue ayer, el segundo es ahora.",
+    "Organiza tu tiempo, organiza tu vida.",
+    "Hoy es buen día para avanzar.",
+    "Elimina lo urgente para hacer lo importante.",
+    "Tu energía es finita, inviértela bien.",
+    "Menos pero mejor, esa es la clave.",
+    "Termina antes de empezar algo nuevo.",
+    "El enfoque es tu superpoder.",
+    "Progresar es mejor que planear.",
+    "Acción sobre perfección, siempre.",
+    "Un objetivo a la vez, con claridad.",
+    "Hoy resuelve algo importante.",
+    "Tu logro de hoy construye tu mañana.",
+    "Simplifica, prioriza, ejecuta.",
+    "Calidad sobre cantidad en todo.",
+    "Las tareas pendientes drenan energía.",
+    "Termina hoy y descansa tranquilo.",
+    "Tu atención es tu activo más valioso.",
+    "Avanza un poco cada día.",
+    "Lo importante no es empezar, es continuar.",
+    "Celebra cada tarea completada.",
+    "Reduce el ruido, aumenta el impacto.",
+    "Planifica tu día, ejecuta tu plan.",
+    "Cada tarea es una oportunidad.",
+    "Hoy es el día para lograrlo.",
+    "Tú decides cómo usar tu hoy.",
+    "Termina bien el día para empezar mejor el mañana.",
+] as const
+
+/**
+ * Get daily motivational message based on day of year
+ * Same message for the entire day, changes next day
+ */
+function getDailyMessage(): string {
+    const now = new Date()
+    const start = new Date(now.getFullYear(), 0, 0)
+    const diff = now.getTime() - start.getTime()
+    const oneDay = 1000 * 60 * 60 * 24
+    const dayOfYear = Math.floor(diff / oneDay)
+    // Use day of year to select message (cycles through all 50 messages)
+    return MOTIVATIONAL_MESSAGES[dayOfYear % MOTIVATIONAL_MESSAGES.length]
+}
 
 /**
  * Parse a date string (yyyy-MM-dd) correctly, avoiding timezone issues
@@ -77,6 +145,29 @@ export function MisTareasDashboard() {
         },
     })
 
+    // 1.5. Get member data from config_organizacion_miembros
+    const { data: memberData } = useQuery({
+        queryKey: ["member-data", user?.id],
+        queryFn: async () => {
+            if (!user) return null
+            const supabase = createClient()
+            const { data, error } = await supabase
+                .from("config_organizacion_miembros")
+                .select("nombres, apellidos, nombre_completo")
+                .eq("user_id", user.id)
+                .is("eliminado_en", null)
+                .limit(1)
+                .single()
+
+            if (error) {
+                console.error("Error fetching member data:", error)
+                return null
+            }
+            return data
+        },
+        enabled: !!user,
+    })
+
     // 2. Fetch tasks assigned to current user
     const { data: misTareas = [], isLoading: isLoadingTareas } = useQuery({
         queryKey: ["mis-tareas", user?.id],
@@ -95,7 +186,17 @@ export function MisTareasDashboard() {
         enabled: !!user,
     })
 
-    // 3. Greeting logic
+    // 3. Get first name from member data
+    const firstName = React.useMemo(() => {
+        if (memberData?.nombres) {
+            // Split by spaces and get first name
+            return memberData.nombres.split(' ')[0]
+        }
+        // Fallback to email username
+        return user?.email?.split('@')[0]
+    }, [memberData, user])
+
+    // 4. Greeting logic
     const getGreeting = () => {
         const hour = new Date().getHours()
         if (hour < 12) return "Buenos días"
@@ -347,7 +448,22 @@ export function MisTareasDashboard() {
         )
     }
 
-    const pendingCount = misTareas.filter(t => t.estado !== "Terminada").length
+    // Count tasks due TODAY or OVERDUE (not all pending tasks)
+    const today = new Date()
+    const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
+
+    const todayTasksCount = misTareas.filter(t => {
+        // Exclude cancelled and completed tasks
+        if (t.estado === "Terminada" || t.estado === "Cancelada") return false
+        // Exclude tasks without due date
+        if (!t.fecha_vencimiento) return false
+        const vencimiento = parseLocalDate(t.fecha_vencimiento)
+        // Include tasks due today or before today (overdue)
+        return vencimiento && vencimiento < todayEnd
+    }).length
+
+    // Get daily motivational message
+    const dailyMessage = getDailyMessage()
 
     return (
         <PageShell>
@@ -357,10 +473,13 @@ export function MisTareasDashboard() {
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-3xl font-bold tracking-tight">
-                                {getGreeting()}, {user.email?.split('@')[0]}
+                                {getGreeting()}, {firstName}
                             </h1>
                             <p className="text-muted-foreground mt-1">
-                                Tienes {pendingCount} {pendingCount === 1 ? 'tarea pendiente' : 'tareas pendientes'} para hoy.
+                                {todayTasksCount > 0
+                                    ? `Tienes ${todayTasksCount} ${todayTasksCount === 1 ? 'tarea' : 'tareas'} para hoy. ${dailyMessage}`
+                                    : dailyMessage
+                                }
                             </p>
                         </div>
                         <div className="flex gap-2">
@@ -410,12 +529,7 @@ export function MisTareasDashboard() {
                                 <PersonalStats tareas={misTareas} />
                             </section>
 
-                            {/* Componente B: Rhythm Chart */}
-                            <section>
-                                <WeeklyCompletionChart tareas={misTareas} />
-                            </section>
-
-                            {/* Componente C: Balance Chart */}
+                            {/* Componente B: Balance Chart */}
                             <section>
                                 <BalanceChart tareas={misTareas} />
                             </section>

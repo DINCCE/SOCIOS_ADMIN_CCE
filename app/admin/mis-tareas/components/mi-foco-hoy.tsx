@@ -13,6 +13,7 @@ import { crearTarea, actualizarTarea } from "@/app/actions/tareas"
 import { useQueryClient } from "@tanstack/react-query"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { FocoCompletionCelebration } from "@/components/procesos/tareas/foco-completion-celebration"
 import {
     Dialog,
     DialogContent,
@@ -44,6 +45,20 @@ export function MiFocoHoy({ userId, organizationId, allTasks }: MiFocoHoyProps) 
     const completedFocusCount = focusTasks.filter(t => t.estado === "Terminada").length
     const progress = focusTasks.length > 0 ? (completedFocusCount / focusTasks.length) * 100 : 0
 
+    // Celebration state
+    const [showCelebration, setShowCelebration] = React.useState(false)
+    const [previousCompletedCount, setPreviousCompletedCount] = React.useState(0)
+    const allCompleted = focusTasks.length > 0 && completedFocusCount === focusTasks.length
+
+    // Trigger celebration when all tasks are just completed
+    React.useEffect(() => {
+        if (allCompleted && previousCompletedCount < focusTasks.length && focusTasks.length > 0) {
+            setShowCelebration(true)
+        }
+        // Update previous count for next comparison
+        setPreviousCompletedCount(completedFocusCount)
+    }, [allCompleted, completedFocusCount, focusTasks.length, previousCompletedCount])
+
     const handleToggleComplete = async (taskId: string, isCompleted: boolean) => {
         const result = await actualizarTarea(taskId, {
             estado: isCompleted ? "Terminada" : "Pendiente"
@@ -71,6 +86,7 @@ export function MiFocoHoy({ userId, organizationId, allTasks }: MiFocoHoyProps) 
     }
 
     return (
+        <>
         <Card className="border border-border bg-muted/30 shadow-sm">
             <CardHeader className="pb-3 px-4">
                 <div className="flex items-center justify-between">
@@ -118,6 +134,14 @@ export function MiFocoHoy({ userId, organizationId, allTasks }: MiFocoHoyProps) 
                 )}
             </CardContent>
         </Card>
+
+        {/* Celebration Overlay */}
+        <FocoCompletionCelebration
+            open={showCelebration}
+            onClose={() => setShowCelebration(false)}
+            taskCount={focusTasks.length}
+        />
+    </>
     )
 }
 

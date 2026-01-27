@@ -249,15 +249,6 @@ export function BalanceChart({ tareas }: BalanceChartProps) {
                                 />
                                 <YAxis hide />
                                 <ChartTooltip content={<BalanceTooltip />} cursor={false} />
-                                {/* Terminadas FIRST so it appears on TOP (z-index) */}
-                                <Area
-                                    dataKey="completed"
-                                    type="linear"
-                                    fill="var(--color-completed)"
-                                    fillOpacity={0.3}
-                                    stroke="var(--color-completed)"
-                                    strokeWidth={2}
-                                />
                                 <Area
                                     dataKey="created"
                                     type="linear"
@@ -266,21 +257,17 @@ export function BalanceChart({ tareas }: BalanceChartProps) {
                                     stroke="var(--color-created)"
                                     strokeWidth={2}
                                 />
+                                <Area
+                                    dataKey="completed"
+                                    type="linear"
+                                    fill="var(--color-completed)"
+                                    fillOpacity={0.3}
+                                    stroke="var(--color-completed)"
+                                    strokeWidth={2}
+                                />
                             </AreaChart>
                         </ResponsiveContainer>
                     </ChartContainer>
-                </div>
-
-                {/* Legend */}
-                <div className="flex items-center justify-center gap-4 text-[10px] text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-[hsl(var(--chart-2))]" />
-                        <span>Creadas</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-[hsl(var(--chart-1))]" />
-                        <span>Terminadas</span>
-                    </div>
                 </div>
             </CardContent>
         </Card>

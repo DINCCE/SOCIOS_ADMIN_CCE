@@ -27,6 +27,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
+  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -52,6 +53,8 @@ import { SearchSkeleton } from './search-skeleton'
 import { NewPersonSheet } from '@/components/socios/personas/new-person-sheet'
 import { NewCompanySheet } from '@/components/socios/empresas/new-company-sheet'
 import { NewTareaSheet } from '@/components/procesos/tareas/new-tarea-sheet'
+import { NewDocComercialSheet } from '@/components/procesos/documentos-comerciales/new-doc-comercial-sheet'
+import { AsignarAccionSheet } from '@/components/procesos/acciones/asignar-accion-sheet'
 import { Loader2, Search as SearchIcon, Clock, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SearchResult } from '@/lib/search/types'
@@ -76,6 +79,8 @@ export function GlobalSearchDialog() {
   const [showNewPerson, setShowNewPerson] = useState(false)
   const [showNewCompany, setShowNewCompany] = useState(false)
   const [showNewTarea, setShowNewTarea] = useState(false)
+  const [showNewDocComercial, setShowNewDocComercial] = useState(false)
+  const [showAsignarAccion, setShowAsignarAccion] = useState(false)
   const router = useRouter()
 
   // Get organization ID for context
@@ -159,6 +164,8 @@ export function GlobalSearchDialog() {
           if (action.id === 'create-persona') setShowNewPerson(true)
           if (action.id === 'create-empresa') setShowNewCompany(true)
           if (action.id === 'create-tarea') setShowNewTarea(true)
+          if (action.id === 'create-doc-comercial') setShowNewDocComercial(true)
+          if (action.id === 'asignar-accion') setShowAsignarAccion(true)
         }, 150)
       }
     },
@@ -195,11 +202,26 @@ export function GlobalSearchDialog() {
   return (
     <>
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput
+        {/* Command mode: disable cmdk's built-in filtering */}
+        <Command
+          filter={
+            commandMode
+              ? (value: string, search: string) => {
+                  // In command mode, search without the "/" prefix
+                  const cmdQuery = search.trimStart().startsWith('/')
+                    ? search.slice(1).trim().toLowerCase()
+                    : search.toLowerCase()
+                  // Show all actions when query is empty, otherwise filter by value
+                  return cmdQuery === '' ? 1 : Number(value.toLowerCase().includes(cmdQuery))
+                }
+              : undefined
+          }
+        >
+          <CommandInput
           placeholder={
             commandMode
               ? 'Comando: crear, navegar...'
-              : 'Buscar personas, tareas, acciones... (escribe ">" para comandos)'
+              : 'Buscar personas, tareas, acciones... (escribe "/" para comandos)'
           }
           value={query}
           onValueChange={setQuery}
@@ -242,23 +264,49 @@ export function GlobalSearchDialog() {
                   </div>
                 </CommandEmpty>
               ) : (
-                <CommandGroup
-                  heading="Acciones Rápidas"
-                  className={cn(
-                    '[&_[cmdk-group-heading]]:px-4 [&_[cmdk-group-heading]]:py-2',
-                    '[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium',
-                    '[&_[cmdk-group-heading]]:text-muted-foreground',
-                    '[&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider'
+                <>
+                  {/* Create actions group */}
+                  {filteredActions.filter(a => a.type === 'create').length > 0 && (
+                    <CommandGroup
+                      heading="Crear"
+                      className={cn(
+                        '[&_[cmdk-group-heading]]:px-4 [&_[cmdk-group-heading]]:py-2',
+                        '[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium',
+                        '[&_[cmdk-group-heading]]:text-muted-foreground',
+                        '[&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider'
+                      )}
+                    >
+                      {filteredActions.filter(a => a.type === 'create').map((action) => (
+                        <SearchActionItem
+                          key={action.id}
+                          action={action}
+                          onSelect={() => handleActionSelect(action)}
+                        />
+                      ))}
+                    </CommandGroup>
                   )}
-                >
-                  {filteredActions.map((action) => (
-                    <SearchActionItem
-                      key={action.id}
-                      action={action}
-                      onSelect={() => handleActionSelect(action)}
-                    />
-                  ))}
-                </CommandGroup>
+
+                  {/* Navigation actions group */}
+                  {filteredActions.filter(a => a.type === 'navigation').length > 0 && (
+                    <CommandGroup
+                      heading="Navegar"
+                      className={cn(
+                        '[&_[cmdk-group-heading]]:px-4 [&_[cmdk-group-heading]]:py-2',
+                        '[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium',
+                        '[&_[cmdk-group-heading]]:text-muted-foreground',
+                        '[&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider'
+                      )}
+                    >
+                      {filteredActions.filter(a => a.type === 'navigation').map((action) => (
+                        <SearchActionItem
+                          key={action.id}
+                          action={action}
+                          onSelect={() => handleActionSelect(action)}
+                        />
+                      ))}
+                    </CommandGroup>
+                  )}
+                </>
               )}
             </>
           )}
@@ -333,7 +381,7 @@ export function GlobalSearchDialog() {
                   >
                     <CommandItem
                       value="command-mode-trigger"
-                      onSelect={() => setQuery('> ')}
+                      onSelect={() => setQuery('/ ')}
                       className={cn(
                         'gap-3 px-4 py-3',
                         '!cursor-pointer',
@@ -342,7 +390,7 @@ export function GlobalSearchDialog() {
                       )}
                     >
                       <Zap className="h-4 w-4" />
-                      <span>Escribe '&gt;' para comandos rápidos</span>
+                      <span>Escribe "/" para comandos rápidos</span>
                     </CommandItem>
                   </CommandGroup>
                 </>
@@ -357,7 +405,7 @@ export function GlobalSearchDialog() {
                       {EMPTY_STATE_MESSAGES.idle}
                     </p>
                     <p className="text-xs text-muted-foreground/70 mt-2">
-                      Escribe "&gt;" para ver acciones rápidas
+                      Escribe "/" para ver acciones rápidas
                     </p>
                   </div>
                 </CommandEmpty>
@@ -451,6 +499,7 @@ export function GlobalSearchDialog() {
             </>
           )}
         </CommandList>
+        </Command>
       </CommandDialog>
 
       {/* Entity Creation Sheets */}
@@ -465,6 +514,14 @@ export function GlobalSearchDialog() {
       <NewTareaSheet
         open={showNewTarea}
         onOpenChange={setShowNewTarea}
+      />
+      <NewDocComercialSheet
+        open={showNewDocComercial}
+        onOpenChange={setShowNewDocComercial}
+      />
+      <AsignarAccionSheet
+        open={showAsignarAccion}
+        onOpenChange={setShowAsignarAccion}
       />
     </>
   )

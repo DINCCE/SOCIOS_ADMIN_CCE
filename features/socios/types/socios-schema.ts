@@ -188,18 +188,37 @@ export const personaSchema = z.object({
 export type Persona = z.infer<typeof personaSchema>
 
 /**
- * Schema for Empresa view (v_empresas_completa)
- * Combines data from empresas, business_partners, and organizations tables
- * IMPORTANT: Matches actual database schema
+ * Schema for Empresa view (dm_actores table)
+ * Matches actual database schema for company detail view
+ * IMPORTANT: Both personas and empresas share dm_actores table
  */
 export const empresaSchema = z.object({
-  // From empresas table
+  // Core identity (from dm_actores)
   id: z.string().uuid(),
-  nit: z.string(),
-  digito_verificacion: z.string(),
+  codigo_bp: z.string(),
+  organizacion_id: z.string().uuid(),
+  organizacion_nombre: z.string(),
+  tipo_actor: z.literal("empresa"),
+  nat_fiscal: z.literal("jurídica"),
+  estado_actor: z.enum(["activo", "inactivo", "bloqueado"]),
+
+  // Company names (from dm_actores)
   razon_social: z.string(),
   nombre_comercial: z.string().nullable(),
-  tipo_sociedad: z.string(),
+
+  // Document (from dm_actores)
+  tipo_documento: z.literal("NIT"),
+  num_documento: z.string(),
+  digito_verificacion: z.number().nullable(),
+
+  // Contact (from dm_actores)
+  email_principal: z.string().nullable(),
+  email_secundario: z.string().nullable(),
+  telefono_principal: z.string().nullable(),
+  telefono_secundario: z.string().nullable(),
+
+  // Company data from perfil_profesional_corporativo JSONB
+  tipo_sociedad: z.string().nullable(),
   fecha_constitucion: z.string().nullable(),
   ciudad_constitucion: z.string().nullable(),
   pais_constitucion: z.string().nullable(),
@@ -207,41 +226,46 @@ export const empresaSchema = z.object({
   codigo_ciiu: z.string().nullable(),
   sector_industria: z.string().nullable(),
   actividad_economica: z.string().nullable(),
-  tamano_empresa: z.string().nullable(),
+  tamano_empresa: z.enum(["micro", "pequena", "mediana", "grande"]).nullable(),
   representante_legal_id: z.string().uuid().nullable(),
   cargo_representante: z.string().nullable(),
-  telefono_secundario: z.string().nullable(),
-  whatsapp: z.string().nullable(),
+  ingresos_anuales: z.number().nullable(),
+  numero_empleados: z.number().nullable(),
+
+  // Digital presence from perfil_redes JSONB
+  logo_url: z.string().nullable(),
   website: z.string().nullable(),
   linkedin_url: z.string().nullable(),
   facebook_url: z.string().nullable(),
   instagram_handle: z.string().nullable(),
   twitter_handle: z.string().nullable(),
-  logo_url: z.string().nullable(),
-  ingresos_anuales: z.number().nullable(),
-  numero_empleados: z.number().nullable(),
-  atributos: z.record(z.string(), z.any()).nullable(),
-  creado_en: z.string(),
-  actualizado_en: z.string(),
+  whatsapp: z.string().nullable(),
 
-  // From business_partners table
-  organizacion_id: z.string().uuid(),
-  tipo_actor: z.enum(["persona", "empresa"]),
-  codigo: z.string(),
-  estado: z.enum(["activo", "inactivo", "bloqueado"]),
-  email_principal: z.string().nullable(),
-  telefono_principal: z.string().nullable(),
-  bp_creado_en: z.string(),
-  bp_actualizado_en: z.string(),
-  eliminado_en: z.string().nullable(),
+  // Business classifications
+  es_socio: z.boolean(),
+  es_cliente: z.boolean(),
+  es_proveedor: z.boolean(),
 
-  // From organizations table
-  organizacion_nombre: z.string(),
+  // Metadata
+  tags: z.array(z.string()).default([]),
+  atributos: z.record(z.string(), z.any()).default({}),
+  perfil_intereses: z.record(z.string(), z.any()).default({}),
+  perfil_preferencias: z.record(z.string(), z.any()).default({}),
+  perfil_metricas: z.record(z.string(), z.any()).default({}),
+  perfil_compliance: z.record(z.string(), z.any()).default({}),
 
   // Computed fields
-  nit_completo: z.string().nullable(), // Can be null if DV is missing
+  nit_completo: z.string().nullable(),
   nombre_representante_legal: z.string().nullable(),
-  tags: z.array(z.string()).optional().default([]), // Optional since not all views have it
+
+  // Timestamps
+  creado_en: z.string(),
+  actualizado_en: z.string(),
+  eliminado_en: z.string().nullable(),
+
+  // Alias fields for backward compatibility
+  codigo: z.string().optional(), // Alias for codigo_bp
+  estado: z.enum(["activo", "inactivo", "bloqueado"]).optional(), // Alias for estado_actor
 })
 
 export type Empresa = z.infer<typeof empresaSchema>
