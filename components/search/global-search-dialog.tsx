@@ -24,7 +24,7 @@
 
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   CommandDialog,
@@ -33,6 +33,7 @@ import {
   CommandInput,
   CommandList,
   CommandSeparator,
+  CommandItem,
 } from '@/components/ui/command'
 import { useCmdK } from '@/hooks/use-cmd-k'
 import { useGlobalSearch } from './use-global-search'
@@ -89,6 +90,9 @@ export function GlobalSearchDialog() {
     orgId,
     enabled: open && !commandMode,
   })
+
+  // Debug logging
+  console.log('🎯 Dialog state:', { query, orgId, results, isLoading, isError, resultsLength: results?.length })
 
   // Get recent items
   const { recentItems, addRecentItem } = useRecentSearch({
@@ -176,69 +180,122 @@ export function GlobalSearchDialog() {
   // Group results by entity type for organized display
   const groupedResults = useMemo(() => {
     const groups = new Map<string, typeof results>()
+    console.log('🔨 Building groups from results:', { results, isArray: Array.isArray(results), length: results?.length })
     results.forEach((result) => {
       if (!groups.has(result.entity_type)) {
         groups.set(result.entity_type, [])
       }
       groups.get(result.entity_type)!.push(result)
     })
+    const groupsArray = Array.from(groups.entries())
+    console.log('📊 Grouped results:', { groups: groupsArray, resultsCount: results.length, groupSizes: groupsArray.map(([k, v]) => `${k}: ${v.length}`) })
     return groups
   }, [results])
 
   return (
     <>
       <CommandDialog open={open} onOpenChange={setOpen}>
-        {/* Custom styled dialog with distinctive entrance animation */}
-        <div
+        <CommandInput
+          placeholder={
+            commandMode
+              ? 'Comando: crear, navegar...'
+              : 'Buscar personas, tareas, acciones... (escribe ">" para comandos)'
+          }
+          value={query}
+          onValueChange={setQuery}
+          leftIcon={
+            commandMode ? (
+              <Zap className="mr-2 h-4 w-4 shrink-0 text-primary" />
+            ) : (
+              <SearchIcon className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            )
+          }
           className={cn(
-            // Animation keyframes defined inline for component isolation
-            '[&_[cmdk-dialog]]:animate-in [&_[cmdk-dialog]]:fade-in-0',
-            '[&_[cmdk-dialog]]:zoom-in-95 [&_[cmdk-dialog]]:slide-in-from-top-2',
-            // Duration - using cubic-bezier for premium feel
-            '[&_[cmdk-dialog]]:duration-200',
-            // Easing function - custom cubic-bezier for "Linear-like" smooth feel
-            '[&_[cmdk-dialog]]:[animation-timing-function:cubic-bezier(0.16,1,0.3,1)]'
+            'flex h-11 w-full rounded-md bg-transparent py-3',
+            'text-sm outline-none placeholder:text-muted-foreground',
+            'disabled:cursor-not-allowed disabled:opacity-50',
+            // Remove default focus ring - using dialog-level focus
+            'focus:outline-none focus:ring-0'
+          )}
+        />
+
+        <CommandList
+          className={cn(
+            'max-h-[calc(100vh-12rem)]',
+            // Custom scrollbar styling
+            '[&::-webkit-scrollbar]:w-1.5',
+            '[&::-webkit-scrollbar-track]:bg-transparent',
+            '[&::-webkit-scrollbar-thumb]:bg-muted-foreground/20',
+            '[&::-webkit-scrollbar-thumb]:rounded-full',
+            '[&::-webkit-scrollbar-thumb]:hover:bg-muted-foreground/30'
           )}
         >
-          <CommandInput
-            placeholder={
-              commandMode
-                ? 'Comando: crear, navegar...'
-                : 'Buscar personas, tareas, acciones... (escribe ">" para comandos)'
-            }
-            value={query}
-            onValueChange={setQuery}
-            leftIcon={
-              commandMode ? (
-                <Zap className="mr-2 h-4 w-4 shrink-0 text-primary" />
+          {/* Command mode - show actions */}
+          {commandMode && (
+            <>
+              {filteredActions.length === 0 ? (
+                <CommandEmpty>
+                  <div className="text-center py-8 px-4">
+                    <p className="text-sm text-muted-foreground">
+                      No se encontraron comandos para "{query.slice(1).trim()}"
+                    </p>
+                  </div>
+                </CommandEmpty>
               ) : (
-                <SearchIcon className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-              )
-            }
-            className={cn(
-              'flex h-11 w-full rounded-md bg-transparent py-3',
-              'text-sm outline-none placeholder:text-muted-foreground',
-              'disabled:cursor-not-allowed disabled:opacity-50',
-              // Remove default focus ring - using dialog-level focus
-              'focus:outline-none focus:ring-0'
-            )}
-          />
+                <CommandGroup
+                  heading="Acciones Rápidas"
+                  className={cn(
+                    '[&_[cmdk-group-heading]]:px-4 [&_[cmdk-group-heading]]:py-2',
+                    '[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium',
+                    '[&_[cmdk-group-heading]]:text-muted-foreground',
+                    '[&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider'
+                  )}
+                >
+                  {filteredActions.map((action) => (
+                    <SearchActionItem
+                      key={action.id}
+                      action={action}
+                      onSelect={() => handleActionSelect(action)}
+                    />
+                  ))}
+                </CommandGroup>
+              )}
+            </>
+          )}
 
-          <CommandList>
-            {/* Command mode - show actions */}
-            {commandMode && (
-              <>
-                {filteredActions.length === 0 ? (
-                  <CommandEmpty>
-                    <div className="text-center py-8 px-4">
-                      <p className="text-sm text-muted-foreground">
-                        No se encontraron comandos para "{query.slice(1).trim()}"
-                      </p>
-                    </div>
-                  </CommandEmpty>
-                ) : (
+          {/* Search mode - loading state */}
+          {!commandMode && isLoading && query.length >= 2 && (
+            <SearchSkeleton count={5} />
+          )}
+
+          {/* Search mode - error state */}
+          {!commandMode && isError && (
+            <CommandEmpty>
+              <div className="text-center py-8 px-4">
+                <p className="text-sm text-muted-foreground">{EMPTY_STATE_MESSAGES.error}</p>
+              </div>
+            </CommandEmpty>
+          )}
+
+          {/* Search mode - empty state (no results) */}
+          {!commandMode && !isLoading && !isError && results.length === 0 && query.length >= 2 && (
+            <CommandEmpty>
+              <div className="text-center py-8 px-4">
+                <p className="text-sm text-muted-foreground">
+                  {EMPTY_STATE_MESSAGES.noResults} para "{query}"
+                </p>
+              </div>
+            </CommandEmpty>
+          )}
+
+          {/* Idle state - show recent items */}
+          {!commandMode && !isLoading && query.length === 0 && (
+            <>
+              {/* Recent items */}
+              {recentItems.length > 0 && (
+                <>
                   <CommandGroup
-                    heading="Acciones Rápidas"
+                    heading="Recientes"
                     className={cn(
                       '[&_[cmdk-group-heading]]:px-4 [&_[cmdk-group-heading]]:py-2',
                       '[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium',
@@ -246,205 +303,154 @@ export function GlobalSearchDialog() {
                       '[&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider'
                     )}
                   >
-                    {filteredActions.map((action) => (
-                      <SearchActionItem
-                        key={action.id}
-                        action={action}
-                        onSelect={() => handleActionSelect(action)}
+                    {recentItems.map((item) => (
+                      <SearchResultItem
+                        key={item.entity_id}
+                        result={{
+                          entity_type: item.entity_type,
+                          entity_id: item.entity_id,
+                          title: item.title,
+                          subtitle: `Visto ${getTimeAgo(item.viewed_at)}`,
+                          route: item.route,
+                          metadata: {},
+                        }}
+                        onSelect={() => handleSelect(item)}
                       />
                     ))}
                   </CommandGroup>
-                )}
-              </>
-            )}
 
-            {/* Search mode - loading state */}
-            {!commandMode && isLoading && query.length >= 2 && (
-              <SearchSkeleton count={5} />
-            )}
+                  <CommandSeparator />
 
-            {/* Search mode - error state */}
-            {!commandMode && isError && (
-              <CommandEmpty>
-                <div className="text-center py-8 px-4">
-                  <p className="text-sm text-muted-foreground">{EMPTY_STATE_MESSAGES.error}</p>
-                </div>
-              </CommandEmpty>
-            )}
-
-            {/* Search mode - empty state (no results) */}
-            {!commandMode && !isLoading && !isError && results.length === 0 && query.length >= 2 && (
-              <CommandEmpty>
-                <div className="text-center py-8 px-4">
-                  <p className="text-sm text-muted-foreground">
-                    {EMPTY_STATE_MESSAGES.noResults} para "{query}"
-                  </p>
-                </div>
-              </CommandEmpty>
-            )}
-
-            {/* Idle state - show recent items */}
-            {!commandMode && !isLoading && query.length === 0 && (
-              <>
-                {/* Recent items */}
-                {recentItems.length > 0 && (
-                  <>
-                    <CommandGroup
-                      heading="Recientes"
+                  {/* Quick actions preview */}
+                  <CommandGroup
+                    heading="Acciones"
+                    className={cn(
+                      '[&_[cmdk-group-heading]]:px-4 [&_[cmdk-group-heading]]:py-2',
+                      '[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium',
+                      '[&_[cmdk-group-heading]]:text-muted-foreground',
+                      '[&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider'
+                    )}
+                  >
+                    <CommandItem
+                      value="command-mode-trigger"
+                      onSelect={() => setQuery('> ')}
                       className={cn(
-                        '[&_[cmdk-group-heading]]:px-4 [&_[cmdk-group-heading]]:py-2',
-                        '[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium',
-                        '[&_[cmdk-group-heading]]:text-muted-foreground',
-                        '[&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider'
+                        'gap-3 px-4 py-3',
+                        '!cursor-pointer',
+                        'rounded-md mx-2 my-1',
+                        'text-muted-foreground text-sm'
                       )}
                     >
-                      {recentItems.map((item) => (
-                        <SearchResultItem
-                          key={item.entity_id}
-                          result={{
-                            entity_type: item.entity_type,
-                            entity_id: item.entity_id,
-                            title: item.title,
-                            subtitle: `Visto ${getTimeAgo(item.viewed_at)}`,
-                            route: item.route,
-                            metadata: {},
-                          }}
-                          onSelect={() => handleSelect(item)}
-                        />
-                      ))}
-                    </CommandGroup>
+                      <Zap className="h-4 w-4" />
+                      <span>Escribe '&gt;' para comandos rápidos</span>
+                    </CommandItem>
+                  </CommandGroup>
+                </>
+              )}
 
-                    <CommandSeparator />
-
-                    {/* Quick actions preview */}
-                    <CommandGroup
-                      heading="Acciones"
-                      className={cn(
-                        '[&_[cmdk-group-heading]]:px-4 [&_[cmdk-group-heading]]:py-2',
-                        '[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium',
-                        '[&_[cmdk-group-heading]]:text-muted-foreground',
-                        '[&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider'
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          'flex items-center gap-3 px-4 py-3',
-                          'cursor-pointer transition-all duration-200',
-                          'hover:translate-x-1 hover:bg-accent/50',
-                          'rounded-md mx-2 my-1',
-                          'text-muted-foreground text-sm'
-                        )}
-                        onClick={() => setQuery('> ')}
-                      >
-                        <Zap className="h-4 w-4" />
-                        <span>Escribe '&gt;' para comandos rápidos</span>
-                      </div>
-                    </CommandGroup>
-                  </>
-                )}
-
-                {/* No recent items - show idle message */}
-                {recentItems.length === 0 && (
-                  <CommandEmpty>
-                    <div className="text-center py-8 px-4">
-                      <Clock className="h-8 w-8 mx-auto mb-3 text-muted-foreground/50" />
-                      <p className="text-sm text-muted-foreground">
-                        {EMPTY_STATE_MESSAGES.idle}
-                      </p>
-                      <p className="text-xs text-muted-foreground/70 mt-2">
-                        Escribe "&gt;" para ver acciones rápidas
-                      </p>
-                    </div>
-                  </CommandEmpty>
-                )}
-              </>
-            )}
-
-            {/* Search results grouped by entity type */}
-            {!commandMode && !isLoading && !isError && results.length > 0 && (
-              <>
-                {Array.from(groupedResults.entries()).map(([entityType, items], index) => (
-                  <div key={entityType}>
-                    {/* Add separator between groups (but not before first group) */}
-                    {index > 0 && <CommandSeparator />}
-
-                    <CommandGroup
-                      heading={ENTITY_CONFIG[entityType as keyof typeof ENTITY_CONFIG]?.label}
-                      className={cn(
-                        // Enhanced group styling
-                        '[&_[cmdk-group-heading]]:px-4 [&_[cmdk-group-heading]]:py-2',
-                        '[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium',
-                        '[&_[cmdk-group-heading]]:text-muted-foreground',
-                        '[&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider',
-                        // Letter spacing for refinement
-                        '[&_[cmdk-group-heading]]:tracking-wide'
-                      )}
-                    >
-                      {items.map((result) => (
-                        <SearchResultItem
-                          key={result.entity_id}
-                          result={result}
-                          onSelect={() => handleSelect(result)}
-                        />
-                      ))}
-                    </CommandGroup>
+              {/* No recent items - show idle message */}
+              {recentItems.length === 0 && (
+                <CommandEmpty>
+                  <div className="text-center py-8 px-4">
+                    <Clock className="h-8 w-8 mx-auto mb-3 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">
+                      {EMPTY_STATE_MESSAGES.idle}
+                    </p>
+                    <p className="text-xs text-muted-foreground/70 mt-2">
+                      Escribe "&gt;" para ver acciones rápidas
+                    </p>
                   </div>
-                ))}
-              </>
-            )}
-          </CommandList>
+                </CommandEmpty>
+              )}
+            </>
+          )}
 
-          {/* Keyboard shortcuts footer */}
-          <div
-            className={cn(
-              'flex items-center justify-between px-4 py-2',
-              'border-t text-xs text-muted-foreground',
-              'bg-muted/30'
-            )}
-          >
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1">
-                <kbd
-                  className={cn(
-                    'px-1.5 py-0.5 rounded',
-                    'bg-background border',
-                    'font-mono text-[10px]'
-                  )}
-                >
-                  {KEYBOARD_SHORTCUTS.navigate}
-                </kbd>
-                <span>navegar</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd
-                  className={cn(
-                    'px-1.5 py-0.5 rounded',
-                    'bg-background border',
-                    'font-mono text-[10px]'
-                  )}
-                >
-                  {KEYBOARD_SHORTCUTS.select}
-                </kbd>
-                <span>seleccionar</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd
-                  className={cn(
-                    'px-1.5 py-0.5 rounded',
-                    'bg-background border',
-                    'font-mono text-[10px]'
-                  )}
-                >
-                  esc
-                </kbd>
-                <span>cerrar</span>
-              </span>
-            </div>
-            <span className="text-[10px] opacity-70">
-              {results.length > 0 ? `${results.length} resultados` : ''}
-            </span>
-          </div>
-        </div>
+          {/* Search results grouped by entity type */}
+          {!commandMode && !isLoading && !isError && results.length > 0 && (
+            <>
+              {Array.from(groupedResults.entries()).map(([entityType, items], index) => (
+                <React.Fragment key={entityType}>
+                  {/* Add separator between groups (but not before first group) */}
+                  {index > 0 && <CommandSeparator />}
+
+                  <CommandGroup
+                    heading={ENTITY_CONFIG[entityType as keyof typeof ENTITY_CONFIG]?.label}
+                    className={cn(
+                      // Enhanced group styling
+                      '[&_[cmdk-group-heading]]:px-4 [&_[cmdk-group-heading]]:py-2',
+                      '[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium',
+                      '[&_[cmdk-group-heading]]:text-muted-foreground',
+                      '[&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider',
+                      // Letter spacing for refinement
+                      '[&_[cmdk-group-heading]]:tracking-wide'
+                    )}
+                  >
+                    {items.map((result) => (
+                      <SearchResultItem
+                        key={result.entity_id}
+                        result={result}
+                        onSelect={() => handleSelect(result)}
+                      />
+                    ))}
+                  </CommandGroup>
+                </React.Fragment>
+              ))}
+
+              {/* Keyboard shortcuts footer - rendered after results */}
+              <div
+                className={cn(
+                  'flex items-center justify-between px-4 py-2',
+                  'border-t text-xs text-muted-foreground',
+                  'bg-muted/30',
+                  'sticky bottom-0',
+                  'mt-2'
+                )}
+              >
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1">
+                    <kbd
+                      className={cn(
+                        'px-1.5 py-0.5 rounded',
+                        'bg-background border',
+                        'font-mono text-[10px]'
+                      )}
+                    >
+                      {KEYBOARD_SHORTCUTS.navigate}
+                    </kbd>
+                    <span>navegar</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <kbd
+                      className={cn(
+                        'px-1.5 py-0.5 rounded',
+                        'bg-background border',
+                        'font-mono text-[10px]'
+                      )}
+                    >
+                      {KEYBOARD_SHORTCUTS.select}
+                    </kbd>
+                    <span>seleccionar</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <kbd
+                      className={cn(
+                        'px-1.5 py-0.5 rounded',
+                        'bg-background border',
+                        'font-mono text-[10px]'
+                      )}
+                    >
+                      esc
+                    </kbd>
+                    <span>cerrar</span>
+                  </span>
+                </div>
+                <span className="text-[10px] opacity-70">
+                  {results.length > 0 ? `${results.length} resultados` : ''}
+                </span>
+              </div>
+            </>
+          )}
+        </CommandList>
       </CommandDialog>
 
       {/* Entity Creation Sheets */}

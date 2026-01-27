@@ -53,6 +53,8 @@ export function useGlobalSearch({
         p_limit: SEARCH_LIMIT,
       })
 
+      console.log('🔍 Search RPC call:', { query, orgId, data, error })
+
       if (error) {
         // Log meaningful error info - handle empty error objects gracefully
         const errorMsg = error.message || error.details || JSON.stringify(error)
@@ -60,6 +62,7 @@ export function useGlobalSearch({
         throw error
       }
 
+      console.log('✅ Search results:', data)
       return data || []
     },
     enabled: enabled && query.length >= SEARCH_MIN_LENGTH && !!orgId,

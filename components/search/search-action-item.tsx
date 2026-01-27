@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { ENTITY_CONFIG } from '@/lib/search/constants'
 import { ICON_MAP } from '@/lib/search/actions'
 import type { SearchAction } from '@/lib/search/types'
+import { CommandItem } from '@/components/ui/command'
 
 interface SearchActionItemProps {
   action: SearchAction
@@ -29,20 +30,14 @@ export function SearchActionItem({ action, isSelected, onSelect }: SearchActionI
   const Icon = ICON_MAP[action.icon]
 
   return (
-    <div
-      role="option"
-      aria-selected={isSelected}
-      onClick={onSelect}
+    <CommandItem
+      value={action.id}
+      onSelect={onSelect}
       className={cn(
         // Base layout - consistent with SearchResultItem
-        'group flex items-center gap-3 px-4 py-3',
-        // Interactive states
-        'cursor-pointer transition-all duration-200',
-        'hover:translate-x-1 hover:bg-accent/50',
-        // Selected state
-        isSelected && 'bg-accent translate-x-1',
-        // Focus ring for keyboard navigation
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
+        'gap-3 px-4 py-3',
+        // Remove default cmdk styling to use our custom design
+        '!cursor-pointer',
         'rounded-md mx-2 my-1'
       )}
     >
@@ -86,7 +81,7 @@ export function SearchActionItem({ action, isSelected, onSelect }: SearchActionI
           'bg-muted text-muted-foreground',
           'font-mono',
           'opacity-0 group-hover:opacity-100 transition-opacity',
-          isSelected && 'opacity-100'
+          'data-[selected=true]:opacity-100'
         )}>
           {action.shortcut.split(' ').pop()}
         </span>
@@ -96,9 +91,9 @@ export function SearchActionItem({ action, isSelected, onSelect }: SearchActionI
       <ArrowRight className={cn(
         'h-4 w-4 flex-shrink-0 transition-all duration-200',
         'opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0',
-        isSelected && 'opacity-100 translate-x-0',
+        'data-[selected=true]:opacity-100 data-[selected=true]:translate-x-0',
         'text-muted-foreground'
       )} />
-    </div>
+    </CommandItem>
   )
 }

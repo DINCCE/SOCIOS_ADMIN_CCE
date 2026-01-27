@@ -12,6 +12,7 @@ import { ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ENTITY_CONFIG } from '@/lib/search/constants'
 import type { SearchResult, EntityType } from '@/lib/search/types'
+import { CommandItem } from '@/components/ui/command'
 
 interface SearchResultItemProps {
   result: SearchResult
@@ -31,21 +32,20 @@ export function SearchResultItem({ result, isSelected, onSelect }: SearchResultI
   const config = ENTITY_CONFIG[result.entity_type]
   const Icon = config.icon
 
+  // IMPORTANT: cmdk uses the `value` prop for filtering items based on the input.
+  // We include title, subtitle, and entity_type in the value for proper search matching.
+  // Adding a unique prefix to ensure each item has a unique value across the list.
+  const searchValue = `${result.entity_type}:${result.title}:${result.subtitle || ''}:${result.entity_id}`
+
   return (
-    <div
-      role="option"
-      aria-selected={isSelected}
-      onClick={onSelect}
+    <CommandItem
+      value={searchValue}
+      onSelect={onSelect}
       className={cn(
         // Base layout - asymmetrical with left padding variation
-        'group flex items-center gap-3 px-4 py-3',
-        // Interactive states - subtle translate on hover
-        'cursor-pointer transition-all duration-200',
-        'hover:translate-x-1 hover:bg-accent/50',
-        // Selected state
-        isSelected && 'bg-accent translate-x-1',
-        // Focus ring for keyboard navigation
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
+        'gap-3 px-4 py-3',
+        // Remove default cmdk styling to use our custom design
+        '!cursor-pointer',
         // Rounded corners with theme-aware radius
         'rounded-md mx-2 my-1'
       )}
@@ -87,10 +87,9 @@ export function SearchResultItem({ result, isSelected, onSelect }: SearchResultI
       <ArrowRight className={cn(
         'h-4 w-4 flex-shrink-0 transition-all duration-200',
         // Hidden by default, slides in on hover/select
-        'opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0',
-        isSelected && 'opacity-100 translate-x-0',
+        'opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 data-[selected=true]:opacity-100 data-[selected=true]:translate-x-0',
         'text-muted-foreground'
       )} />
-    </div>
+    </CommandItem>
   )
 }
