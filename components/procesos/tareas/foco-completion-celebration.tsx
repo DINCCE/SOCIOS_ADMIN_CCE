@@ -181,6 +181,10 @@ function FireworksCelebration({ taskCount, message, onClose }: { taskCount: numb
         const ctx = canvas.getContext("2d")
         if (!ctx) return
 
+        // Non-null assertions for use in class closures
+        const canvasNN = canvas
+        const ctxNN = ctx
+
         const resizeCanvas = () => {
             canvas.width = window.innerWidth
             canvas.height = window.innerHeight
@@ -264,9 +268,9 @@ function FireworksCelebration({ taskCount, message, onClose }: { taskCount: numb
             trail: { x: number; y: number }[]
 
             constructor() {
-                this.x = Math.random() * canvas.width
-                this.y = canvas.height
-                this.targetY = Math.random() * canvas.height * 0.4 + canvas.height * 0.1
+                this.x = Math.random() * canvasNN.width
+                this.y = canvasNN.height
+                this.targetY = Math.random() * canvasNN.height * 0.4 + canvasNN.height * 0.1
                 const colors = ["#FF6B6B", "#4ECDC4", "#FFE66D", "#95E1D3", "#F38181", "#AA96DA", "#FCBAD3", "#FF9F43", "#EE5A24", "#00D2D3"]
                 this.color = colors[Math.floor(Math.random() * colors.length)]
                 this.particles = []
@@ -274,13 +278,13 @@ function FireworksCelebration({ taskCount, message, onClose }: { taskCount: numb
                 this.trail = []
             }
 
-            update() {
+            update(ctx: CanvasRenderingContext2D) {
                 if (!this.exploded) {
                     this.trail.push({ x: this.x, y: this.y })
                     if (this.trail.length > 15) this.trail.shift()
                     this.y -= 8
                     if (this.y <= this.targetY) {
-                        this.explode()
+                        this.explode(ctx)
                     }
                 } else {
                     this.particles = this.particles.filter(p => {
@@ -290,13 +294,13 @@ function FireworksCelebration({ taskCount, message, onClose }: { taskCount: numb
                 }
             }
 
-            explode() {
+            explode(ctx: CanvasRenderingContext2D) {
                 this.exploded = true
                 for (let i = 0; i < 80; i++) {
                     this.particles.push(new Particle(this.x, this.y, this.color))
                 }
                 ctx.fillStyle = `rgba(255, 255, 255, 0.3)`
-                ctx.fillRect(0, 0, canvas.width, canvas.height)
+                ctx.fillRect(0, 0, canvasNN.width, canvasNN.height)
             }
 
             draw(ctx: CanvasRenderingContext2D) {
@@ -339,12 +343,12 @@ function FireworksCelebration({ taskCount, message, onClose }: { taskCount: numb
         }, 3000)
 
         const animate = () => {
-            ctx.fillStyle = "rgba(0, 0, 0, 0.15)"
-            ctx.fillRect(0, 0, canvas.width, canvas.height)
+            ctxNN.fillStyle = "rgba(0, 0, 0, 0.15)"
+            ctxNN.fillRect(0, 0, canvasNN.width, canvasNN.height)
 
             fireworks = fireworks.filter(fw => {
-                fw.update()
-                fw.draw(ctx)
+                fw.update(ctxNN)
+                fw.draw(ctxNN)
                 return !fw.isDead()
             })
 
@@ -431,6 +435,10 @@ function EarthquakeCelebration({ taskCount, message, onClose }: { taskCount: num
         const ctx = canvas.getContext("2d")
         if (!ctx) return
 
+        // Non-null assertions for use in class closures
+        const canvasNN = canvas
+        const ctxNN = ctx
+
         canvas.width = window.innerWidth
         canvas.height = window.innerHeight
 
@@ -453,7 +461,7 @@ function EarthquakeCelebration({ taskCount, message, onClose }: { taskCount: num
             oscillationSpeed: number
 
             constructor() {
-                this.x = Math.random() * canvas.width
+                this.x = Math.random() * canvasNN.width
                 this.y = -20
                 this.vx = (Math.random() - 0.5) * 4
                 this.vy = Math.random() * 3 + 2
@@ -493,7 +501,7 @@ function EarthquakeCelebration({ taskCount, message, onClose }: { taskCount: num
             }
 
             isOffScreen(): boolean {
-                return this.y > canvas.height + 20
+                return this.y > canvasNN.height + 20
             }
         }
 
@@ -510,10 +518,10 @@ function EarthquakeCelebration({ taskCount, message, onClose }: { taskCount: num
         }, 3000)
 
         const animate = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            ctxNN.clearRect(0, 0, canvasNN.width, canvasNN.height)
             confetti = confetti.filter(c => {
                 c.update()
-                c.draw(ctx)
+                c.draw(ctxNN)
                 return !c.isOffScreen()
             })
             requestAnimationFrame(animate)
@@ -611,6 +619,10 @@ function ExplosionCelebration({ taskCount, message, onClose }: { taskCount: numb
         const ctx = canvas.getContext("2d")
         if (!ctx) return
 
+        // Non-null assertions for use in class closures
+        const canvasNN = canvas
+        const ctxNN = ctx
+
         canvas.width = window.innerWidth
         canvas.height = window.innerHeight
 
@@ -635,10 +647,10 @@ function ExplosionCelebration({ taskCount, message, onClose }: { taskCount: numb
             lineWidth: number
 
             constructor() {
-                this.x = canvas.width / 2
-                this.y = canvas.height / 2
+                this.x = canvasNN.width / 2
+                this.y = canvasNN.height / 2
                 this.radius = 0
-                this.maxRadius = Math.max(canvas.width, canvas.height) * 0.8
+                this.maxRadius = Math.max(canvasNN.width, canvasNN.height) * 0.8
                 this.alpha = 1
                 const colors = ["#FF6B6B", "#4ECDC4", "#FFE66D", "#AA96DA"]
                 this.color = colors[Math.floor(Math.random() * colors.length)]
@@ -683,8 +695,8 @@ function ExplosionCelebration({ taskCount, message, onClose }: { taskCount: numb
             constructor() {
                 const angle = Math.random() * Math.PI * 2
                 const speed = Math.random() * 15 + 5
-                this.x = canvas.width / 2
-                this.y = canvas.height / 2
+                this.x = canvasNN.width / 2
+                this.y = canvasNN.height / 2
                 this.vx = Math.cos(angle) * speed
                 this.vy = Math.sin(angle) * speed
                 this.size = Math.random() * 30 + 10
@@ -732,8 +744,8 @@ function ExplosionCelebration({ taskCount, message, onClose }: { taskCount: numb
             alpha: number
 
             constructor() {
-                this.x = canvas.width / 2
-                this.y = canvas.height / 2
+                this.x = canvasNN.width / 2
+                this.y = canvasNN.height / 2
                 const angle = Math.random() * Math.PI * 2
                 const speed = Math.random() * 25 + 10
                 this.vx = Math.cos(angle) * speed
@@ -785,24 +797,24 @@ function ExplosionCelebration({ taskCount, message, onClose }: { taskCount: numb
         }, 300)
 
         const animate = () => {
-            ctx.fillStyle = "rgba(0, 0, 0, 0.1)"
-            ctx.fillRect(0, 0, canvas.width, canvas.height)
+            ctxNN.fillStyle = "rgba(0, 0, 0, 0.1)"
+            ctxNN.fillRect(0, 0, canvasNN.width, canvasNN.height)
 
             shockwaves = shockwaves.filter(sw => {
                 sw.update()
-                sw.draw(ctx)
+                sw.draw(ctxNN)
                 return !sw.isDead()
             })
 
             debris = debris.filter(d => {
                 d.update()
-                d.draw(ctx)
+                d.draw(ctxNN)
                 return !d.isDead()
             })
 
             stars = stars.filter(s => {
                 s.update()
-                s.draw(ctx)
+                s.draw(ctxNN)
                 return !s.isDead()
             })
 
@@ -900,6 +912,10 @@ function AuroraCelebration({ taskCount, message, onClose }: { taskCount: number;
         const ctx = canvas.getContext("2d")
         if (!ctx) return
 
+        // Non-null assertions for use in class closures
+        const canvasNN = canvas
+        const ctxNN = ctx
+
         canvas.width = window.innerWidth
         canvas.height = window.innerHeight
 
@@ -912,7 +928,7 @@ function AuroraCelebration({ taskCount, message, onClose }: { taskCount: number;
             phase: number
 
             constructor() {
-                this.y = Math.random() * canvas.height * 0.6 + canvas.height * 0.2
+                this.y = Math.random() * canvasNN.height * 0.6 + canvasNN.height * 0.2
                 this.amplitude = Math.random() * 80 + 40
                 this.frequency = Math.random() * 0.01 + 0.005
                 this.speed = Math.random() * 0.02 + 0.01
@@ -927,7 +943,7 @@ function AuroraCelebration({ taskCount, message, onClose }: { taskCount: number;
 
             draw(ctx: CanvasRenderingContext2D, time: number) {
                 ctx.beginPath()
-                for (let x = 0; x < canvas.width; x += 5) {
+                for (let x = 0; x < canvasNN.width; x += 5) {
                     const y = this.y + Math.sin(x * this.frequency + time * this.speed + this.phase) * this.amplitude
                     if (x === 0) {
                         ctx.moveTo(x, y)
@@ -957,8 +973,8 @@ function AuroraCelebration({ taskCount, message, onClose }: { taskCount: number;
             twinkleSpeed: number
 
             constructor() {
-                this.x = Math.random() * canvas.width
-                this.y = Math.random() * canvas.height * 0.7
+                this.x = Math.random() * canvasNN.width
+                this.y = Math.random() * canvasNN.height * 0.7
                 this.size = Math.random() * 2 + 1
                 this.twinkle = Math.random() * Math.PI * 2
                 this.twinkleSpeed = Math.random() * 0.05 + 0.02
@@ -989,23 +1005,23 @@ function AuroraCelebration({ taskCount, message, onClose }: { taskCount: number;
             const time = Date.now() - startTime
 
             // Dark gradient background
-            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
+            const gradient = ctxNN.createLinearGradient(0, 0, 0, canvasNN.height)
             gradient.addColorStop(0, "#0a0a20")
             gradient.addColorStop(0.5, "#0f0f30")
             gradient.addColorStop(1, "#1a1a40")
-            ctx.fillStyle = gradient
-            ctx.fillRect(0, 0, canvas.width, canvas.height)
+            ctxNN.fillStyle = gradient
+            ctxNN.fillRect(0, 0, canvasNN.width, canvasNN.height)
 
             // Draw stars
             stars.forEach(star => {
                 star.update()
-                star.draw(ctx)
+                star.draw(ctxNN)
             })
 
             // Draw waves
             waves.forEach(wave => {
                 wave.update(time)
-                wave.draw(ctx, time)
+                wave.draw(ctxNN, time)
             })
 
             requestAnimationFrame(animate)
@@ -1088,6 +1104,10 @@ function MeteorCelebration({ taskCount, message, onClose }: { taskCount: number;
         const ctx = canvas.getContext("2d")
         if (!ctx) return
 
+        // Non-null assertions for use in class closures
+        const canvasNN = canvas
+        const ctxNN = ctx
+
         canvas.width = window.innerWidth
         canvas.height = window.innerHeight
 
@@ -1101,7 +1121,7 @@ function MeteorCelebration({ taskCount, message, onClose }: { taskCount: number;
             color: string
 
             constructor() {
-                this.x = Math.random() * canvas.width * 0.8 + canvas.width * 0.1
+                this.x = Math.random() * canvasNN.width * 0.8 + canvasNN.width * 0.1
                 this.y = -100
                 const angle = Math.PI / 4 + (Math.random() - 0.5) * 0.3
                 const speed = Math.random() * 10 + 15
@@ -1153,7 +1173,7 @@ function MeteorCelebration({ taskCount, message, onClose }: { taskCount: number;
             }
 
             isDead(): boolean {
-                return this.alpha <= 0 || this.y > canvas.height + 100
+                return this.alpha <= 0 || this.y > canvasNN.height + 100
             }
         }
 
@@ -1212,29 +1232,29 @@ function MeteorCelebration({ taskCount, message, onClose }: { taskCount: number;
 
         const animate = () => {
             // Clear with fade effect
-            ctx.fillStyle = "rgba(10, 10, 30, 0.2)"
-            ctx.fillRect(0, 0, canvas.width, canvas.height)
+            ctxNN.fillStyle = "rgba(10, 10, 30, 0.2)"
+            ctxNN.fillRect(0, 0, canvasNN.width, canvasNN.height)
 
             // Draw stars background
             for (let i = 0; i < 50; i++) {
-                const x = (i * 137) % canvas.width
-                const y = (i * 97) % canvas.height
+                const x = (i * 137) % canvasNN.width
+                const y = (i * 97) % canvasNN.height
                 const twinkle = Math.sin(Date.now() * 0.001 + i) * 0.5 + 0.5
-                ctx.beginPath()
-                ctx.arc(x, y, 1, 0, Math.PI * 2)
-                ctx.fillStyle = `rgba(255, 255, 255, ${twinkle * 0.5})`
-                ctx.fill()
+                ctxNN.beginPath()
+                ctxNN.arc(x, y, 1, 0, Math.PI * 2)
+                ctxNN.fillStyle = `rgba(255, 255, 255, ${twinkle * 0.5})`
+                ctxNN.fill()
             }
 
             // Update and draw meteors
             meteors = meteors.filter(meteor => {
                 meteor.update()
-                meteor.draw(ctx)
+                meteor.draw(ctxNN)
 
                 // Create impact particles when meteor reaches bottom
-                if (meteor.y > canvas.height - 100 && meteor.alpha > 0.5) {
+                if (meteor.y > canvasNN.height - 100 && meteor.alpha > 0.5) {
                     for (let i = 0; i < 5; i++) {
-                        particles.push(new ImpactParticle(meteor.x, canvas.height - 50))
+                        particles.push(new ImpactParticle(meteor.x, canvasNN.height - 50))
                     }
                 }
 
@@ -1244,7 +1264,7 @@ function MeteorCelebration({ taskCount, message, onClose }: { taskCount: number;
             // Update and draw particles
             particles = particles.filter(p => {
                 p.update()
-                p.draw(ctx)
+                p.draw(ctxNN)
                 return !p.isDead()
             })
 

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { AreaChart, Area, CartesianGrid, XAxis, YAxis, ResponsiveContainer, TooltipProps } from "recharts"
+import { AreaChart, Area, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts"
 import {
   ChartContainer,
   ChartTooltip,
@@ -35,7 +35,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-interface TooltipProps {
+interface CustomTooltipProps {
   active?: boolean
   payload?: Array<{
     name: string
@@ -48,7 +48,7 @@ interface TooltipProps {
   }>
 }
 
-function ExpandedTooltip({ active, payload }: TooltipProps) {
+function ExpandedTooltip({ active, payload }: CustomTooltipProps) {
   if (!active || !payload || !payload.length) {
     return null
   }

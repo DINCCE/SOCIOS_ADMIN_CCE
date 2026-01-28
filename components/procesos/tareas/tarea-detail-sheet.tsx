@@ -436,7 +436,7 @@ export function TareaDetailSheet({
                                 onClick={() => handleQuickUpdate("prioridad", option.value)}
                                 disabled={isQuickUpdating}
                               >
-                                <Icon className="mr-2 h-4 w-4" />
+                                {Icon && <Icon className="mr-2 h-4 w-4" />}
                                 {option.label}
                               </DropdownMenuItem>
                             )
@@ -478,7 +478,7 @@ export function TareaDetailSheet({
                                 onClick={() => handleQuickUpdate("estado", option.value)}
                                 disabled={isQuickUpdating}
                               >
-                                <Icon className="mr-2 h-4 w-4" />
+                                {Icon && <Icon className="mr-2 h-4 w-4" />}
                                 {option.label}
                               </DropdownMenuItem>
                             )
@@ -689,7 +689,7 @@ export function TareaDetailSheet({
                           {tarea.doc_comercial_codigo}
                         </a>
                         <span className="text-xs text-muted-foreground">
-                          {tarea.doc_comercial_tipo}
+                          {(tarea as any).doc_comercial_tipo}
                         </span>
                         {/* Edit indicator - shows on hover */}
                         <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-50">

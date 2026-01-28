@@ -230,13 +230,13 @@ export function TareaDetailDialog({
     return {
       id: tarea.doc_comercial_id,
       codigo: tarea.doc_comercial_codigo || '',
-      tipo: tarea.doc_comercial_tipo || '',
+      tipo: (tarea as any).doc_comercial_tipo || '',
       estado: tarea.doc_comercial_estado || '',
-      titulo: tarea.doc_comercial_titulo,
-      fecha_doc: tarea.doc_comercial_fecha_doc,
-      solicitante_id: tarea.doc_comercial_solicitante_id,
+      titulo: (tarea as any).doc_comercial_titulo,
+      fecha_doc: (tarea as any).doc_comercial_fecha_doc,
+      solicitante_id: (tarea as any).doc_comercial_solicitante_id,
     }
-  }, [tarea?.doc_comercial_id, tarea?.doc_comercial_codigo, tarea?.doc_comercial_tipo, tarea?.doc_comercial_estado, tarea?.doc_comercial_titulo, tarea?.doc_comercial_fecha_doc, tarea?.doc_comercial_solicitante_id])
+  }, [tarea?.doc_comercial_id, tarea?.doc_comercial_codigo, tarea?.doc_comercial_estado])
 
   return (
     <>
@@ -368,14 +368,17 @@ export function TareaDetailDialog({
                             )}
                           </SelectTrigger>
                           <SelectContent>
-                            {tareasPrioridadOptions.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                <div className="flex items-center gap-2">
-                                  <option.icon className="h-4 w-4" />
-                                  {option.label}
-                                </div>
-                              </SelectItem>
-                            ))}
+                            {tareasPrioridadOptions.map((option) => {
+                              const Icon = option.icon
+                              return (
+                                <SelectItem key={option.value} value={option.value}>
+                                  <div className="flex items-center gap-2">
+                                    {Icon && <Icon className="h-4 w-4" />}
+                                    {option.label}
+                                  </div>
+                                </SelectItem>
+                              )
+                            })}
                           </SelectContent>
                         </Select>
                       </div>
@@ -401,14 +404,17 @@ export function TareaDetailDialog({
                             )}
                           </SelectTrigger>
                           <SelectContent>
-                            {tareasEstadoOptions.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                <div className="flex items-center gap-2">
-                                  <option.icon className="h-4 w-4" />
-                                  {option.label}
-                                </div>
-                              </SelectItem>
-                            ))}
+                            {tareasEstadoOptions.map((option) => {
+                              const Icon = option.icon
+                              return (
+                                <SelectItem key={option.value} value={option.value}>
+                                  <div className="flex items-center gap-2">
+                                    {Icon && <Icon className="h-4 w-4" />}
+                                    {option.label}
+                                  </div>
+                                </SelectItem>
+                              )
+                            })}
                           </SelectContent>
                         </Select>
                       </div>
@@ -514,14 +520,14 @@ export function TareaDetailDialog({
                       {/* System Metadata */}
                       <div className="flex flex-col gap-2">
                         <p className="text-[10px] text-muted-foreground">
-                          Actualizado por {tarea.actualizado_por_nombre || tarea.actualizado_por_email} el {new Date(tarea.actualizado_en || tarea.creado_en).toLocaleDateString('es-ES', {
+                          Actualizado por {(tarea as any).actualizado_por_nombre || (tarea as any).actualizado_por_email} el {new Date(tarea.actualizado_en || tarea.creado_en).toLocaleDateString('es-ES', {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric'
                           })}
                         </p>
                         <p className="text-[10px] text-muted-foreground">
-                          Creado por {tarea.creado_por_nombre || tarea.creado_por_email} el {new Date(tarea.creado_en).toLocaleDateString('es-ES', {
+                          Creado por {(tarea as any).creado_por_nombre || (tarea as any).creado_por_email} el {new Date(tarea.creado_en).toLocaleDateString('es-ES', {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric'

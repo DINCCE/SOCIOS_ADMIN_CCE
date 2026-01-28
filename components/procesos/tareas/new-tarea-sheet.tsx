@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQueryClient, useQuery } from "@tanstack/react-query"
-import { Loader2, Plus, Search, X, Badge } from "lucide-react"
+import { Loader2, Plus, Search, X } from "lucide-react"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 
@@ -48,7 +48,7 @@ import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 import { crearTarea, buscarMiembrosOrganizacion, buscarDocumentosComerciales } from "@/app/actions/tareas"
-import { tareaSchema, type TareaFormValues } from "@/lib/schemas/tarea-schema"
+import { tareaFormSchema, type TareaFormValues } from "@/lib/schemas/tarea-schema"
 
 interface NewTareaSheetProps {
     open?: boolean
@@ -151,7 +151,7 @@ export function NewTareaSheet({ open: controlledOpen, onOpenChange, onSuccess, d
     const [existingTags, setExistingTags] = useState<string[]>([])
 
     const form = useForm<TareaFormValues>({
-        resolver: zodResolver(tareaSchema),
+        resolver: zodResolver(tareaFormSchema),
         defaultValues: {
             titulo: "",
             descripcion: "",
@@ -289,7 +289,9 @@ export function NewTareaSheet({ open: controlledOpen, onOpenChange, onSuccess, d
                 asignado_a: data.asignado_a || undefined,
                 relacionado_con_bp: data.relacionado_con_bp || undefined,
                 fecha_vencimiento: data.fecha_vencimiento
-                    ? data.fecha_vencimiento.toISOString().split('T')[0]
+                    ? (typeof data.fecha_vencimiento === 'string'
+                        ? data.fecha_vencimiento
+                        : data.fecha_vencimiento.toISOString().split('T')[0])
                     : undefined,
                 tags: tags.length > 0 ? tags : undefined,
             })
@@ -610,9 +612,9 @@ export function NewTareaSheet({ open: controlledOpen, onOpenChange, onSuccess, d
                                                                         <span className="font-medium">{miembro.nombres} {miembro.apellidos}</span>
                                                                         <span className="text-xs text-muted-foreground">{miembro.email}</span>
                                                                         {miembro.role && (
-                                                                            <Badge variant="outline" className="text-[10px] mt-0.5">
+                                                                            <UIBadge variant="outline" className="text-[10px] mt-0.5">
                                                                                 {miembro.role}
-                                                                            </Badge>
+                                                                            </UIBadge>
                                                                         )}
                                                                     </div>
                                                                 </button>

@@ -5,7 +5,7 @@
  * for the global search command palette.
  */
 
-import type { EntityConfig, EntityType } from './types'
+import type { EntityType } from './types'
 import {
   User,
   Building2,

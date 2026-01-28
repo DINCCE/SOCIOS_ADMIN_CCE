@@ -34,7 +34,7 @@ export function ComplianceStatusCard() {
               <FileText className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs">Cámara de Comercio</span>
             </div>
-            <Badge variant="warning" className="text-[9px] px-1.5 py-0 h-4">30 días</Badge>
+            <Badge variant="status-warning" className="text-[9px] px-1.5 py-0 h-4">30 días</Badge>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

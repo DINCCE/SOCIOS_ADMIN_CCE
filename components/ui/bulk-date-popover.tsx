@@ -119,7 +119,7 @@ export function BulkDatePopover({
             onChange={handleSelectDate}
             disabled={disabled || isSaving}
             placeholder={placeholder}
-            dateDisplayFormat="dd MMM yyyy"
+            dateDisplayFormat="dd MMM yy"
             className="border-0 shadow-none p-0"
             fromYear={new Date().getFullYear()}
             toYear={new Date().getFullYear() + 5}

@@ -5,6 +5,7 @@
 
 'use client'
 
+import type { ReactNode } from 'react'
 import type { UserRole } from './page-permissions'
 
 /**
@@ -30,15 +31,16 @@ export function canManageUsers(role: UserRole | null | undefined): boolean {
 export interface RequireRoleProps {
   role: UserRole | null
   allowedRoles: UserRole[]
-  fallback?: React.ReactNode
-  children: React.ReactNode
+  fallback?: ReactNode
+  children: ReactNode
 }
 
 export function RequireRole({ role, allowedRoles, fallback, children }: RequireRoleProps) {
-  if (!role || !allowedRoles.includes(role)) {
-    return <>{fallback || null}</>
+  const isAuthorized = role && allowedRoles.includes(role)
+  if (!isAuthorized) {
+    return fallback ?? null
   }
-  return <>{children}</>
+  return children as any
 }
 
 /**
@@ -47,8 +49,8 @@ export function RequireRole({ role, allowedRoles, fallback, children }: RequireR
  */
 export interface RequireOwnerProps {
   role: UserRole | null
-  fallback?: React.ReactNode
-  children: React.ReactNode
+  fallback?: ReactNode
+  children: ReactNode
 }
 
 export function RequireOwner({ role, fallback, children }: RequireOwnerProps) {
@@ -63,8 +65,8 @@ export function RequireOwner({ role, fallback, children }: RequireOwnerProps) {
  */
 export interface RequireAdminProps {
   role: UserRole | null
-  fallback?: React.ReactNode
-  children: React.ReactNode
+  fallback?: ReactNode
+  children: ReactNode
 }
 
 export function RequireAdmin({ role, fallback, children }: RequireAdminProps) {

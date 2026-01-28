@@ -55,8 +55,15 @@ interface CommandItem {
   data: AccionBuscada | ActorBuscado
 }
 
-export function AsignarAccionSheet() {
-  const [open, setOpen] = useState(false)
+interface AsignarAccionSheetProps {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}
+
+export function AsignarAccionSheet({ open: controlledOpen, onOpenChange: controlledOnOpenChange }: AsignarAccionSheetProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen
+  const setOpen = controlledOnOpenChange || setInternalOpen
   const [isPending, setIsPending] = useState(false)
 
   // Search states for acciones

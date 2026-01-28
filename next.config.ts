@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  turbopack: {}, // Enable Turbopack (Next.js 16 default)
 };
 
 import withPWAInit from "@ducanh2912/next-pwa";

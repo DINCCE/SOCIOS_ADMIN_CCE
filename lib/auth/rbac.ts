@@ -52,7 +52,7 @@ export async function getUserOrganizations() {
   return (data || []).map(item => ({
     organizationId: item.organization_id,
     role: item.role as UserRole,
-    organizationName: item.organizacion?.nombre || 'Unknown',
+    organizationName: (item as any).organizacion?.nombre || 'Unknown',
   }))
 }
 
