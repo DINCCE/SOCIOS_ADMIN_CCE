@@ -775,7 +775,7 @@ export function PageContent({ children, className }: PageContentProps) {
   title="Personas"
   description="Gestiona las personas registradas"
   metadata="128 total"
-  actions={<NewPersonSheet />}
+  actions={<NewPersonDialog />}
 />
 ```
 

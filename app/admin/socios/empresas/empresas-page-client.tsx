@@ -23,7 +23,7 @@ import { PageHeader } from '@/components/shell/page-header'
 import { PageToolbar } from '@/components/shell/page-toolbar'
 import { PageContent } from '@/components/shell/page-content'
 import { ResponsiveEmpresaDataTable } from '@/features/socios/empresas/responsive-data-table'
-import { NewCompanySheet } from '@/components/socios/empresas/new-company-sheet'
+import { NewCompanyDialog } from '@/components/socios/empresas/new-company-dialog'
 import { Input } from '@/components/ui/input'
 import { Search } from 'lucide-react'
 import {
@@ -432,7 +432,7 @@ export function EmpresasPageClient() {
         title="Empresas"
         description="Gestiona las empresas registradas como socios de negocio"
         metadata={`${filteredData.length} de ${initialData.length}`}
-        actions={<NewCompanySheet />}
+        actions={<NewCompanyDialog />}
       />
 
       {/* Toolbar */}

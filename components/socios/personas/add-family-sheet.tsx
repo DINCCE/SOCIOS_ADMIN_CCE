@@ -44,7 +44,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 import { buscarPersonasDisponiblesParaRelacion } from "@/app/actions/personas"
 import { vincularFamiliar } from "@/app/actions/relaciones"
-import { NewPersonSheet } from "./new-person-sheet"
+import { NewPersonDialog } from "./new-person-dialog"
 
 // Schema for validation
 const addFamilySchema = z.object({
@@ -78,7 +78,7 @@ export function AddFamilySheet({ bp_origen_id, organizacion_id, onSuccess }: Add
     const [comboboxOpen, setComboboxOpen] = useState(false)
     const [searchResults, setSearchResults] = useState<PersonaBuscada[]>([])
     const [isSearching, setIsSearching] = useState(false)
-    const [showNewPersonSheet, setShowNewPersonSheet] = useState(false)
+    const [showNewPersonDialog, setShowNewPersonDialog] = useState(false)
     const [createdPersonaId, setCreatedPersonaId] = useState<string | null>(null)
     const [selectedPersona, setSelectedPersona] = useState<PersonaBuscada | null>(null)
 
@@ -308,7 +308,7 @@ export function AddFamilySheet({ bp_origen_id, organizacion_id, onSuccess }: Add
                                                                     type="button"
                                                                     className="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-accent transition-colors"
                                                                     onClick={() => {
-                                                                        setShowNewPersonSheet(true)
+                                                                        setShowNewPersonDialog(true)
                                                                         setComboboxOpen(false)
                                                                     }}
                                                                 >
@@ -416,14 +416,14 @@ export function AddFamilySheet({ bp_origen_id, organizacion_id, onSuccess }: Add
                 </SheetContent>
             </Sheet>
 
-            {/* Nested NewPersonSheet */}
-            {showNewPersonSheet && (
-                <NewPersonSheet
-                    open={showNewPersonSheet}
-                    onOpenChange={setShowNewPersonSheet}
+            {/* Nested NewPersonDialog */}
+            {showNewPersonDialog && (
+                <NewPersonDialog
+                    open={showNewPersonDialog}
+                    onOpenChange={setShowNewPersonDialog}
                     onSuccess={(bp_id) => {
                         setCreatedPersonaId(bp_id)
-                        setShowNewPersonSheet(false)
+                        setShowNewPersonDialog(false)
                     }}
                 />
             )}

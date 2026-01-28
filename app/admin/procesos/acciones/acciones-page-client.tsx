@@ -22,7 +22,7 @@ import { PageHeader } from '@/components/shell/page-header'
 import { PageToolbar } from '@/components/shell/page-toolbar'
 import { PageContent } from '@/components/shell/page-content'
 import { ResponsiveAccionDataTable } from '@/features/procesos/acciones/responsive-data-table'
-import { AsignarAccionSheet } from '@/components/procesos/acciones/asignar-accion-sheet'
+import { AsignarAccionDialog } from '@/components/procesos/acciones/asignar-accion-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
@@ -284,7 +284,7 @@ export function AccionesPageClient() {
         title="Acciones"
         description="Gestiona las acciones de la organización"
         metadata={`${filteredData.length} de ${initialData.length}`}
-        actions={<AsignarAccionSheet />}
+        actions={<AsignarAccionDialog />}
       />
 
       {/* Toolbar */}

@@ -41,7 +41,7 @@ import { DataTableExportDialog } from '@/components/ui/data-table-export-dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { FloatingActionCapsule } from '@/components/ui/floating-action-capsule'
-import { NewTareaSheet } from '@/components/procesos/tareas/new-tarea-sheet'
+import { NewTareaDialog } from '@/components/procesos/tareas/new-tarea-dialog'
 import { TareaDetailDialog } from '@/components/procesos/tareas/tarea-detail-dialog'
 import { columns, type TareaView } from '@/features/procesos/tareas/columns'
 import { tareasPrioridadOptions, tareasEstadoOptions, getTareaTagsOptions, getTareaAsignadoOptions } from '@/lib/table-filters'
@@ -422,7 +422,7 @@ export function TareasPageClient() {
             <Button variant="outline" asChild>
               <Link href="/admin/analitica">Ver Dashboard de Equipo</Link>
             </Button>
-            <NewTareaSheet />
+            <NewTareaDialog />
           </div>
         }
       />

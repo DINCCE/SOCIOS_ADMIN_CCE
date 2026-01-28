@@ -14,7 +14,7 @@ import { DataDate } from "@/components/ui/data-date"
 import { DataEnum } from "@/components/ui/data-enum"
 import { NullCell } from "@/components/ui/null-cell"
 import { cn } from "@/lib/utils"
-import { EditSectionSheet } from "./edit-section-sheet"
+import { EditSectionDialog } from "./edit-section-dialog"
 import {
     Tooltip,
     TooltipContent,
@@ -410,7 +410,7 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                     </ProfileSection>
                 </div>
 
-                <EditSectionSheet
+                <EditSectionDialog
                     persona={persona}
                     sectionKey={editingSection}
                     open={isEditSheetOpen}

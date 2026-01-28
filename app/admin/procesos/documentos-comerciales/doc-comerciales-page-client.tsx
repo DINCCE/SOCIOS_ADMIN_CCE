@@ -25,7 +25,7 @@ import { PageContent } from '@/components/shell/page-content'
 import { ViewToggle } from '@/components/procesos/view-toggle'
 import { DocComercialesBoard } from '@/components/procesos/documentos-comerciales/doc-comerciales-board'
 import { ResponsiveDocComercialesDataTable } from '@/features/procesos/documentos-comerciales/responsive-data-table'
-import { NewDocComercialSheet } from '@/components/procesos/documentos-comerciales/new-doc-comercial-sheet'
+import { NewDocComercialDialog } from '@/components/procesos/documentos-comerciales/new-doc-comercial-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -338,7 +338,7 @@ export function DocComercialesPageClient() {
         title="Documentos Comerciales"
         description="Gestiona los documentos comerciales: oportunidades, ofertas, pedidos y reservas"
         metadata={`${fullyFilteredData.length} de ${initialData.length}`}
-        actions={<NewDocComercialSheet />}
+        actions={<NewDocComercialDialog />}
       />
 
       {/* Toolbar */}

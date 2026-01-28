@@ -23,7 +23,7 @@ import { PageHeader } from '@/components/shell/page-header'
 import { PageToolbar } from '@/components/shell/page-toolbar'
 import { PageContent } from '@/components/shell/page-content'
 import { ResponsivePersonaDataTable } from '@/features/socios/personas/responsive-data-table'
-import { NewPersonSheet } from '@/components/socios/personas/new-person-sheet'
+import { NewPersonDialog } from '@/components/socios/personas/new-person-dialog'
 import { Input } from '@/components/ui/input'
 import { Search } from 'lucide-react'
 import { DataTableViewOptions } from '@/features/socios/components/data-table-view-options'
@@ -336,7 +336,7 @@ export function PersonasPageClient() {
         title="Personas"
         description="Gestiona las personas registradas como socios de negocio"
         metadata={`${filteredData.length} de ${initialData.length}`}
-        actions={<NewPersonSheet />}
+        actions={<NewPersonDialog />}
       />
 
       {/* Toolbar */}

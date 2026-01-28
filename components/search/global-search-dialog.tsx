@@ -50,11 +50,11 @@ import {
   SEARCH_ACTIONS,
 } from '@/lib/search/actions'
 import { SearchSkeleton } from './search-skeleton'
-import { NewPersonSheet } from '@/components/socios/personas/new-person-sheet'
-import { NewCompanySheet } from '@/components/socios/empresas/new-company-sheet'
-import { NewTareaSheet } from '@/components/procesos/tareas/new-tarea-sheet'
-import { NewDocComercialSheet } from '@/components/procesos/documentos-comerciales/new-doc-comercial-sheet'
-import { AsignarAccionSheet } from '@/components/procesos/acciones/asignar-accion-sheet'
+import { NewPersonDialog } from '@/components/socios/personas/new-person-dialog'
+import { NewCompanyDialog } from '@/components/socios/empresas/new-company-dialog'
+import { NewTareaDialog } from '@/components/procesos/tareas/new-tarea-dialog'
+import { NewDocComercialDialog } from '@/components/procesos/documentos-comerciales/new-doc-comercial-dialog'
+import { AsignarAccionDialog } from '@/components/procesos/acciones/asignar-accion-dialog'
 import { Loader2, Search as SearchIcon, Clock, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SearchResult } from '@/lib/search/types'
@@ -503,23 +503,23 @@ export function GlobalSearchDialog() {
       </CommandDialog>
 
       {/* Entity Creation Sheets */}
-      <NewPersonSheet
+      <NewPersonDialog
         open={showNewPerson}
         onOpenChange={setShowNewPerson}
       />
-      <NewCompanySheet
+      <NewCompanyDialog
         open={showNewCompany}
         onOpenChange={setShowNewCompany}
       />
-      <NewTareaSheet
+      <NewTareaDialog
         open={showNewTarea}
         onOpenChange={setShowNewTarea}
       />
-      <NewDocComercialSheet
+      <NewDocComercialDialog
         open={showNewDocComercial}
         onOpenChange={setShowNewDocComercial}
       />
-      <AsignarAccionSheet
+      <AsignarAccionDialog
         open={showAsignarAccion}
         onOpenChange={setShowAsignarAccion}
       />

@@ -107,6 +107,10 @@ export const NAVIGATION_CONFIG: NavItem[] = [
         title: 'Componentes',
         url: '/admin/settings/componentes',
       },
+      {
+        title: 'Vistas',
+        url: '/admin/settings/views',
+      },
     ],
   },
 ]

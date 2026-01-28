@@ -8,6 +8,8 @@ import {
   MoreHorizontal,
   X,
   Users,
+  MessageSquare,
+  Clock,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -46,6 +48,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { DatePicker } from "@/components/ui/date-picker"
 import { SingleTagPopover } from "@/components/ui/single-tag-popover"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 // Inline editing components
 import { InlineEditableTitle } from "@/components/procesos/tareas/inline-editable-title"
@@ -54,6 +57,7 @@ import { InlineAssigneePopover } from "@/components/procesos/tareas/inline-assig
 import { InlineDocumentPopover } from "@/components/procesos/tareas/inline-document-popover"
 
 import { ComentariosSection } from "@/components/shared/comentarios-section"
+import { TareaTimeline } from "@/components/procesos/tareas/tarea-timeline"
 import { actualizarTarea, softDeleteTarea } from "@/app/actions/tareas"
 import { toggleTagsForTareas, createAndAssignTagForTareas } from "@/app/actions/tags"
 import { createClient } from "@/lib/supabase/client"
@@ -145,18 +149,22 @@ export function TareaDetailDialog({
 
   const handleQuickUpdate = useCallback(async (field: string, value: unknown) => {
     if (!tareaId || isSaving) return
+    console.log('🔄 Actualizando tarea:', { tareaId, field, value })
     setIsSaving(true)
 
     try {
       const result = await actualizarTarea(tareaId, { [field]: value })
+      console.log('✅ Resultado:', result)
       if (result.success) {
         queryClient.invalidateQueries({ queryKey: ["tarea", tareaId] })
         queryClient.invalidateQueries({ queryKey: ["tareas"] })
+        queryClient.invalidateQueries({ queryKey: ["tarea-historial", tareaId] })
         onUpdated?.()
       } else {
         toast.error(result.message)
       }
-    } catch {
+    } catch (err) {
+      console.error('❌ Error al actualizar:', err)
       toast.error("Error al actualizar")
     } finally {
       setIsSaving(false)
@@ -325,22 +333,48 @@ export function TareaDetailDialog({
                       </div>
                     </div>
 
-                    {/* Separator */}
-                    <div className="border-b border-border/40 mb-6" />
+                    {/* Tabs: Comentarios + Historial */}
+                    <Tabs defaultValue="comentarios" className="w-full">
+                      <div className="border-b mb-4">
+                        <TabsList className="grid w-full grid-cols-2 bg-transparent p-0 h-auto gap-0">
+                          <TabsTrigger
+                            value="comentarios"
+                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 flex gap-2 px-0 font-semibold justify-center transition-all"
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                            <span className="hidden sm:inline">Comentarios</span>
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="historial"
+                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 flex gap-2 px-0 font-semibold justify-center transition-all"
+                          >
+                            <Clock className="h-4 w-4" />
+                            <span className="hidden sm:inline">Historial</span>
+                          </TabsTrigger>
+                        </TabsList>
+                      </div>
 
-                    {/* Comments Section */}
-                    <div className="flex flex-col gap-1 h-[400px]">
-                      <ComentariosSection
-                        entidadTipo="tarea"
-                        entidadId={tarea.id}
-                        compact
-                        renderHeader={(count) => (
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
-                            COMENTARIOS ({count})
-                          </span>
-                        )}
-                      />
-                    </div>
+                      <TabsContent value="comentarios" className="mt-0">
+                        <div className="flex flex-col gap-1 h-[320px]">
+                          <ComentariosSection
+                            entidadTipo="tarea"
+                            entidadId={tarea.id}
+                            compact
+                            renderHeader={(count) => (
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
+                                COMENTARIOS ({count})
+                              </span>
+                            )}
+                          />
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="historial" className="mt-0">
+                        <div className="max-h-[400px] overflow-y-auto pr-2">
+                          <TareaTimeline tareaId={tarea.id} />
+                        </div>
+                      </TabsContent>
+                    </Tabs>
                   </div>
 
                   {/* RIGHT COLUMN (Metadata - col-span-4) - Vertical Layout */}

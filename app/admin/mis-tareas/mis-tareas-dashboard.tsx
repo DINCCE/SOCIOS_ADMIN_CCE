@@ -9,7 +9,7 @@ import { PageContent } from "@/components/shell/page-content"
 import { Button } from "@/components/ui/button"
 import { CheckSquare } from "lucide-react"
 import Link from "next/link"
-import { NewTareaSheet } from "@/components/procesos/tareas/new-tarea-sheet"
+import { NewTareaDialog } from "@/components/procesos/tareas/new-tarea-dialog"
 import { TareaDetailDialog } from "@/components/procesos/tareas/tarea-detail-dialog"
 import { TareaView } from "@/features/procesos/tareas/columns"
 import { FloatingActionCapsule } from "@/components/ui/floating-action-capsule"
@@ -486,7 +486,7 @@ export function MisTareasDashboard() {
                             <Button variant="outline" size="sm" className="h-8 shadow-sm" asChild>
                                 <Link href="/admin/procesos/tareas">Ver todas</Link>
                             </Button>
-                            <NewTareaSheet />
+                            <NewTareaDialog />
                         </div>
                     </div>
 

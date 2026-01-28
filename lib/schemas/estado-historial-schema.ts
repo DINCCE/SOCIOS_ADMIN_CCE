@@ -57,14 +57,18 @@ export interface TareaHistorialDetalle {
 }
 
 /**
- * Formatea la duración en segundos a formato legible
+ * Formatea la duración en segundos a formato legible con días, horas y minutos
  */
 export function formatearDuracion(segundos: number | null): string {
   if (!segundos) return '-'
 
-  const horas = Math.floor(segundos / 3600)
+  const dias = Math.floor(segundos / 86400)
+  const horas = Math.floor((segundos % 86400) / 3600)
   const minutos = Math.floor((segundos % 3600) / 60)
 
+  if (dias > 0) {
+    return `${dias}d ${horas}h`
+  }
   if (horas > 0) {
     return `${horas}h ${minutos}m`
   }

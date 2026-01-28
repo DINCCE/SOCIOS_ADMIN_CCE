@@ -1,9 +1,9 @@
 "use client"
 
 import {
-    Sheet,
-    SheetContent,
-} from "@/components/ui/sheet"
+    Dialog,
+    DialogContent,
+} from "@/components/ui/dialog"
 import { Persona } from "@/features/socios/types/socios-schema"
 
 // Legacy Forms (to be deprecated)
@@ -20,19 +20,19 @@ import { EditIdentityForm } from "./edit-forms/edit-identity-form"
 import { EditProfileForm } from "./edit-forms/edit-profile-form"
 import { EditSecurityForm } from "./edit-forms/edit-security-form"
 
-interface EditSectionSheetProps {
+interface EditSectionDialogProps {
     sectionKey: string | null
     persona: Persona
     open: boolean
     onOpenChange: (open: boolean) => void
 }
 
-export function EditSectionSheet({
+export function EditSectionDialog({
     sectionKey,
     persona,
     open,
     onOpenChange,
-}: EditSectionSheetProps) {
+}: EditSectionDialogProps) {
     if (!sectionKey) return null
 
     const renderForm = () => {
@@ -61,10 +61,10 @@ export function EditSectionSheet({
     }
 
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="right" className="sm:max-w-2xl w-full p-0">
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-2xl h-[85vh] border border-border/50 shadow-2xl rounded-xl overflow-hidden p-0 flex flex-col [&>button:last-child]:hidden">
                 {renderForm()}
-            </SheetContent>
-        </Sheet>
+            </DialogContent>
+        </Dialog>
     )
 }
