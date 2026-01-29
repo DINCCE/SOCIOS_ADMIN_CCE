@@ -10,6 +10,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { ThemeMenuButton } from '@/components/ui/theme-menu-button'
 import { ColorSchemeMenuButton } from '@/components/ui/color-scheme-menu-button'
+import { DensityMenuButton } from '@/components/ui/density-menu-button'
 import {
   Avatar,
   AvatarFallback,
@@ -101,6 +102,9 @@ export function NavUser({
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <ColorSchemeMenuButton />
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <DensityMenuButton />
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>

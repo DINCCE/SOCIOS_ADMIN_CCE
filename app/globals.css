@@ -59,8 +59,12 @@
   --spacing: 0.25rem;
 
   /* Sidebar width variables */
-  --sidebar-width: 16rem;
+  --sidebar-width: calc(16rem * var(--sidebar-width-scale));
   --sidebar-width-icon: 3rem;
+
+  /* Density variables - scale spacing and sizing */
+  --density-scale: 1;
+  --sidebar-width-scale: 1;
 
   /* Status colors - semánticos para badges */
   --status-positive: oklch(0.65 0.15 145);  /* verde - éxito/activo */
@@ -126,6 +130,19 @@
   --status-neutral: oklch(0.65 0 0);       /* gris - neutral/inactivo */
   --status-warning: oklch(0.75 0.12 85);   /* amarillo - advertencia */
   --status-negative: oklch(0.70 0.18 25);  /* rojo - error/crítico */
+}
+
+/* --- Density Modes --- */
+[data-density="comfortable"] {
+  --density-scale: 0.9;
+  --sidebar-width-scale: 0.9;
+  font-size: 14.4px;
+}
+
+[data-density="compact"] {
+  --density-scale: 0.8;
+  --sidebar-width-scale: 0.8;
+  font-size: 12.8px;
 }
 
 @theme inline {

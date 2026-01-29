@@ -37,7 +37,7 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <header className={cn(
-      "flex flex-col gap-1.5 py-4 px-8 shrink-0 border-b border-border/60",
+      "flex flex-col gap-1.5 py-[calc(1rem*var(--density-scale))] px-[calc(2rem*var(--density-scale))] shrink-0 border-b border-border/60",
       "bg-background/95 backdrop-blur-sm z-10",
       className
     )}>

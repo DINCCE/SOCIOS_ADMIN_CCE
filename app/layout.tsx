@@ -5,6 +5,7 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { CSPostHogProvider } from "@/components/providers/posthog-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ColorSchemeProvider } from "@/components/providers/color-scheme-provider";
+import { DensityProvider } from "@/components/providers/density-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { GlobalSearchDialog } from "@/components/search/global-search-dialog";
 
@@ -64,13 +65,15 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <ColorSchemeProvider>
-              <QueryProvider>
+              <DensityProvider>
+                <QueryProvider>
                 <div className="flex h-full w-full flex-col">
                   {children}
                   <Toaster />
                 </div>
                 <GlobalSearchDialog />
               </QueryProvider>
+              </DensityProvider>
             </ColorSchemeProvider>
           </ThemeProvider>
         </CSPostHogProvider>
