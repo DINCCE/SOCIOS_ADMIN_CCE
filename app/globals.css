@@ -1419,3 +1419,73 @@
 .dark .react-phone-number-input__input::placeholder {
   color: hsl(var(--muted-foreground));
 }
+
+/* --- AI Companion Animations --- */
+
+/* FAB Pulse Animation */
+@keyframes ai-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0px color-mix(in srgb, var(--primary) 50%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--primary) 15%, transparent);
+  }
+}
+
+.animate-ai-pulse {
+  animation: ai-pulse 2s ease-in-out;
+}
+
+/* Chat Bubble Entrance Animation */
+@keyframes ai-bubble-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-ai-bubble-enter {
+  animation: ai-bubble-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Typing Indicator Animation */
+@keyframes ai-typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
+  }
+}
+
+.ai-typing-dot-1 {
+  animation: ai-typing 1s infinite 0s;
+}
+
+.ai-typing-dot-2 {
+  animation: ai-typing 1s infinite 0.2s;
+}
+
+.ai-typing-dot-3 {
+  animation: ai-typing 1s infinite 0.4s;
+}
+
+/* Message Fade In */
+@keyframes ai-message-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-ai-message-enter {
+  animation: ai-message-enter 0.2s ease-out;
+}

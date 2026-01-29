@@ -1,4 +1,5 @@
 import { AppSidebar } from '@/components/app-sidebar'
+import { AdminContentWrapper } from '@/components/admin-content-wrapper'
 import { Separator } from '@/components/ui/separator'
 import {
   SidebarInset,
@@ -58,7 +59,7 @@ export default async function AdminLayout({
             <DynamicBreadcrumb />
           </div>
         </header>
-        <div className="flex flex-1 flex-col overflow-hidden max-w-full">{children}</div>
+        <AdminContentWrapper>{children}</AdminContentWrapper>
       </SidebarInset>
     </SidebarProvider>
   )
