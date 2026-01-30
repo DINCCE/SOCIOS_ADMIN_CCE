@@ -15,20 +15,6 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
         outline: "text-foreground",
-        // Custom variants for status badges
-        "status-active":
-          "border-transparent bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
-        "status-inactive":
-          "border-transparent bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20",
-        "status-destructive":
-          "border-transparent bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-        "status-warning":
-          "border-transparent bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
-        "status-neutral":
-          "border-transparent bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20",
-        // Custom variant for metadata badges
-        "metadata-outline":
-          "border-border/50 bg-background/50 text-muted-foreground hover:bg-background",
       },
     },
     defaultVariants: {
@@ -39,19 +25,11 @@ const badgeVariants = cva(
 
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {
-  showDot?: boolean
-  dotClassName?: string
-}
+    VariantProps<typeof badgeVariants> {}
 
-function Badge({ className, variant, showDot, dotClassName, children, ...props }: BadgeProps) {
+function Badge({ className, variant, ...props }: BadgeProps) {
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props}>
-      {showDot && (
-        <span className={cn("mr-1.5 h-1.5 w-1.5 rounded-full", dotClassName || "bg-current")} />
-      )}
-      {children}
-    </div>
+    <div className={cn(badgeVariants({ variant }), className)} {...props} />
   )
 }
 

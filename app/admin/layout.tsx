@@ -1,5 +1,7 @@
 import { AppSidebar } from '@/components/app-sidebar'
 import { AdminContentWrapper } from '@/components/admin-content-wrapper'
+import { AICompanion } from '@/components/ai-companion'
+import { AICompanionProvider } from '@/features/ai-companion/hooks'
 import { Separator } from '@/components/ui/separator'
 import {
   SidebarInset,
@@ -59,7 +61,10 @@ export default async function AdminLayout({
             <DynamicBreadcrumb />
           </div>
         </header>
-        <AdminContentWrapper>{children}</AdminContentWrapper>
+        <AICompanionProvider>
+          <AdminContentWrapper>{children}</AdminContentWrapper>
+          <AICompanion />
+        </AICompanionProvider>
       </SidebarInset>
     </SidebarProvider>
   )

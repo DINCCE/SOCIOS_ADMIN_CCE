@@ -200,15 +200,19 @@ export function AsignarAccionDialog({ open: controlledOpen, onOpenChange: contro
             .slice(0, 2)
     }
 
+    const isControlled = controlledOpen !== undefined
+
     return (
         <>
             <Dialog open={open} onOpenChange={setOpen}>
-                <DialogTrigger asChild>
-                    <Button size="sm">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Asignar Acción
-                    </Button>
-                </DialogTrigger>
+                {!isControlled && (
+                    <DialogTrigger asChild>
+                        <Button size="sm">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Asignar Acción
+                        </Button>
+                    </DialogTrigger>
+                )}
                 <DialogPortal>
                     <DialogOverlay className="backdrop-blur-sm bg-background/40" />
                     <DialogContent className="max-w-xl h-[85vh] border border-border/50 shadow-2xl rounded-xl overflow-hidden p-0 flex flex-col [&>button:last-child]:hidden">

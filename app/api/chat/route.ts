@@ -2,12 +2,27 @@ import { convertToModelMessages, streamText } from 'ai'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { z } from 'zod'
 import {
-  aiNavigate,
   aiSearch,
   aiCreateTarea,
-  aiCreateAccion,
+  aiCreateDocComercial,
+  aiCreatePersona,
+  aiCreateEmpresa,
+  aiAsignarFamiliar,
+  aiAsignarAccion,
   aiGetSummary,
 } from '@/features/ai-companion/lib/ai-actions'
+import {
+  navigateToolSchema,
+  searchToolSchema,
+  createTareaToolSchema,
+  createDocComercialToolSchema,
+  createPersonaToolSchema,
+  createEmpresaToolSchema,
+  asignarFamiliarToolSchema,
+  asignarAccionToolSchema,
+  getSummaryToolSchema,
+} from '@/features/ai-companion/lib/ai-tools'
+import { AI_MODELS, AI_MODES, DEFAULT_MODEL, DEFAULT_MODE, type AIModeId } from '@/features/ai-companion/types/config'
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30
@@ -16,9 +31,27 @@ const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY ?? '',
 })
 
+const getModePrompt = (modeId: AIModeId) => {
+  switch (modeId) {
+    case 'concise':
+      return '\n\nIMPORTANT: Be extremely concise. Give short, direct answers. Avoid unnecessary explanations.'
+    case 'technical':
+      return '\n\nIMPORTANT: Provide technical details, database field names when relevant, and clear step-by-step instructions. Focus on accuracy and technical depth.'
+    case 'creative':
+      return '\n\nIMPORTANT: Be more descriptive and helpful. Provide context and suggestions. Use a more friendly and engaging tone.'
+    case 'standard':
+    default:
+      return ''
+  }
+}
+
 export async function POST(req: Request) {
   try {
-    const { messages, context } = await req.json()
+    const { messages, context, modelId, modeId } = await req.json()
+
+    // Validate model and mode or use defaults
+    const selectedModel = AI_MODELS.some(m => m.id === modelId) ? modelId : DEFAULT_MODEL
+    const selectedMode = (AI_MODES.some(m => m.id === modeId) ? modeId : DEFAULT_MODE) as AIModeId
 
     // Build context string for system prompt
     let contextInfo = ''
@@ -31,86 +64,131 @@ export async function POST(req: Request) {
       }
     }
 
+    const modePrompt = getModePrompt(selectedMode)
+
     const result = streamText({
-      model: openrouter.chat('anthropic/claude-sonnet-4'),
+      model: openrouter.chat(selectedModel),
       system: `You are a helpful AI assistant for SOCIOS_ADMIN CRM.
 
 You can help users:
-- Navigate to different pages (personas, empresas, tareas, acciones)
-- Search and find information about actors and tasks
-- Create new tareas (tasks) and acciones (activities)
+- Navigate to any page in the CRM
+- Search and find information (personas, empresas, tareas, acciones, doc_comerciales)
+- Create new records (personas, empresas, tareas, doc_comerciales)
+- Assign family relationships between actors
+- Assign actions (shares) to actors
 - Get summaries and counts
+- Answer questions about the CRM${contextInfo}
 
-Entities in the CRM:
-- personas: Individual people in the system
-- empresas: Companies/organizations
-- tareas: Tasks assigned to users
-- acciones: Activities and interactions logged${contextInfo}
+IMPORTANT: Always respond with text to the user. Use tools only when needed. After using a tool, explain the results in text.
 
 When using tools:
 1. Always explain what you're going to do before taking action
 2. For navigation, tell the user which page you're navigating to
 3. For searches, summarize the results clearly
 4. For creating records, confirm what was created
-5. Be concise and helpful in your responses`,
+5. For assignments, specify who was assigned and what the relation is
+6. Be concise and helpful in your responses${modePrompt}`,
       messages: await convertToModelMessages(messages),
       tools: {
         navigate: {
-          description: 'Navigate to a specific page in the CRM. Use this when the user wants to go to a different section.',
-          inputSchema: z.object({
-            path: z.string().describe('The route path to navigate to'),
-            entity: z.enum(['personas', 'empresas', 'tareas', 'acciones', 'analitica', 'settings']).describe('The entity type'),
-            entityId: z.string().optional().describe('Optional specific entity ID'),
-          }),
-          execute: async (params) => {
-            return await aiNavigate(params as { path: string; entity: string; entityId?: string })
-          },
+          description: 'Navigate to a specific page in the CRM.',
+          inputSchema: navigateToolSchema,
         },
         search: {
           description: 'Search or filter records in the CRM.',
-          inputSchema: z.object({
-            entity: z.enum(['personas', 'empresas', 'tareas', 'acciones']).describe('The entity to search'),
-            query: z.string().optional().describe('Search query text'),
-            filters: z.record(z.string(), z.unknown()).optional().describe('Filters to apply'),
-          }),
+          inputSchema: searchToolSchema,
           execute: async (params) => {
-            return await aiSearch(params as { entity: string; query?: string; filters?: Record<string, unknown> })
+            try {
+              return await aiSearch(params)
+            } catch (error) {
+              return { success: false, error: error instanceof Error ? error.message : 'Search failed' }
+            }
           },
         },
         createTarea: {
           description: 'Create a new tarea (task).',
-          inputSchema: z.object({
-            titulo: z.string().describe('Task title'),
-            descripcion: z.string().optional().describe('Task description'),
-            prioridad: z.enum(['baja', 'media', 'alta']).optional().describe('Task priority'),
-          }),
+          inputSchema: createTareaToolSchema,
           execute: async (params) => {
-            return await aiCreateTarea(params as { titulo: string; descripcion?: string; prioridad?: 'baja' | 'media' | 'alta' })
+            try {
+              return await aiCreateTarea(params)
+            } catch (error) {
+              return { success: false, error: error instanceof Error ? error.message : 'Failed to create tarea' }
+            }
           },
         },
-        createAccion: {
-          description: 'Create a new acción (action/activity).',
-          inputSchema: z.object({
-            tipo_acción: z.string().describe('Type of action'),
-            descripcion: z.string().describe('Action description'),
-          }),
+        createDocComercial: {
+          description: 'Create a new commercial document (opportunity, offer, etc.).',
+          inputSchema: createDocComercialToolSchema,
           execute: async (params) => {
-            return await aiCreateAccion(params as { tipo_acción: string; descripcion: string })
+            try {
+              return await aiCreateDocComercial(params)
+            } catch (error) {
+              return { success: false, error: error instanceof Error ? error.message : 'Failed to create document' }
+            }
+          },
+        },
+        createPersona: {
+          description: 'Create a new persona (individual partner).',
+          inputSchema: createPersonaToolSchema,
+          execute: async (params) => {
+            try {
+              return await aiCreatePersona(params)
+            } catch (error) {
+              return { success: false, error: error instanceof Error ? error.message : 'Failed to create persona' }
+            }
+          },
+        },
+        createEmpresa: {
+          description: 'Create a new empresa (company partner).',
+          inputSchema: createEmpresaToolSchema,
+          execute: async (params) => {
+            try {
+              return await aiCreateEmpresa(params)
+            } catch (error) {
+              return { success: false, error: error instanceof Error ? error.message : 'Failed to create empresa' }
+            }
+          },
+        },
+        asignarFamiliar: {
+          description: 'Create a relationship (family, labor, etc.) between two actors.',
+          inputSchema: asignarFamiliarToolSchema,
+          execute: async (params) => {
+            try {
+              return await aiAsignarFamiliar(params)
+            } catch (error) {
+              return { success: false, error: error instanceof Error ? error.message : 'Failed to assign relationship' }
+            }
+          },
+        },
+        asignarAccion: {
+          description: 'Assign a share (accion) to an actor.',
+          inputSchema: asignarAccionToolSchema,
+          execute: async (params) => {
+            try {
+              return await aiAsignarAccion(params)
+            } catch (error) {
+              return { success: false, error: error instanceof Error ? error.message : 'Failed to assign share' }
+            }
           },
         },
         getSummary: {
           description: 'Get a summary of information about entities.',
-          inputSchema: z.object({
-            entity: z.enum(['personas', 'empresas', 'tareas', 'acciones']).describe('The entity to summarize'),
-          }),
+          inputSchema: getSummaryToolSchema,
           execute: async (params) => {
-            return await aiGetSummary(params as { entity: string })
+            try {
+              return await aiGetSummary(params)
+            } catch (error) {
+              return { success: false, error: error instanceof Error ? error.message : 'Failed to get summary' }
+            }
           },
         },
       },
     })
 
-    return result.toTextStreamResponse()
+    return result.toUIMessageStreamResponse({
+      sendSources: true,
+      sendReasoning: true,
+    })
   } catch (error) {
     console.error('Chat API error:', error)
     return new Response(

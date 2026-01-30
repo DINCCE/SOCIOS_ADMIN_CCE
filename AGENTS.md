@@ -291,3 +291,30 @@ When you need UI components:
    - Use `mcp__shadcn__search_items_in_registries` to find components
    - Use `mcp__shadcn__get_add_command_for_items` to get installation command
    - Use `mcp__shadcn__get_item_examples_from_registries` for usage examples
+
+## AI Agent Implementation
+
+### Vercel AI SDK Elements
+
+**CRITICAL RULE**: The project uses the **Official Vercel AI SDK Elements** for all chat and agent (companion) interfaces.
+
+- **Do NOT build custom chat UIs from scratch.**
+- **Do NOT manually stream or parse message parts.**
+- Use the official components located in `components/ai-elements/` (installed via `npx ai-elements@latest`).
+- Standard components to use: `<Conversation />`, `<Message />`, `<PromptInput />` (Composer), `<Reasoning />`, etc.
+
+### Architecture
+
+1.  **Shared UI Primitives**: `components/ai-elements/`
+    - Contains the base building blocks (Thread, Message, Tool, etc.).
+    - Treat these as library code; do not modify heavily unless necessary for theming.
+
+2.  **Feature Logic**: `features/ai-companion/`
+    - Contains the actual implementation (e.g., `AIChatView`).
+    - Uses `useChat` from `@ai-sdk/react`.
+    - Handles tool execution and state management.
+
+3.  **Backend**
+    - `app/api/chat/route.ts` must use `streamText` and return `toUIMessageStreamResponse()`.
+    - Ensure `sendReasoning: true` is enabled in the response.
+
