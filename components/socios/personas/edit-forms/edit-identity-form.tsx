@@ -307,7 +307,7 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
                                                     <SelectItem value="masculino">Masculino</SelectItem>
                                                     <SelectItem value="femenino">Femenino</SelectItem>
                                                     <SelectItem value="otro">Otro</SelectItem>
-                                                    <SelectItem value="no_especifica">No especifica</SelectItem>
+                                                    <SelectItem value="no aplica">No aplica</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -406,7 +406,6 @@ export function EditIdentityForm({ persona, onSuccess, onCancel }: EditIdentityF
                                                     <SelectItem value="union_libre">Unión Libre</SelectItem>
                                                     <SelectItem value="divorciado">Divorciado/a</SelectItem>
                                                     <SelectItem value="viudo">Viudo/a</SelectItem>
-                                                    <SelectItem value="separado">Separado/a</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />

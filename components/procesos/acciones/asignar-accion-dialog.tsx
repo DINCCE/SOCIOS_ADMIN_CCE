@@ -8,6 +8,7 @@ import { Loader2, Plus, Search, UserPlus, Check, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { cn } from "@/lib/utils"
+import { useProcessingState } from "@/lib/hooks/use-processing-messages"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -66,7 +67,7 @@ export function AsignarAccionDialog({ open: controlledOpen, onOpenChange: contro
     const [internalOpen, setInternalOpen] = useState(false)
     const open = controlledOpen !== undefined ? controlledOpen : internalOpen
     const setOpen = controlledOnOpenChange || setInternalOpen
-    const [isPending, setIsPending] = useState(false)
+    const { isPending, processingMessage, withProcessing } = useProcessingState()
 
     // Search states for acciones
     const [accionSearch, setAccionSearch] = useState("")
@@ -163,30 +164,29 @@ export function AsignarAccionDialog({ open: controlledOpen, onOpenChange: contro
     }
 
     async function onSubmit(data: AsignacionFormValues) {
-        setIsPending(true)
         try {
-            await crearAsignacionConOrg({
-                accionId: data.accionId,
-                asociadoId: data.asociadoId,
-                tipoVinculo: data.tipoVinculo,
-                modalidad: data.modalidad,
-                planComercial: data.planComercial,
-                notas: data.notas || null,
+            await withProcessing(async () => {
+                await crearAsignacionConOrg({
+                    accionId: data.accionId,
+                    asociadoId: data.asociadoId,
+                    tipoVinculo: data.tipoVinculo,
+                    modalidad: data.modalidad,
+                    planComercial: data.planComercial,
+                    notas: data.notas || null,
+                })
+
+                toast.success("Acción asignada correctamente")
+                form.reset()
+                setOpen(false)
+
+                // Refresh the page to show updated data
+                window.location.reload()
             })
-
-            toast.success("Acción asignada correctamente")
-            form.reset()
-            setOpen(false)
-
-            // Refresh the page to show updated data
-            window.location.reload()
         } catch (error) {
             console.error("Error creando asignación:", error)
             toast.error("Error al asignar acción", {
                 description: error instanceof Error ? error.message : "Error desconocido",
             })
-        } finally {
-            setIsPending(false)
         }
     }
 
@@ -624,7 +624,7 @@ export function AsignarAccionDialog({ open: controlledOpen, onOpenChange: contro
                                 {isPending ? (
                                     <>
                                         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                        Procesando...
+                                        {processingMessage}
                                     </>
                                 ) : (
                                     "Asignar Acción"

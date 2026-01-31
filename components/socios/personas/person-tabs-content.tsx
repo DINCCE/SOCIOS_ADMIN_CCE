@@ -211,22 +211,6 @@ export function PersonTabsContent({ persona }: PersonTabsContentProps) {
                             label="Estado Civil"
                             value={<DataEnum value={persona.estado_civil} />}
                         />
-                        <ProfileField
-                            label="Tipo de Sangre"
-                            value={
-                                persona.tipo_sangre ? (
-                                    <span className="text-red-600 font-bold">{persona.tipo_sangre}</span>
-                                ) : null
-                            }
-                        />
-                        <ProfileField
-                            label="Estado Vital"
-                            value={
-                                <Badge variant={persona.estado_vital === 'vivo' ? 'status-active' : 'status-destructive'} showDot>
-                                    {persona.estado_vital?.toUpperCase()}
-                                </Badge>
-                            }
-                        />
                     </ProfileSection>
 
                     {/* TARJETA 2: PERFIL SOCIO-PROFESIONAL & CONTACTO */}

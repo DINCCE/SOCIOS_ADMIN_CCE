@@ -14,14 +14,6 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
 
 interface DatePickerProps {
     value?: string | Date | null
@@ -35,46 +27,6 @@ interface DatePickerProps {
     dateDisplayFormat?: "PPP" | "dd/MM/yyyy" | "dd MMM yy"
 }
 
-// Custom dropdown component using shadcn Select
-interface CustomDropdownProps {
-    options?: { value: string | number; label: string; disabled?: boolean }[]
-    value?: string | number | readonly string[]
-    onChange?: React.ChangeEventHandler<HTMLSelectElement>
-    "aria-label"?: string
-    [key: string]: unknown // Allow other props passed by DayPicker
-}
-
-function CustomDropdown({ options, value, onChange, "aria-label": ariaLabel }: CustomDropdownProps) {
-    const handleValueChange = (newValue: string) => {
-        if (onChange) {
-            const syntheticEvent = {
-                target: { value: newValue },
-            } as React.ChangeEvent<HTMLSelectElement>
-            onChange(syntheticEvent)
-        }
-    }
-
-    return (
-        <Select value={value?.toString()} onValueChange={handleValueChange}>
-            <SelectTrigger aria-label={ariaLabel} className="h-9">
-                <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectGroup>
-                    {options?.map((option) => (
-                        <SelectItem
-                            key={option.value}
-                            value={option.value.toString()}
-                            disabled={option.disabled}
-                        >
-                            {option.label}
-                        </SelectItem>
-                    ))}
-                </SelectGroup>
-            </SelectContent>
-        </Select>
-    )
-}
 
 export function DatePicker({
     value,
@@ -161,9 +113,6 @@ export function DatePicker({
                         startMonth={new Date(fromYear, 0, 1)}
                         endMonth={new Date(toYear, 11, 31)}
                         locale={es}
-                        components={{
-                            Dropdown: CustomDropdown,
-                        }}
                         className="rdp rdp-v9"
                     />
                 </div>

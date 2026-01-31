@@ -26,7 +26,8 @@ import { PageHeader } from '@/components/shell/page-header'
 import { PageToolbar } from '@/components/shell/page-toolbar'
 import { PageContent } from '@/components/shell/page-content'
 import { ViewToggle } from '@/components/procesos/view-toggle'
-import { TareasBoard } from '@/components/procesos/tareas/tareas-board'
+import { GenericKanbanBoard } from '@/components/kanban/generic-kanban-board'
+import { tareasToKanbanData, handleTareasDragEnd } from '@/components/procesos/tareas/tareas-kanban-config'
 import { ResponsiveTareaDataTable } from '@/features/procesos/tareas/responsive-data-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -52,11 +53,14 @@ import { useNotify } from '@/lib/hooks/use-notify'
 import { toggleTagsForTareas, createAndAssignTagForTareas } from '@/app/actions/tags'
 import {
   softDeleteTarea,
+  actualizarTarea,
   actualizarPrioridadTareasMasivo,
   actualizarEstadoTareasMasivo,
   actualizarFechaVencimientoTareasMasivo,
-  reasignarTareasMasivo
+  reasignarTareasMasivo,
+  actualizarPosicionTarea
 } from '@/app/actions/tareas'
+import { TareaCard } from '@/components/procesos/tareas/tarea-card'
 
 export function TareasPageClient() {
   const searchParams = useSearchParams()
@@ -68,6 +72,7 @@ export function TareasPageClient() {
 
   const [hasMounted, setHasMounted] = React.useState(false)
   const [sorting, setSorting] = React.useState<SortingState>([])
+  const [initialFiltersApplied, setInitialFiltersApplied] = React.useState(false)
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [globalSearch, setGlobalSearch] = React.useState("")
   const [showSelectionExport, setShowSelectionExport] = React.useState(false)
@@ -89,6 +94,7 @@ export function TareasPageClient() {
       const { data, error } = await supabase
         .from('v_tareas_org')
         .select('*')
+        .order('posicion_orden', { ascending: true })
         .order('fecha_vencimiento', { ascending: true })
 
       if (error) throw error
@@ -196,6 +202,80 @@ export function TareasPageClient() {
     }).length
   }, [filteredData, completedDaysFilter])
 
+  // Transform filtered data for kanban board
+  const kanbanData = React.useMemo(
+    () => tareasToKanbanData(fullyFilteredData),
+    [fullyFilteredData]
+  )
+
+  // Handle drag end for kanban board
+  const handleKanbanDragEnd = React.useCallback(async (result: import('@hello-pangea/dnd').DropResult) => {
+    await handleTareasDragEnd(
+      result,
+      // onUpdate: horizontal move (status change)
+      async (tareaId, newEstado) => {
+        // Store previous data for rollback
+        const previousData = queryClient.getQueryData<TareaView[]>(['tareas'])
+
+        // Optimistic update
+        queryClient.setQueryData(['tareas'], (old: TareaView[] | undefined) =>
+          old?.map((t) => t.id === tareaId ? { ...t, estado: newEstado } : t)
+        )
+
+        try {
+          const updateResult = await actualizarTarea(tareaId, { estado: newEstado })
+
+          if (!updateResult.success) {
+            throw new Error(updateResult.message)
+          }
+
+          // Refetch to ensure data is in sync
+          await queryClient.invalidateQueries({ queryKey: ['tareas'] })
+          notifySuccess({ title: 'Estado actualizado correctamente' })
+
+          return { success: true, message: updateResult.message }
+        } catch (error) {
+          // Rollback on error
+          queryClient.setQueryData(['tareas'], previousData)
+          const errorMsg = error instanceof Error ? error.message : 'Error al actualizar el estado'
+          console.error('Error updating tarea:', error)
+          notifyError({ title: 'Error al actualizar el estado' })
+          return { success: false, message: errorMsg }
+        }
+      },
+      // onReorder: vertical sorting within same column
+      async (tareaId, newPosition, estado) => {
+        // Store previous data for rollback
+        const previousData = queryClient.getQueryData<TareaView[]>(['tareas'])
+
+        try {
+          const updateResult = await actualizarPosicionTarea({
+            tareaId,
+            nuevaPosicion: newPosition,
+            estado
+          })
+
+          if (!updateResult.success) {
+            throw new Error(updateResult.message)
+          }
+
+          // Refetch to ensure data is in sync
+          await queryClient.invalidateQueries({ queryKey: ['tareas'] })
+          notifySuccess({ title: 'Posición actualizada correctamente' })
+
+          return { success: true, message: updateResult.message }
+        } catch (error) {
+          // Rollback on error
+          queryClient.setQueryData(['tareas'], previousData)
+          const errorMsg = error instanceof Error ? error.message : 'Error al actualizar la posición'
+          console.error('Error updating tarea position:', error)
+          notifyError({ title: 'Error al actualizar la posición' })
+          return { success: false, message: errorMsg }
+        }
+      }
+    )
+  }, [queryClient, notifySuccess, notifyError])
+
   // Obtener todas las etiquetas únicas disponibles
   const availableTags = React.useMemo(() => {
     const tagsSet = new Set<string>()
@@ -240,6 +320,19 @@ export function TareasPageClient() {
       setIsDetailOpen(true)
     }
   }, [searchParams])
+
+  // Apply asignado filter from URL when coming from Mis Tareas
+  React.useEffect(() => {
+    if (!hasMounted || initialFiltersApplied) return
+
+    const asignadoParam = searchParams.get('asignado')
+    if (asignadoParam) {
+      setColumnFilters([
+        { id: 'asignado_id', value: [asignadoParam] }
+      ])
+      setInitialFiltersApplied(true)
+    }
+  }, [searchParams, hasMounted, initialFiltersApplied])
 
   // Update page size dynamically based on data count
   React.useEffect(() => {
@@ -419,7 +512,7 @@ export function TareasPageClient() {
         metadata={`${fullyFilteredData.length} de ${initialData.length}`}
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" asChild>
+            <Button variant="outline" size="sm" className="h-8 shadow-sm" asChild>
               <Link href="/admin/analitica">Ver Dashboard de Equipo</Link>
             </Button>
             <NewTareaDialog />
@@ -490,8 +583,17 @@ export function TareasPageClient() {
       <PageContent>
         <div className="space-y-4">
           {view === 'board' ? (
-            /* KANBAN: Mantiene h-full absoluto para el canvas */
-            <TareasBoard data={fullyFilteredData} initialData={initialData} onTareaClick={handleTareaClick} />
+            <div className="py-4">
+              <GenericKanbanBoard
+                columns={kanbanData.columns}
+                cards={kanbanData.cards}
+                onDragEnd={handleKanbanDragEnd}
+                onCardClick={handleTareaClick}
+                renderCard={(card, isDragging) => (
+                  <TareaCard tarea={card.data} isDragging={isDragging} onClick={undefined} />
+                )}
+              />
+            </div>
           ) : (
             /* TABLA: Comportamiento natural con scroll */
             isLoading ? (

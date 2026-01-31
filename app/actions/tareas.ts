@@ -456,3 +456,95 @@ export async function actualizarFechaVencimientoTareasMasivo(
 
   return { success: true, message: `Fecha de vencimiento actualizada para ${tareaIds.length} tareas` }
 }
+
+/**
+ * Update task position within a column (Kanban vertical sorting)
+ * Reorders all tasks in the same column to maintain consistent positions
+ *
+ * @param args - Object with tareaId, nuevaPosicion, and estado
+ * @returns Object with { success, message }
+ */
+export async function actualizarPosicionTarea(args: {
+  tareaId: string
+  nuevaPosicion: number
+  estado: string
+  organizacion_id?: string
+}) {
+  const supabase = await createClient()
+
+  // Get organization_id from task if not provided
+  let orgId = args.organizacion_id
+  if (!orgId) {
+    const { data: tarea } = await supabase
+      .from('tr_tareas')
+      .select('organizacion_id')
+      .eq('id', args.tareaId)
+      .single()
+    orgId = tarea?.organizacion_id
+  }
+
+  if (!orgId) {
+    return { success: false, message: 'No se pudo determinar la organización' }
+  }
+
+  // Get all tasks in the same column (same org, same estado, not deleted)
+  // Ordered by current position
+  const { data: tareasEnColumna, error: fetchError } = await supabase
+    .from('tr_tareas')
+    .select('id, posicion_orden')
+    .eq('organizacion_id', orgId)
+    .eq('estado', args.estado)
+    .is('eliminado_en', null)
+    .order('posicion_orden', { ascending: true })
+
+  if (fetchError) {
+    console.error('Error fetching tareas en columna:', fetchError)
+    return { success: false, message: `Error al obtener tareas: ${fetchError.message}` }
+  }
+
+  if (!tareasEnColumna || tareasEnColumna.length === 0) {
+    return { success: false, message: 'No se encontraron tareas en la columna' }
+  }
+
+  // Find the current position of the task being moved
+  const currentIndex = tareasEnColumna.findIndex(t => t.id === args.tareaId)
+  if (currentIndex === -1) {
+    return { success: false, message: 'Tarea no encontrada en la columna' }
+  }
+
+  // Remove the task from the array
+  const [tareaMovida] = tareasEnColumna.splice(currentIndex, 1)
+
+  // Insert at new position
+  tareasEnColumna.splice(args.nuevaPosicion, 0, tareaMovida)
+
+  // Update positions for all tasks in the column
+  const updates = tareasEnColumna.map((tarea, index) => ({
+    id: tarea.id,
+    posicion_orden: index
+  }))
+
+  // Update each task position individually to avoid RLS issues with upsert
+  for (const update of updates) {
+    const { error: updateError } = await supabase
+      .from('tr_tareas')
+      .update({
+        posicion_orden: update.posicion_orden,
+        actualizado_en: new Date().toISOString()
+      })
+      .eq('id', update.id)
+
+    if (updateError) {
+      console.error('Error updating posicion_orden:', updateError)
+      return { success: false, message: `Error al actualizar posición: ${updateError.message}` }
+    }
+  }
+
+  revalidatePath("/admin/procesos/tareas")
+  revalidatePath("/admin/mis-tareas")
+
+  return {
+    success: true,
+    message: 'Posición actualizada correctamente'
+  }
+}

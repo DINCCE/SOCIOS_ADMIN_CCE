@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { z } from "zod"
+import { createClient } from "@/lib/supabase/client"
 
 import { Button } from "@/components/ui/button"
 import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -27,8 +28,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { SingleTagPopover } from "@/components/ui/single-tag-popover"
 import { Persona } from "@/features/socios/types/socios-schema"
 import { updatePersonaProfile } from "@/app/actions/personas"
+import { toggleTagsForActores, createAndAssignTag } from "@/app/actions/tags"
 
 // Schema de validación
 const profileSchema = z.object({
@@ -63,7 +66,64 @@ interface EditProfileFormProps {
 
 export function EditProfileForm({ persona, onSuccess, onCancel }: EditProfileFormProps) {
     const [isPending, setIsPending] = useState(false)
+    const [availableTags, setAvailableTags] = useState<string[]>([])
+    const [currentTags, setCurrentTags] = useState<string[]>(persona.tags || [])
     const router = useRouter()
+    const supabase = createClient()
+
+    // Fetch available tags from all personas
+    useEffect(() => {
+        const fetchAvailableTags = async () => {
+            const { data } = await supabase
+                .from("dm_actores")
+                .select("tags")
+                .eq("organizacion_id", persona.organizacion_id)
+                .not("tags", "is", null)
+
+            const tagsSet = new Set<string>()
+            data?.forEach((actor) => {
+                if (actor.tags) {
+                    (actor.tags as string[]).forEach((tag) => tagsSet.add(tag))
+                }
+            })
+            setAvailableTags(Array.from(tagsSet).sort())
+        }
+        fetchAvailableTags()
+    }, [persona.organizacion_id, supabase])
+
+    // Handle tag toggle
+    const handleToggleTag = async (tag: string, add: boolean) => {
+        const result = await toggleTagsForActores([persona.id], tag, add)
+        if (result.success) {
+            // Update local state
+            if (add) {
+                setCurrentTags((prev) => [...new Set([...prev, tag])])
+            } else {
+                setCurrentTags((prev) => prev.filter((t) => t !== tag))
+            }
+            // Update available tags if new
+            if (add && !availableTags.includes(tag)) {
+                setAvailableTags((prev) => [...prev, tag].sort())
+            }
+            toast.success(result.message)
+            router.refresh()
+        } else {
+            toast.error(result.message)
+        }
+    }
+
+    // Handle new tag creation
+    const handleCreateTag = async (tag: string) => {
+        const result = await createAndAssignTag([persona.id], tag)
+        if (result.success) {
+            setCurrentTags((prev) => [...new Set([...prev, tag])])
+            setAvailableTags((prev) => [...new Set([...prev, tag])].sort())
+            toast.success(result.message)
+            router.refresh()
+        } else {
+            toast.error(result.message)
+        }
+    }
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileSchema),
@@ -167,7 +227,7 @@ export function EditProfileForm({ persona, onSuccess, onCancel }: EditProfileFor
                                                 <SelectContent>
                                                     <SelectItem value="activo">Activo</SelectItem>
                                                     <SelectItem value="inactivo">Inactivo</SelectItem>
-                                                    <SelectItem value="suspendido">Suspendido</SelectItem>
+                                                    <SelectItem value="bloqueado">Bloqueado</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -221,6 +281,19 @@ export function EditProfileForm({ persona, onSuccess, onCancel }: EditProfileFor
                                     )}
                                 />
                             </div>
+
+                            {/* Etiquetas */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                                    Etiquetas
+                                </label>
+                                <SingleTagPopover
+                                    availableTags={availableTags}
+                                    selectedTags={currentTags}
+                                    onToggleTag={handleToggleTag}
+                                    onCreateTag={handleCreateTag}
+                                />
+                            </div>
                         </div>
 
                         {/* Sección 2: Perfil Profesional */}
@@ -240,13 +313,13 @@ export function EditProfileForm({ persona, onSuccess, onCancel }: EditProfileFor
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
+                                                    <SelectItem value="sin estudios">Sin estudios</SelectItem>
                                                     <SelectItem value="primaria">Primaria</SelectItem>
                                                     <SelectItem value="bachillerato">Bachillerato</SelectItem>
-                                                    <SelectItem value="tecnico">Técnico</SelectItem>
-                                                    <SelectItem value="tecnologo">Tecnólogo</SelectItem>
-                                                    <SelectItem value="pregrado">Pregrado</SelectItem>
-                                                    <SelectItem value="posgrado">Posgrado</SelectItem>
-                                                    <SelectItem value="maestria">Maestría</SelectItem>
+                                                    <SelectItem value="técnica">Técnica</SelectItem>
+                                                    <SelectItem value="profesional">Profesional</SelectItem>
+                                                    <SelectItem value="especialización">Especialización</SelectItem>
+                                                    <SelectItem value="maestría">Maestría</SelectItem>
                                                     <SelectItem value="doctorado">Doctorado</SelectItem>
                                                 </SelectContent>
                                             </Select>

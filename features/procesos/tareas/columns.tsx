@@ -146,6 +146,7 @@ export type TareaView = {
   estado: string
   prioridad: string
   fecha_vencimiento: string | null
+  posicion_orden: number
   organizacion_id: string
   organizacion_nombre: string
   // Usuario asignado (de config_organizacion_miembros via v_tareas_org)

@@ -2,8 +2,8 @@
 
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import { Sparkles, Trash2, Send, StopCircle, User, Copy, Check, Settings, Bot, Zap, Cpu, Settings2, Maximize2 } from 'lucide-react'
-import { useState, useEffect, useCallback } from 'react'
+import { Sparkles, Trash2, User, Copy, Settings, Bot, Zap, Cpu, Settings2, Maximize2, Mic, Paperclip, Image as ImageIcon, Loader2, ChevronDown, Globe, Sparkle } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useNotify } from '@/lib/hooks/use-notify'
@@ -25,8 +25,13 @@ import {
   DropdownMenuSubContent,
   DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
 
+// ============================================================================
 // Official AI Elements Imports
+// ============================================================================
+
+// Conversation & Messages
 import {
   Conversation,
   ConversationContent,
@@ -40,7 +45,10 @@ import {
   MessageAvatar,
   MessageActions,
   MessageAction,
+  MessageToolbar,
 } from '@/components/ai-elements/message'
+
+// Prompt Input with all sub-components
 import {
   PromptInput,
   PromptInputBody,
@@ -48,7 +56,24 @@ import {
   PromptInputFooter,
   PromptInputSubmit,
   PromptInputProvider,
+  PromptInputTools,
+  PromptInputActionMenu,
+  PromptInputActionMenuTrigger,
+  PromptInputActionMenuContent,
+  PromptInputActionAddAttachments,
+  PromptInputButton,
+  usePromptInputAttachments,
 } from '@/components/ai-elements/prompt-input'
+
+// Attachments
+import {
+  Attachments,
+  Attachment,
+  AttachmentPreview,
+  AttachmentRemove,
+} from '@/components/ai-elements/attachments'
+
+// Reasoning & Tools
 import {
   Reasoning,
   ReasoningTrigger,
@@ -61,6 +86,8 @@ import {
   ToolInput,
   ToolOutput,
 } from '@/components/ai-elements/tool'
+
+// Rich Content Displays
 import {
   Artifact,
   ArtifactHeader,
@@ -87,7 +114,106 @@ import {
 } from '@/components/ai-elements/suggestion'
 import { Persona } from '@/components/ai-elements/persona'
 
-// Specialized Tool Result Renderer
+// Loading & States
+import { Loader } from '@/components/ai-elements/loader'
+import { Shimmer } from '@/components/ai-elements/shimmer'
+
+// Context & Sources
+import {
+  Context,
+  ContextTrigger,
+  ContextContent,
+  ContextContentHeader,
+  ContextContentBody,
+  ContextContentFooter,
+  ContextInputUsage,
+  ContextOutputUsage,
+} from '@/components/ai-elements/context'
+import {
+  Sources,
+  SourcesTrigger,
+  SourcesContent,
+  Source,
+} from '@/components/ai-elements/sources'
+
+// Speech Input
+import { SpeechInput } from '@/components/ai-elements/speech-input'
+
+// ============================================================================
+// Types & Constants
+// ============================================================================
+
+interface AIChatViewProps {
+  conversationId?: string
+  showHeader?: boolean
+  storageKey?: string
+}
+
+const STORAGE_KEY = 'ai-companion-messages'
+const CONFIG_STORAGE_KEY = 'ai-companion-config'
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+function loadMessagesFromStorage(key: string) {
+  if (typeof window === 'undefined') return []
+  try {
+    const saved = localStorage.getItem(key)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (Array.isArray(parsed)) return parsed
+    }
+  } catch (e) {
+    console.error('Failed to load messages from storage:', e)
+  }
+  return []
+}
+
+function saveMessagesToStorage(key: string, messages: unknown[]) {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(key, JSON.stringify(messages))
+  } catch (e) {
+    console.error('Failed to save messages to storage:', e)
+  }
+}
+
+function clearMessagesFromStorage(key: string) {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.removeItem(key)
+  } catch (e) {
+    console.error('Failed to clear messages from storage:', e)
+  }
+}
+
+function loadConfigFromStorage() {
+  if (typeof window === 'undefined') return { modelId: DEFAULT_MODEL, modeId: DEFAULT_MODE }
+  try {
+    const saved = localStorage.getItem(CONFIG_STORAGE_KEY)
+    if (saved) {
+      return JSON.parse(saved)
+    }
+  } catch (e) {
+    console.error('Failed to load config from storage:', e)
+  }
+  return { modelId: DEFAULT_MODEL, modeId: DEFAULT_MODE }
+}
+
+function saveConfigToStorage(config: { modelId: string; modeId: string }) {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config))
+  } catch (e) {
+    console.error('Failed to save config to storage:', e)
+  }
+}
+
+// ============================================================================
+// Tool Result Renderer
+// ============================================================================
+
 function ToolResultRenderer({ toolResult, isStreaming }: { toolResult: any, isStreaming: boolean }) {
   const { toolName, result, error, args } = toolResult
   const isError = !!error
@@ -108,7 +234,6 @@ function ToolResultRenderer({ toolResult, isStreaming }: { toolResult: any, isSt
     )
   }
 
-  // Customize by tool
   switch (toolName) {
     case 'createTarea':
       return (
@@ -213,69 +338,38 @@ function ToolResultRenderer({ toolResult, isStreaming }: { toolResult: any, isSt
   }
 }
 
-interface AIChatViewProps {
-  conversationId?: string
-  showHeader?: boolean
-  storageKey?: string
-}
+// ============================================================================
+// Attachments Display Component
+// ============================================================================
 
-const STORAGE_KEY = 'ai-companion-messages'
-const CONFIG_STORAGE_KEY = 'ai-companion-config'
+const PromptInputAttachmentsDisplay = () => {
+  const attachments = usePromptInputAttachments()
 
-// Helper functions for localStorage
-function loadMessagesFromStorage(key: string) {
-  if (typeof window === 'undefined') return []
-  try {
-    const saved = localStorage.getItem(key)
-    if (saved) {
-      const parsed = JSON.parse(saved)
-      if (Array.isArray(parsed)) return parsed
-    }
-  } catch (e) {
-    console.error('Failed to load messages from storage:', e)
+  if (attachments.files.length === 0) {
+    return null
   }
-  return []
+
+  return (
+    <div className="px-3 pt-3">
+      <Attachments variant="inline">
+        {attachments.files.map((attachment) => (
+          <Attachment
+            data={attachment}
+            key={attachment.id}
+            onRemove={() => attachments.remove(attachment.id)}
+          >
+            <AttachmentPreview />
+            <AttachmentRemove />
+          </Attachment>
+        ))}
+      </Attachments>
+    </div>
+  )
 }
 
-function saveMessagesToStorage(key: string, messages: unknown[]) {
-  if (typeof window === 'undefined') return
-  try {
-    localStorage.setItem(key, JSON.stringify(messages))
-  } catch (e) {
-    console.error('Failed to save messages to storage:', e)
-  }
-}
-
-function clearMessagesFromStorage(key: string) {
-  if (typeof window === 'undefined') return
-  try {
-    localStorage.removeItem(key)
-  } catch (e) {
-    console.error('Failed to clear messages from storage:', e)
-  }
-}
-
-function loadConfigFromStorage() {
-  if (typeof window === 'undefined') return { modelId: DEFAULT_MODEL, modeId: DEFAULT_MODE }
-  try {
-    const saved = localStorage.getItem(CONFIG_STORAGE_KEY)
-    if (saved) {
-      return JSON.parse(saved)
-    }
-  } catch (e) {
-    console.error('Failed to load config from storage:', e)
-  }
-  return { modelId: DEFAULT_MODEL, modeId: DEFAULT_MODE }
-}
-
-function saveConfigToStorage(config: { modelId: string; modeId: string }) {
-  if (typeof window === 'undefined') return
-  try {
-    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config))
-  } catch (e) {
-    console.error('Failed to save config to storage:', e)
-  }
-}
+// ============================================================================
+// Main Component
+// ============================================================================
 
 export function AIChatView({
   conversationId = 'ai-companion-main',
@@ -305,6 +399,7 @@ function AIChatViewInternal({
   // State for config
   const [modelId, setModelId] = useState<string>(() => loadConfigFromStorage().modelId)
   const [modeId, setModeId] = useState<string>(() => loadConfigFromStorage().modeId)
+  const [modelSelectorOpen, setModelSelectorOpen] = useState(false)
 
   // Save config when it changes
   useEffect(() => {
@@ -321,19 +416,10 @@ function AIChatViewInternal({
       },
     }),
     onToolCall: async ({ toolCall }) => {
-      console.log('🔍 Full toolCall object:', toolCall)
-      console.log('🔍 toolCall type:', typeof toolCall)
-      console.log('🔍 toolCall keys:', Object.keys(toolCall))
-
       const tc = toolCall as { toolName: string; toolCallId: string; input?: any }
 
       if (tc.toolName === 'navigate') {
-        console.log('🤖 AI Tool Call: navigate', tc.input)
-        console.log('🔍 tc.input type:', typeof tc.input)
-        console.log('🔍 Full tc object:', tc)
-
         if (!tc.input) {
-          console.error('❌ AI Tool Error: Arguments are missing')
           addToolOutput({
             tool: tc.toolName,
             toolCallId: tc.toolCallId,
@@ -347,9 +433,6 @@ function AIChatViewInternal({
         // If page title is provided, try to resolve it to a path
         if (tc.input.page) {
           const pageTitle = tc.input.page.toLowerCase().trim()
-          console.log('🔍 Resolving page title:', pageTitle)
-
-          // Map titles to paths (can be expanded)
           const titleMap: Record<string, string> = {
             'panel': '/admin',
             'mis tareas': '/admin/mis-tareas',
@@ -370,19 +453,15 @@ function AIChatViewInternal({
 
           if (titleMap[pageTitle]) {
             navigateTo = titleMap[pageTitle]
-            console.log('✅ Resolved to path:', navigateTo)
           } else {
-            // Check if any title is contained in the page argument (more flexible)
             const matchedKey = Object.keys(titleMap).find(key => pageTitle.includes(key))
             if (matchedKey) {
               navigateTo = titleMap[matchedKey]
-              console.log('✅ Resolved to path (partial match):', navigateTo)
             }
           }
         }
 
         if (navigateTo) {
-          // Handle detail views for specific entities
           if (tc.input.entityId) {
             if (tc.input.entity === 'personas') {
               navigateTo = `/admin/socios/personas/${tc.input.entityId}`
@@ -394,15 +473,11 @@ function AIChatViewInternal({
               navigateTo = `/admin/procesos/tareas`
             } else if (tc.input.entity === 'doc_comerciales') {
               navigateTo = `/admin/procesos/documentos-comerciales`
-            } else {
-              // Fallback: only append if it doesn't already have an ID-like segment
-              if (navigateTo && !navigateTo.includes(tc.input.entityId)) {
-                navigateTo = `${navigateTo}/${tc.input.entityId}`
-              }
+            } else if (navigateTo && !navigateTo.includes(tc.input.entityId)) {
+              navigateTo = `${navigateTo}/${tc.input.entityId}`
             }
           }
 
-          console.log('🚀 Final navigation to:', navigateTo)
           router.push(navigateTo)
           addToolOutput({
             tool: tc.toolName,
@@ -410,7 +485,6 @@ function AIChatViewInternal({
             output: { success: true, navigatedTo: navigateTo }
           })
         } else {
-          console.warn('⚠️ Could not determine destination path for:', tc.input)
           addToolOutput({
             tool: tc.toolName,
             toolCallId: tc.toolCallId,
@@ -480,35 +554,50 @@ function AIChatViewInternal({
     sendMessage({ text: suggestion })
   }
 
-  const currentModelLabel = AI_MODELS.find(m => m.id === modelId)?.label || 'Desconocido'
+  const currentModelData = useMemo(() => {
+    return AI_MODELS.find(m => m.id === modelId)
+  }, [modelId])
+
+  const currentModelLabel = currentModelData?.label || 'Desconocido'
   const currentModeLabel = AI_MODES.find(m => m.id === modeId)?.label || 'Estándar'
+
+  // Get the last assistant message for context display
+  const lastAssistantMessage = useMemo(() => {
+    return messages.filter(m => m.role === 'assistant').at(-1)
+  }, [messages])
+
+  const hasUsage = lastAssistantMessage && 'usage' in lastAssistantMessage
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
+      {/* Header */}
       {showHeader && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0 bg-background">
+          <div className="flex items-center gap-3">
+            <div className="relative">
               {isLoading ? (
-                <Persona
-                  state={isStreaming ? 'speaking' : 'thinking'}
-                  variant="obsidian"
-                  className="size-10"
-                />
+                <div className="size-9 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden">
+                  <Persona
+                    state={isStreaming ? 'speaking' : 'thinking'}
+                    variant="obsidian"
+                    className="size-full"
+                  />
+                </div>
               ) : (
-                <Sparkles className="h-4 w-4 text-primary" />
+                <div className="size-9 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
               )}
             </div>
             <div>
-              <h3 className="font-semibold text-foreground text-sm leading-none mb-1">Country AI</h3>
-              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                <span className="flex items-center gap-0.5">
-                  <Cpu className="size-2.5" />
+              <h3 className="font-semibold text-foreground text-sm leading-tight">Country AI</h3>
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted/50">
+                  <Cpu className="size-3" />
                   {currentModelLabel}
                 </span>
-                <span>•</span>
-                <span className="flex items-center gap-0.5">
-                  <Settings2 className="size-2.5" />
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted/50">
+                  <Settings2 className="size-3" />
                   {currentModeLabel}
                 </span>
               </div>
@@ -519,7 +608,7 @@ function AIChatViewInternal({
               type="button"
               onClick={handleClearChat}
               disabled={!hasMessages || isLoading}
-              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-destructive disabled:opacity-50"
+              className="p-2 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-destructive disabled:opacity-50 disabled:cursor-not-allowed"
               title="Limpiar chat"
             >
               <Trash2 className="h-4 w-4" />
@@ -528,21 +617,21 @@ function AIChatViewInternal({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  className="p-2 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Configuración de IA"
                   disabled={isLoading}
                 >
                   <Settings className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="w-52">
                 <DropdownMenuLabel>Configuración de IA</DropdownMenuLabel>
                 <DropdownMenuSeparator />
 
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <Bot className="mr-2 h-4 w-4" />
-                    <span>Modelo de IA</span>
+                    <span>Modelo</span>
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
                     <DropdownMenuSubContent>
@@ -563,7 +652,7 @@ function AIChatViewInternal({
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <Zap className="mr-2 h-4 w-4" />
-                    <span>Modo de Respuesta</span>
+                    <span>Modo</span>
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
                     <DropdownMenuSubContent>
@@ -625,20 +714,31 @@ function AIChatViewInternal({
             <ConversationEmptyState
               title="¿En qué puedo ayudarte?"
               description="Pregúntame sobre personas, empresas, tareas o acciones del CRM."
-              icon={<Persona state="idle" variant="obsidian" className="size-20" />}
+              icon={
+                <div className="relative">
+                  <Persona state="idle" variant="obsidian" className="size-20" />
+                  <div className="absolute -top-1 -right-1">
+                    <Sparkle className="size-5 text-primary animate-pulse" />
+                  </div>
+                </div>
+              }
             >
-              <div className="mt-4">
+              <div className="mt-6 w-full max-w-md mx-auto">
+                <p className="text-xs text-muted-foreground text-center mb-3">Prueba estas sugerencias:</p>
                 <Suggestions>
                   {[
-                    'Show active personas',
-                    'Find tareas for today',
-                    'How to create an acción',
+                    { text: 'Show active personas', icon: '👥' },
+                    { text: 'Find tareas for today', icon: '📋' },
+                    { text: 'How to create an acción', icon: '💡' },
                   ].map((suggestion) => (
                     <Suggestion
-                      key={suggestion}
-                      suggestion={suggestion}
+                      key={suggestion.text}
+                      suggestion={suggestion.text}
                       onClick={handleSuggestionClick}
-                    />
+                    >
+                      {suggestion.icon && <span className="mr-1.5">{suggestion.icon}</span>}
+                      {suggestion.text}
+                    </Suggestion>
                   ))}
                 </Suggestions>
               </div>
@@ -708,12 +808,28 @@ function AIChatViewInternal({
                             )
                           }
 
+                          // Handle source-display parts
+                          if ((part as any).type === 'source-display') {
+                            const sourceData = part as any
+                            return (
+                              <Sources key={i}>
+                                <SourcesTrigger count={sourceData.sources?.length || 1} />
+                                <SourcesContent>
+                                  {sourceData.sources?.map((source: any, idx: number) => (
+                                    <Source key={idx} href={source.url} title={source.title || source.url} />
+                                  ))}
+                                </SourcesContent>
+                              </Sources>
+                            )
+                          }
+
                           return null
                         })}
                       </MessageContent>
 
+                      {/* Message Actions & Toolbar */}
                       {message.role === 'assistant' && !isStreaming && (
-                        <div className="flex items-center gap-2">
+                        <MessageToolbar>
                           <MessageActions>
                             <MessageAction
                               tooltip="Copiar mensaje"
@@ -725,9 +841,35 @@ function AIChatViewInternal({
                                 navigator.clipboard.writeText(text)
                               }}
                             >
-                              <Copy className="h-3 w-3" />
+                              <Copy className="h-3.5 w-3.5" />
                             </MessageAction>
+                            {hasUsage && (
+                              <Context
+                                usedTokens={(lastAssistantMessage as any).usage?.totalTokens || 0}
+                                maxTokens={128000}
+                                usage={(lastAssistantMessage as any).usage}
+                                modelId={modelId}
+                              >
+                                <ContextTrigger />
+                                <ContextContent>
+                                  <ContextContentHeader />
+                                  <ContextContentBody>
+                                    <ContextInputUsage />
+                                    <ContextOutputUsage />
+                                  </ContextContentBody>
+                                  <ContextContentFooter />
+                                </ContextContent>
+                              </Context>
+                            )}
                           </MessageActions>
+                        </MessageToolbar>
+                      )}
+
+                      {/* Loading indicator for streaming message */}
+                      {message.role === 'assistant' && isStreaming && message === messages[messages.length - 1] && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+                          <Loader size={12} />
+                          <span>Escribiendo...</span>
                         </div>
                       )}
                     </div>
@@ -756,20 +898,82 @@ function AIChatViewInternal({
         )}
 
         <PromptInput
-          onSubmit={({ text }) => {
-            if (text.trim()) {
-              sendMessage({ text })
+          multiple
+          globalDrop={false}
+          onSubmit={({ text, files }) => {
+            if (text.trim() || (files && files.length > 0)) {
+              sendMessage({ text, files: files || [] })
             }
           }}
         >
-          <PromptInputTextarea
-            name="message"
-            placeholder="Escribe un mensaje..."
-            disabled={isLoading}
-            autoFocus
-          />
+          <PromptInputAttachmentsDisplay />
+          <PromptInputBody>
+            <PromptInputTextarea
+              name="message"
+              placeholder="Escribe un mensaje..."
+              disabled={isLoading}
+              autoFocus
+            />
+          </PromptInputBody>
           <PromptInputFooter>
-            <div className="flex-1" />
+            <PromptInputTools>
+              {/* Attachments Menu */}
+              <PromptInputActionMenu>
+                <PromptInputActionMenuTrigger />
+                <PromptInputActionMenuContent>
+                  <PromptInputActionAddAttachments />
+                </PromptInputActionMenuContent>
+              </PromptInputActionMenu>
+
+              {/* Voice Input */}
+              <SpeechInput
+                onTranscriptionChange={(text) => {
+                  // Append transcribed text to textarea
+                  const textarea = document.querySelector('textarea[name="message"]') as HTMLTextAreaElement
+                  if (textarea) {
+                    textarea.value = text
+                    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+                  }
+                }}
+                lang="es-ES"
+              />
+
+              {/* Model Selector Button */}
+              <DropdownMenu open={modelSelectorOpen} onOpenChange={setModelSelectorOpen}>
+                <DropdownMenuTrigger asChild>
+                  <PromptInputButton>
+                    <Sparkle className="size-3.5 text-primary" />
+                    <span className="text-xs">{currentModelData?.shortLabel || currentModelLabel}</span>
+                    <ChevronDown className="size-3.5" />
+                  </PromptInputButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 p-2">
+                  <p className="px-2 py-1 text-xs font-semibold text-muted-foreground">Modelo</p>
+                  <DropdownMenuSeparator />
+                  {AI_MODELS.map((model) => (
+                    <DropdownMenuItem
+                      key={model.id}
+                      onClick={() => {
+                        setModelId(model.id)
+                        setModelSelectorOpen(false)
+                      }}
+                      className={cn(
+                        "cursor-pointer",
+                        modelId === model.id && "bg-accent"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Bot className="size-4" />
+                        <div className="flex flex-col">
+                          <span className="text-sm">{model.label}</span>
+                          <span className="text-[10px] text-muted-foreground">{model.provider}</span>
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </PromptInputTools>
             <PromptInputSubmit status={status} onStop={stop} />
           </PromptInputFooter>
         </PromptInput>

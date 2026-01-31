@@ -767,6 +767,7 @@ SELECT
   t.prioridad,
   t.estado,
   t.fecha_vencimiento,
+  t.posicion_orden,
   org.slug AS organizacion_slug,
   org.nombre AS organizacion_nombre,
   t.doc_comercial_id,

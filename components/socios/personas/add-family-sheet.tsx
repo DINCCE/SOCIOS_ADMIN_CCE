@@ -8,6 +8,7 @@ import { Loader2, Search, UserPlus } from "lucide-react"
 import { toast } from "sonner"
 
 import { cn } from "@/lib/utils"
+import { useProcessingState } from "@/lib/hooks/use-processing-messages"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -73,7 +74,7 @@ interface AddFamilySheetProps {
 
 export function AddFamilySheet({ bp_origen_id, organizacion_id, onSuccess }: AddFamilySheetProps) {
     const [open, setOpen] = useState(false)
-    const [isPending, setIsPending] = useState(false)
+    const { isPending, processingMessage, withProcessing } = useProcessingState()
     const [searchQuery, setSearchQuery] = useState("")
     const [comboboxOpen, setComboboxOpen] = useState(false)
     const [searchResults, setSearchResults] = useState<PersonaBuscada[]>([])
@@ -172,31 +173,30 @@ export function AddFamilySheet({ bp_origen_id, organizacion_id, onSuccess }: Add
     }, [createdPersonaId, bp_origen_id, organizacion_id, form])
 
     async function onSubmit(data: AddFamilyFormValues) {
-        setIsPending(true)
         try {
-            const result = await vincularFamiliar({
-                bp_origen_id,
-                bp_destino_id: data.persona_id,
-                tipo_parentesco: data.relacion,
-                descripcion: `Vinculado como ${data.relacion}`
-            })
+            await withProcessing(async () => {
+                const result = await vincularFamiliar({
+                    bp_origen_id,
+                    bp_destino_id: data.persona_id,
+                    tipo_parentesco: data.relacion,
+                    descripcion: `Vinculado como ${data.relacion}`
+                })
 
-            if (result.success) {
-                toast.success("Familiar vinculado correctamente")
-                form.reset()
-                setSelectedPersona(null)
-                setSearchQuery("")
-                setComboboxOpen(false)
-                setOpen(false)
-                onSuccess?.()
-            } else {
-                toast.error(result.message)
-            }
+                if (result.success) {
+                    toast.success("Familiar vinculado correctamente")
+                    form.reset()
+                    setSelectedPersona(null)
+                    setSearchQuery("")
+                    setComboboxOpen(false)
+                    setOpen(false)
+                    onSuccess?.()
+                } else {
+                    toast.error(result.message)
+                }
+            })
         } catch (err) {
             console.error("Error linking family member:", err)
             toast.error("Error al vincular familiar")
-        } finally {
-            setIsPending(false)
         }
     }
 
@@ -405,7 +405,7 @@ export function AddFamilySheet({ bp_origen_id, organizacion_id, onSuccess }: Add
                                 {isPending ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Vinculando...
+                                        {processingMessage}
                                     </>
                                 ) : (
                                     "Vincular Familiar"

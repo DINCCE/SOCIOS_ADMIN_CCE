@@ -1,7 +1,5 @@
 'use client'
 
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { Card } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
 import { AlertCircle, AlertTriangle, CheckCircle2, Clock, XCircle, type LucideIcon } from 'lucide-react'
@@ -59,37 +57,19 @@ const PRIORIDAD_CONFIG: Record<
 }
 
 export function TareaCard({ tarea, isDragging, onClick }: TareaCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging: isSortableDragging,
-  } = useSortable({ id: tarea.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  const dragging = isDragging || isSortableDragging
+  const dragging = isDragging
   const EstadoIcon = ESTADO_CONFIG[tarea.estado as EstadoTarea].icon
   const PrioridadIcon = PRIORIDAD_CONFIG[tarea.prioridad as PrioridadTarea].icon
 
   return (
     <Card
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
       onClick={onClick}
       className={`
-        p-3 cursor-grab active:cursor-grabbing
-        transition-all duration-200
+        p-3 cursor-pointer
+        transition-shadow duration-200
         hover:border-primary/50
-        ${dragging ? 'shadow-xl rotate-2 scale-105' : ''}
-        ${onClick ? 'hover:shadow-md' : ''}
+        ${dragging ? 'shadow-2xl' : ''}
+        ${onClick && !dragging ? 'hover:shadow-md' : ''}
       `}
     >
       <div className="space-y-2">

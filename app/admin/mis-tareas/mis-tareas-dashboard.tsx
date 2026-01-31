@@ -178,6 +178,7 @@ export function MisTareasDashboard() {
                 .from("v_tareas_org")
                 .select("*")
                 .eq("asignado_id", user.id)
+                .order("posicion_orden", { ascending: true })
                 .order("fecha_vencimiento", { ascending: true })
 
             if (error) throw error
@@ -484,7 +485,7 @@ export function MisTareasDashboard() {
                         </div>
                         <div className="flex gap-2">
                             <Button variant="outline" size="sm" className="h-8 shadow-sm" asChild>
-                                <Link href="/admin/procesos/tareas">Ver todas</Link>
+                                <Link href={`/admin/procesos/tareas?view=board&asignado=${user.id}`}>Ver Tablero</Link>
                             </Button>
                             <NewTareaDialog />
                         </div>

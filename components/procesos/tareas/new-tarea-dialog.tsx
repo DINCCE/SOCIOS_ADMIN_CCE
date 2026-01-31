@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 
 import { cn } from "@/lib/utils"
+import { useProcessingState } from "@/lib/hooks/use-processing-messages"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -82,7 +83,7 @@ interface DocumentoComercial {
 
 export function NewTareaDialog({ open: controlledOpen, onOpenChange, onSuccess, defaultValues }: NewTareaDialogProps) {
     const [internalOpen, setInternalOpen] = useState(false)
-    const [isPending, setIsPending] = useState(false)
+    const { isPending, processingMessage, withProcessing } = useProcessingState()
     const queryClient = useQueryClient()
     const supabase = createClient()
 
@@ -281,46 +282,45 @@ export function NewTareaDialog({ open: controlledOpen, onOpenChange, onSuccess, 
     }
 
     async function onSubmit(data: TareaFormValues) {
-        setIsPending(true)
         try {
-            const result = await crearTarea({
-                titulo: data.titulo,
-                descripcion: data.descripcion || undefined,
-                prioridad: (data.prioridad?.toLowerCase() as 'baja' | 'media' | 'alta' | 'critica') || 'media',
-                oportunidad_id: data.oportunidad_id || undefined,
-                asignado_a: data.asignado_a || undefined,
-                relacionado_con_bp: data.relacionado_con_bp || undefined,
-                fecha_vencimiento: data.fecha_vencimiento
-                    ? (typeof data.fecha_vencimiento === 'string'
-                        ? data.fecha_vencimiento
-                        : data.fecha_vencimiento.toISOString().split('T')[0])
-                    : undefined,
-                tags: tags.length > 0 ? tags : undefined,
-            })
-
-            if (!result.success) {
-                toast.error("Error al crear tarea", {
-                    description: result.message,
+            await withProcessing(async () => {
+                const result = await crearTarea({
+                    titulo: data.titulo,
+                    descripcion: data.descripcion || undefined,
+                    prioridad: (data.prioridad?.toLowerCase() as 'baja' | 'media' | 'alta' | 'critica') || 'media',
+                    oportunidad_id: data.oportunidad_id || undefined,
+                    asignado_a: data.asignado_a || undefined,
+                    relacionado_con_bp: data.relacionado_con_bp || undefined,
+                    fecha_vencimiento: data.fecha_vencimiento
+                        ? (typeof data.fecha_vencimiento === 'string'
+                            ? data.fecha_vencimiento
+                            : data.fecha_vencimiento.toISOString().split('T')[0])
+                        : undefined,
+                    tags: tags.length > 0 ? tags : undefined,
                 })
-                return
-            }
 
-            toast.success("Tarea creada correctamente")
+                if (!result.success) {
+                    toast.error("Error al crear tarea", {
+                        description: result.message,
+                    })
+                    return
+                }
 
-            // Invalidate and refetch
-            await queryClient.invalidateQueries({ queryKey: ["tareas"] })
+                toast.success("Tarea creada correctamente")
 
-            form.reset()
-            setOpen(false)
+                // Invalidate and refetch
+                await queryClient.invalidateQueries({ queryKey: ["tareas"] })
 
-            if (onSuccess && result.tarea_id) {
-                onSuccess(result.tarea_id)
-            }
+                form.reset()
+                setOpen(false)
+
+                if (onSuccess && result.tarea_id) {
+                    onSuccess(result.tarea_id)
+                }
+            })
         } catch (err) {
             console.error("Error creating tarea:", err)
             toast.error("Error inesperado al crear la tarea")
-        } finally {
-            setIsPending(false)
         }
     }
 
@@ -819,7 +819,7 @@ export function NewTareaDialog({ open: controlledOpen, onOpenChange, onSuccess, 
                             {isPending ? (
                                 <>
                                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                    Creando...
+                                    {processingMessage}
                                 </>
                             ) : (
                                 "Crear Tarea"

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -8,6 +8,7 @@ import { Loader2, Plus, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { cn } from "@/lib/utils"
+import { useProcessingState } from "@/lib/hooks/use-processing-messages"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -52,7 +53,7 @@ interface NewPersonDialogProps {
 
 export function NewPersonDialog({ open: controlledOpen, onOpenChange, onSuccess }: NewPersonDialogProps) {
     const [internalOpen, setInternalOpen] = useState(false)
-    const [isPending, setIsPending] = useState(false)
+    const { isPending, processingMessage, withProcessing } = useProcessingState()
     const router = useRouter()
 
     // Use controlled open if provided, otherwise use internal state
@@ -93,38 +94,37 @@ export function NewPersonDialog({ open: controlledOpen, onOpenChange, onSuccess 
 
     async function onSubmit(data: PersonFormValues) {
         console.log('[NewPersonDialog] Iniciando submit con datos:', data)
-        setIsPending(true)
         try {
-            const result = await crearPersonaFromPersonFormValues(data)
-            console.log('[NewPersonDialog] Resultado del servidor:', result)
+            await withProcessing(async () => {
+                const result = await crearPersonaFromPersonFormValues(data)
+                console.log('[NewPersonDialog] Resultado del servidor:', result)
 
-            if (result.success === false) {
-                toast.error("Error al crear persona", {
-                    description: result.message || "Error desconocido",
-                })
-                return
-            }
+                if (result.success === false) {
+                    toast.error("Error al crear persona", {
+                        description: result.message || "Error desconocido",
+                    })
+                    return
+                }
 
-            toast.success("Persona creada correctamente. Completa su perfil ahora.")
+                toast.success("Persona creada correctamente. Completa su perfil ahora.")
 
-            form.reset()
-            setOpen(false)
+                form.reset()
+                setOpen(false)
 
-            // Call onSuccess callback if provided (for nested dialog usage)
-            if (onSuccess && result.bp_id) {
-                onSuccess(result.bp_id)
-            }
-            // Otherwise navigate to the newly created person detail page (default behavior)
-            else if (result.bp_id) {
-                router.push(`/admin/socios/personas/${result.bp_id}?tab=profile`)
-            } else {
-                router.refresh()
-            }
+                // Call onSuccess callback if provided (for nested dialog usage)
+                if (onSuccess && result.bp_id) {
+                    onSuccess(result.bp_id)
+                }
+                // Otherwise navigate to the newly created person detail page (default behavior)
+                else if (result.bp_id) {
+                    router.push(`/admin/socios/personas/${result.bp_id}?tab=profile`)
+                } else {
+                    router.refresh()
+                }
+            })
         } catch (err) {
             console.error("Unexpected error submitting form:", err)
             toast.error("Error inesperado al procesar la solicitud")
-        } finally {
-            setIsPending(false)
         }
     }
 
@@ -493,7 +493,7 @@ export function NewPersonDialog({ open: controlledOpen, onOpenChange, onSuccess 
                             {isPending ? (
                                 <>
                                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                    Procesando Alta...
+                                    {processingMessage}
                                 </>
                             ) : (
                                 "Crear Persona"

@@ -2,41 +2,49 @@ export const AI_MODELS = [
     {
         id: 'anthropic/claude-haiku-4.5',
         label: 'Claude Haiku 4.5',
+        shortLabel: 'Haiku',
         provider: 'Anthropic',
     },
     {
         id: 'anthropic/claude-sonnet-4.5',
         label: 'Clause Sonnet 4.5',
+        shortLabel: 'Sonnet',
         provider: 'Anthropic',
     },
     {
         id: 'deepseek/deepseek-v3.2',
         label: 'DeepSeek 3.2',
+        shortLabel: 'DeepSeek',
         provider: 'DeepSeek',
     },
     {
         id: 'google/gemini-2.5-flash',
         label: 'Gemini 2.5 Flash',
+        shortLabel: 'Gemini 2.5',
         provider: 'Google',
     },
     {
         id: 'google/gemini-3-flash-preview',
         label: 'Gemini 3 Flash',
+        shortLabel: 'Gemini 3',
         provider: 'Google',
     },
     {
         id: 'z-ai/glm-4.7-flash',
         label: 'GLM-4.7 Flash',
+        shortLabel: 'GLM',
         provider: 'BigModel',
     },
     {
         id: 'x-ai/grok-3-mini',
         label: 'Grok 3 mini',
+        shortLabel: 'Grok 3',
         provider: 'X.AI',
     },
     {
         id: 'x-ai/grok-4.1-fast',
         label: 'Grok 4.1',
+        shortLabel: 'Grok 4',
         provider: 'X.AI',
     },
 ] as const

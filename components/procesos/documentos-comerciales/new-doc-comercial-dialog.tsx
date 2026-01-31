@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import { useQuery } from "@tanstack/react-query"
 import { cn } from "@/lib/utils"
+import { useProcessingState } from "@/lib/hooks/use-processing-messages"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -67,7 +68,7 @@ interface ActorSearchResult {
 
 export function NewDocComercialDialog({ open: controlledOpen, onOpenChange, onSuccess }: NewDocComercialDialogProps) {
     const [internalOpen, setInternalOpen] = useState(false)
-    const [isPending, setIsPending] = useState(false)
+    const { isPending, processingMessage, withProcessing } = useProcessingState()
     const router = useRouter()
     const supabase = createClient()
 
@@ -217,58 +218,57 @@ export function NewDocComercialDialog({ open: controlledOpen, onOpenChange, onSu
             return
         }
 
-        setIsPending(true)
         try {
-            // Generate codigo server-side
-            // TODO: Ensure gen_codigo_doc_comercial exists in Supabase
-            const { data: generatedCodigo } = await supabase.rpc("gen_codigo_doc_comercial", {
-                p_organizacion_id: orgId
-            })
-
-            if (!generatedCodigo) {
-                toast.error("Error: No se pudo generar el código del documento")
-                return
-            }
-
-            const result = await crearDocComercial({
-                organizacion_id: orgId,
-                codigo: generatedCodigo as string,
-                tipo: data.tipo,
-                solicitante_id: data.solicitante_id,
-                responsable_id: data.responsable_id || undefined,
-                monto_estimado: data.monto_estimado || undefined,
-                notas: data.notas || undefined,
-                atributos: data.atributos,
-                tags: tags.length > 0 ? tags : undefined,
-            })
-
-            if (result.success === false) {
-                toast.error("Error al crear documento comercial", {
-                    description: result.message || "Error desconocido",
+            await withProcessing(async () => {
+                // Generate codigo server-side
+                // TODO: Ensure gen_codigo_doc_comercial exists in Supabase
+                const { data: generatedCodigo } = await supabase.rpc("gen_codigo_doc_comercial", {
+                    p_organizacion_id: orgId
                 })
-                return
-            }
 
-            toast.success("Documento comercial creado correctamente")
+                if (!generatedCodigo) {
+                    toast.error("Error: No se pudo generar el código del documento")
+                    return
+                }
 
-            form.reset()
-            setOpen(false)
+                const result = await crearDocComercial({
+                    organizacion_id: orgId,
+                    codigo: generatedCodigo as string,
+                    tipo: data.tipo,
+                    solicitante_id: data.solicitante_id,
+                    responsable_id: data.responsable_id || undefined,
+                    monto_estimado: data.monto_estimado || undefined,
+                    notas: data.notas || undefined,
+                    atributos: data.atributos,
+                    tags: tags.length > 0 ? tags : undefined,
+                })
 
-            // Call onSuccess callback if provided (for nested dialog usage)
-            if (onSuccess && result.doc_comercial_id) {
-                onSuccess(result.doc_comercial_id)
-            }
-            // Otherwise navigate to the newly created detail page (default behavior)
-            else if (result.doc_comercial_id) {
-                router.push(`/admin/procesos/documentos-comerciales/${result.doc_comercial_id}`)
-            } else {
-                router.refresh()
-            }
+                if (result.success === false) {
+                    toast.error("Error al crear documento comercial", {
+                        description: result.message || "Error desconocido",
+                    })
+                    return
+                }
+
+                toast.success("Documento comercial creado correctamente")
+
+                form.reset()
+                setOpen(false)
+
+                // Call onSuccess callback if provided (for nested dialog usage)
+                if (onSuccess && result.doc_comercial_id) {
+                    onSuccess(result.doc_comercial_id)
+                }
+                // Otherwise navigate to the newly created detail page (default behavior)
+                else if (result.doc_comercial_id) {
+                    router.push(`/admin/procesos/documentos-comerciales/${result.doc_comercial_id}`)
+                } else {
+                    router.refresh()
+                }
+            })
         } catch (err) {
             console.error("Unexpected error submitting form:", err)
             toast.error("Error inesperado al procesar la solicitud")
-        } finally {
-            setIsPending(false)
         }
     }
 
@@ -641,7 +641,7 @@ export function NewDocComercialDialog({ open: controlledOpen, onOpenChange, onSu
                             {isPending ? (
                                 <>
                                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                    Creando Documento Comercial...
+                                    {processingMessage}
                                 </>
                             ) : (
                                 "Crear Documento Comercial"
