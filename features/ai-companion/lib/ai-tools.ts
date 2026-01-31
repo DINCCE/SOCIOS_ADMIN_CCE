@@ -8,8 +8,9 @@ import { z } from 'zod'
 
 // Navigation tool schema
 export const navigateToolSchema = z.object({
-  path: z.string().describe('The route path to navigate to (e.g., /admin/socios/personas, /admin/procesos/tareas)'),
-  entity: z.enum(['personas', 'empresas', 'tareas', 'acciones', 'doc_comerciales', 'analitica', 'settings']).describe('The entity type'),
+  page: z.string().describe('The title of the page to navigate to (e.g., "Mis Tareas", "Personas", "Empresas", "Documentos Comerciales", "Acciones", "Analítica")'),
+  path: z.string().optional().describe('The route path to navigate to if known (e.g., /admin/socios/personas)'),
+  entity: z.enum(['personas', 'empresas', 'tareas', 'acciones', 'doc_comerciales', 'analitica', 'settings']).optional().describe('The entity type'),
   entityId: z.string().optional().describe('Optional specific entity ID to open detail view'),
 })
 

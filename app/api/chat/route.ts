@@ -1,6 +1,6 @@
 import { convertToModelMessages, streamText } from 'ai'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
-import { z } from 'zod'
+
 import {
   aiSearch,
   aiCreateTarea,
@@ -79,20 +79,50 @@ You can help users:
 - Get summaries and counts
 - Answer questions about the CRM${contextInfo}
 
-IMPORTANT: Always respond with text to the user. Use tools only when needed. After using a tool, explain the results in text.
+CRITICAL: When the user wants to go to a page or navigate, you MUST call the 'navigate' tool. Do not just say you will do it; execute the tool call immediately.
+
+NAVIGATION KEYWORDS: If the user says any of these words, you MUST call the navigate tool:
+- "navega", "navigate", "go to", "vé a", "ir a", "llévame a", "abre", "open", "show me"
+- Followed by any page name like: "personas", "empresas", "tareas", "mis tareas", "panel", etc.
+
+AVAILABLE PAGES FOR NAVIGATION (Use these exact names for the 'page' argument):
+- "Personas" -> Individual partners list (/admin/socios/personas)
+- "Empresas" -> Company partners list (/admin/socios/empresas)
+- "Mis Tareas" -> User tasks (/admin/mis-tareas)
+- "Tareas" -> Global tasks processes (/admin/procesos/tareas)
+- "Acciones" -> Shares/Actions processes (/admin/procesos/acciones)
+- "Documentos Comerciales" -> Commercial documents processes (/admin/procesos/documentos-comerciales)
+- "Panel" -> Main dashboard (/admin)
+- "Analítica" -> Analytics dashboard (/admin/analitica)
+- "Organizaciones" -> Organization management (/admin/organizations)
+- "Perfil" -> User profile settings (/admin/settings/profile)
+- "Cuenta" -> Account settings (/admin/settings/account)
+- "Componentes" -> UI components reference (/admin/settings/componentes)
+- "Vistas" -> System views settings (/admin/settings/views)
+
+EXAMPLE:
+User: "navega a personas"
+You MUST: Call navigate tool with {page: "Personas"}
+Then respond: "Te he llevado a la página de Personas."
+
+DO NOT just respond with text for navigation requests. You MUST call the tool.
 
 When using tools:
-1. Always explain what you're going to do before taking action
-2. For navigation, tell the user which page you're navigating to
-3. For searches, summarize the results clearly
-4. For creating records, confirm what was created
-5. For assignments, specify who was assigned and what the relation is
-6. Be concise and helpful in your responses${modePrompt}`,
+1. For navigation: ALWAYS call the navigate tool, then confirm with text.
+2. For searches: Call search tool, then summarize results.
+3. For creating records: Call the appropriate create tool, then confirm.
+4. For assignments: Call the assignment tool, then explain what was done.
+5. Be concise and helpful in your responses${modePrompt}`,
       messages: await convertToModelMessages(messages),
       tools: {
         navigate: {
           description: 'Navigate to a specific page in the CRM.',
           inputSchema: navigateToolSchema,
+          execute: async (params) => {
+            // Navigation is handled client-side in onToolCall
+            // This execute function ensures arguments are properly passed through
+            return { success: true, params }
+          },
         },
         search: {
           description: 'Search or filter records in the CRM.',

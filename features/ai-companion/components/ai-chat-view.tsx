@@ -2,12 +2,13 @@
 
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import { Sparkles, Trash2, Send, StopCircle, User, Copy, Check, Settings, Bot, Zap, Cpu, Settings2 } from 'lucide-react'
+import { Sparkles, Trash2, Send, StopCircle, User, Copy, Check, Settings, Bot, Zap, Cpu, Settings2, Maximize2 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useNotify } from '@/lib/hooks/use-notify'
-import { AI_MODELS, AI_MODES, DEFAULT_MODEL, DEFAULT_MODE, type AIModelId, type AIModeId } from '../types/config'
+import { AI_MODELS, AI_MODES, AI_SIZES, DEFAULT_MODEL, DEFAULT_MODE, type AIModelId, type AIModeId } from '../types/config'
+import { useAICompanion } from '../hooks/use-ai-companion'
 
 // UI Components
 import {
@@ -299,6 +300,7 @@ function AIChatViewInternal({
 }: AIChatViewProps) {
   const router = useRouter()
   const { notifyError } = useNotify()
+  const { chatSize, setChatSize } = useAICompanion()
 
   // State for config
   const [modelId, setModelId] = useState<string>(() => loadConfigFromStorage().modelId)
@@ -319,32 +321,102 @@ function AIChatViewInternal({
       },
     }),
     onToolCall: async ({ toolCall }) => {
-      const tc = toolCall as { toolName: string; toolCallId: string; args?: any }
+      console.log('🔍 Full toolCall object:', toolCall)
+      console.log('🔍 toolCall type:', typeof toolCall)
+      console.log('🔍 toolCall keys:', Object.keys(toolCall))
 
-      if (tc.toolName === 'navigate' && tc.args?.path) {
-        let navigateTo = tc.args.path
+      const tc = toolCall as { toolName: string; toolCallId: string; input?: any }
 
-        // Handle detail views for specific entities
-        if (tc.args.entityId) {
-          if (tc.args.entity === 'personas' || tc.args.entity === 'empresas') {
-            navigateTo = `/admin/socios/actores/${tc.args.entityId}`
-          } else if (tc.args.entity === 'tareas') {
-            navigateTo = `/admin/procesos/tareas/${tc.args.entityId}`
-          } else if (tc.args.entity === 'doc_comerciales') {
-            navigateTo = `/admin/procesos/posventas-socio/oportunidades/${tc.args.entityId}`
-          } else if (tc.args.entity === 'acciones') {
-            navigateTo = `/admin/socios/acciones/${tc.args.entityId}`
+      if (tc.toolName === 'navigate') {
+        console.log('🤖 AI Tool Call: navigate', tc.input)
+        console.log('🔍 tc.input type:', typeof tc.input)
+        console.log('🔍 Full tc object:', tc)
+
+        if (!tc.input) {
+          console.error('❌ AI Tool Error: Arguments are missing')
+          addToolOutput({
+            tool: tc.toolName,
+            toolCallId: tc.toolCallId,
+            output: { success: false, error: 'Arguments are missing' }
+          })
+          return
+        }
+
+        let navigateTo = tc.input.path
+
+        // If page title is provided, try to resolve it to a path
+        if (tc.input.page) {
+          const pageTitle = tc.input.page.toLowerCase().trim()
+          console.log('🔍 Resolving page title:', pageTitle)
+
+          // Map titles to paths (can be expanded)
+          const titleMap: Record<string, string> = {
+            'panel': '/admin',
+            'mis tareas': '/admin/mis-tareas',
+            'analítica': '/admin/analitica',
+            'analitica': '/admin/analitica',
+            'personas': '/admin/socios/personas',
+            'empresas': '/admin/socios/empresas',
+            'acciones': '/admin/procesos/acciones',
+            'documentos comerciales': '/admin/procesos/documentos-comerciales',
+            'documentos': '/admin/procesos/documentos-comerciales',
+            'tareas': '/admin/procesos/tareas',
+            'organizaciones': '/admin/organizations',
+            'perfil': '/admin/settings/profile',
+            'cuenta': '/admin/settings/account',
+            'componentes': '/admin/settings/componentes',
+            'vistas': '/admin/settings/views',
+          }
+
+          if (titleMap[pageTitle]) {
+            navigateTo = titleMap[pageTitle]
+            console.log('✅ Resolved to path:', navigateTo)
           } else {
-            navigateTo = `${tc.args.path}/${tc.args.entityId}`
+            // Check if any title is contained in the page argument (more flexible)
+            const matchedKey = Object.keys(titleMap).find(key => pageTitle.includes(key))
+            if (matchedKey) {
+              navigateTo = titleMap[matchedKey]
+              console.log('✅ Resolved to path (partial match):', navigateTo)
+            }
           }
         }
 
-        router.push(navigateTo)
-        addToolOutput({
-          tool: tc.toolName,
-          toolCallId: tc.toolCallId,
-          output: { success: true, navigatedTo: navigateTo }
-        })
+        if (navigateTo) {
+          // Handle detail views for specific entities
+          if (tc.input.entityId) {
+            if (tc.input.entity === 'personas') {
+              navigateTo = `/admin/socios/personas/${tc.input.entityId}`
+            } else if (tc.input.entity === 'empresas') {
+              navigateTo = `/admin/socios/empresas/${tc.input.entityId}`
+            } else if (tc.input.entity === 'acciones') {
+              navigateTo = `/admin/procesos/acciones/${tc.input.entityId}`
+            } else if (tc.input.entity === 'tareas') {
+              navigateTo = `/admin/procesos/tareas`
+            } else if (tc.input.entity === 'doc_comerciales') {
+              navigateTo = `/admin/procesos/documentos-comerciales`
+            } else {
+              // Fallback: only append if it doesn't already have an ID-like segment
+              if (navigateTo && !navigateTo.includes(tc.input.entityId)) {
+                navigateTo = `${navigateTo}/${tc.input.entityId}`
+              }
+            }
+          }
+
+          console.log('🚀 Final navigation to:', navigateTo)
+          router.push(navigateTo)
+          addToolOutput({
+            tool: tc.toolName,
+            toolCallId: tc.toolCallId,
+            output: { success: true, navigatedTo: navigateTo }
+          })
+        } else {
+          console.warn('⚠️ Could not determine destination path for:', tc.input)
+          addToolOutput({
+            tool: tc.toolName,
+            toolCallId: tc.toolCallId,
+            output: { success: false, error: 'Could not determine destination path' }
+          })
+        }
       }
     },
     onError: (err) => {
@@ -428,7 +500,7 @@ function AIChatViewInternal({
               )}
             </div>
             <div>
-              <h3 className="font-semibold text-foreground text-sm leading-none mb-1">AI Assistant</h3>
+              <h3 className="font-semibold text-foreground text-sm leading-none mb-1">Country AI</h3>
               <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                 <span className="flex items-center gap-0.5">
                   <Cpu className="size-2.5" />
@@ -501,6 +573,27 @@ function AIChatViewInternal({
                             <div className="flex flex-col">
                               <span>{mode.label}</span>
                               <span className="text-[10px] text-muted-foreground">{mode.description}</span>
+                            </div>
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Maximize2 className="mr-2 h-4 w-4" />
+                    <span>Tamaño</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuRadioGroup value={chatSize} onValueChange={setChatSize}>
+                        {AI_SIZES.map((size) => (
+                          <DropdownMenuRadioItem key={size.id} value={size.id}>
+                            <div className="flex flex-col">
+                              <span>{size.label}</span>
+                              <span className="text-[10px] text-muted-foreground">{size.height}</span>
                             </div>
                           </DropdownMenuRadioItem>
                         ))}

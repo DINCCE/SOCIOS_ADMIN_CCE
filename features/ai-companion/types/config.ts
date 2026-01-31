@@ -70,3 +70,13 @@ export type AIModeId = (typeof AI_MODES)[number]['id']
 
 export const DEFAULT_MODEL: AIModelId = 'google/gemini-2.5-flash'
 export const DEFAULT_MODE: AIModeId = 'standard'
+
+export const AI_SIZES = [
+  { id: 'compact', label: 'Compacto', height: '400px' },
+  { id: 'normal', label: 'Normal', height: '650px' },
+  { id: 'large', label: 'Grande', height: '850px' },
+] as const
+
+export type AISizeId = (typeof AI_SIZES)[number]['id']
+
+export const DEFAULT_SIZE: AISizeId = 'normal'

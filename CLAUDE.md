@@ -294,27 +294,80 @@ When you need UI components:
 
 ## AI Agent Implementation
 
-### Vercel AI SDK Elements
+### Vercel AI SDK v6
 
-**CRITICAL RULE**: The project uses the **Official Vercel AI SDK Elements** for all chat and agent (companion) interfaces.
+**CRITICAL RULE**: The project uses **Vercel AI SDK v6** (the `ai` package) for all AI capabilities. This is the official SDK maintained by Vercel for building AI-powered applications.
 
+- **Version**: Always use imports from `@ai-sdk/react` (React hooks) and `ai` (core utilities) - version 6.x or higher
+- **Documentation**: [sdk.vercel.ai/docs](https://sdk.vercel.ai/docs)
+- **Do NOT** use older patterns like `ai/rsc` or custom streaming implementations
+
+### Official Vercel AI Components
+
+**CRITICAL**: Always use official Vercel AI SDK components for chat and agent interfaces.
+
+- **Installation**: `npx ai-elements@latest` (installs to `components/ai-elements/`)
 - **Do NOT build custom chat UIs from scratch.**
 - **Do NOT manually stream or parse message parts.**
-- Use the official components located in `components/ai-elements/` (installed via `npx ai-elements@latest`).
-- Standard components to use: `<Conversation />`, `<Message />`, `<PromptInput />` (Composer), `<Reasoning />`, etc.
+- **Do NOT create your own message components unless absolutely necessary.**
+
+**Standard Components** (located in `components/ai-elements/`):
+- `<Conversation />` - Main chat container
+- `<Message />` - Individual message display
+- `<PromptInput />` - Input field (also called Composer)
+- `<Reasoning />` - Chain-of-thought reasoning display
+- `<ToolInvocation />` - Tool call results display
+- `<ThreadList />` - Thread/conversation list
+
+These are official Vercel components - treat them as library code and avoid heavy modifications.
 
 ### Architecture
 
-1.  **Shared UI Primitives**: `components/ai-elements/`
-    - Contains the base building blocks (Thread, Message, Tool, etc.).
-    - Treat these as library code; do not modify heavily unless necessary for theming.
+1. **Shared UI Primitives**: `components/ai-elements/`
+   - Contains official Vercel AI SDK components (Thread, Message, Tool, etc.)
+   - Installed via `npx ai-elements@latest`
+   - Treat as library code; do not modify heavily unless necessary for theming
 
-2.  **Feature Logic**: `features/ai-companion/`
-    - Contains the actual implementation (e.g., `AIChatView`).
-    - Uses `useChat` from `@ai-sdk/react`.
-    - Handles tool execution and state management.
+2. **Feature Logic**: `features/ai-companion/`
+   - Contains the actual implementation (e.g., `AIChatView`)
+   - Uses `useChat` hook from `@ai-sdk/react` (Vercel AI SDK v6)
+   - Handles tool execution and state management
+   - Implements AI tools using the `tool` schema from the SDK
 
-3.  **Backend**
-    - `app/api/chat/route.ts` must use `streamText` and return `toUIMessageStreamResponse()`.
-    - Ensure `sendReasoning: true` is enabled in the response.
+3. **Backend**: `app/api/chat/route.ts`
+   - Must use `streamText` from `ai` package
+   - Must return `toUIMessageStreamResponse()` for proper streaming
+   - Ensure `sendReasoning: true` is enabled in the response for thinking models
+   - Tool definitions should follow Vercel AI SDK `tool` schema
+
+### Key SDK Imports
+
+```typescript
+// React hooks (client components)
+import { useChat, useCompletion, useAssistant } from '@ai-sdk/react'
+
+// Core utilities (server)
+import { streamText, generateText, tool } from 'ai'
+import { createOpenAI } from '@ai-sdk/openai'
+import { createAnthropic } from '@ai-sdk/anthropic'
+import { toUIMessageStreamResponse } from 'ai/react'
+
+// Types
+import type { CoreMessage, ToolInvocation } from 'ai'
+```
+
+### Tool Definition Pattern
+
+```typescript
+// Define tools using Vercel AI SDK tool schema
+const myTool = tool({
+  description: 'Tool description',
+  parameters: z.object({
+    // Zod schema for parameters
+  }),
+  execute: async ({ param }) => {
+    // Tool implementation
+  }
+})
+```
 
