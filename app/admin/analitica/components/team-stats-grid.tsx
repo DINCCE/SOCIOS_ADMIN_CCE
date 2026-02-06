@@ -1,20 +1,22 @@
 "use client"
 
 import * as React from "react"
-import { ClipboardList, AlertTriangle, Clock, TrendingUp } from "lucide-react"
+import { ClipboardList, AlertTriangle, Clock, TrendingUp, HeartPulse } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 interface TeamStatCardProps {
     label: string
     value: string | number
-    icon: React.ElementType
+    icon?: React.ElementType
     trend?: number
     variant?: 'default' | 'success' | 'warning' | 'critical'
     onClick?: () => void
+    insight?: string
 }
 
-function TeamStatCard({ label, value, trend, variant = 'default', onClick }: Omit<TeamStatCardProps, 'icon'>) {
+function TeamStatCard({ label, value, trend, variant = 'default', onClick, insight }: Omit<TeamStatCardProps, 'icon'>) {
     const isCritical = variant === 'critical' && typeof value === 'number' && value > 0;
 
     return (
@@ -45,6 +47,9 @@ function TeamStatCard({ label, value, trend, variant = 'default', onClick }: Omi
                     )}>
                         {value}
                     </h3>
+                    {insight && (
+                        <p className="text-[10px] text-muted-foreground mt-1">{insight}</p>
+                    )}
                 </div>
             </CardContent>
         </Card>
@@ -59,9 +64,33 @@ interface TeamStatsGridProps {
         completedThisWeek: number
         weeklyRate?: number
     }
+    // Flow Health props
+    flowHealthScore?: number
+    flowHealthStatus?: 'healthy' | 'warning' | 'critical'
 }
 
-export function TeamStatsGrid({ stats }: TeamStatsGridProps) {
+export function TeamStatsGrid({ stats, flowHealthScore, flowHealthStatus }: TeamStatsGridProps) {
+    const getFlowHealthVariant = () => {
+        switch (flowHealthStatus) {
+            case 'healthy': return 'success'
+            case 'warning': return 'warning'
+            case 'critical': return 'critical'
+            default: return 'default'
+        }
+    }
+
+    const getFlowHealthText = () => {
+        if (flowHealthScore === undefined) return 'N/A'
+        return `${flowHealthScore >= 0 ? '+' : ''}${flowHealthScore}`
+    }
+
+    const getFlowHealthInsight = () => {
+        if (flowHealthScore === undefined) return undefined
+        if (flowHealthScore > 0) return 'Saldo positivo'
+        if (flowHealthScore < 0) return 'Saldo negativo'
+        return 'Equilibrado'
+    }
+
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <TeamStatCard
@@ -77,11 +106,20 @@ export function TeamStatsGrid({ stats }: TeamStatsGridProps) {
                 label="En Progreso"
                 value={stats.inProgress}
             />
-            <TeamStatCard
-                label="Completadas (Semana)"
-                value={stats.completedThisWeek}
-                variant="success"
-            />
+            {flowHealthScore !== undefined ? (
+                <TeamStatCard
+                    label="Salud del Flujo"
+                    value={getFlowHealthText()}
+                    variant={getFlowHealthVariant()}
+                    insight={getFlowHealthInsight()}
+                />
+            ) : (
+                <TeamStatCard
+                    label="Completadas (Semana)"
+                    value={stats.completedThisWeek}
+                    variant="success"
+                />
+            )}
         </div>
     )
 }

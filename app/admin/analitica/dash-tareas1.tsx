@@ -17,7 +17,7 @@ import {
 
 // Components
 import { TeamStatsGrid } from "./components/team-stats-grid"
-import { TeamWorkloadSection } from "./components/team-workload-section"
+import { TeamWorkloadChart } from "./components/team-workload-chart"
 import { WeeklyTrendChart } from "./components/weekly-trend-chart"
 import { ResolutionTimeCard } from "./components/resolution-time-card"
 import { ProductivityRanking } from "./components/productivity-ranking"
@@ -353,12 +353,8 @@ export function DashTareas1() {
                 {/* Quick Stats Grid */}
                 <TeamStatsGrid stats={calculations.stats} />
 
-                {/* Workload Section */}
-                <TeamWorkloadSection
-                    members={calculations.workload}
-                    idealLoad={calculations.idealLoad}
-                    onReassign={handleReassignStart}
-                />
+                {/* Workload Chart - New combined chart */}
+                <TeamWorkloadChart tareas={tareasWithNames} />
 
                 {/* Insights Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

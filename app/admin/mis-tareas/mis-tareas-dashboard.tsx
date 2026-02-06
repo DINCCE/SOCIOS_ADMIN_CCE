@@ -545,7 +545,6 @@ export function MisTareasDashboard() {
                     open={isDetailOpen}
                     onOpenChange={setIsDetailOpen}
                     onDeleted={() => queryClient.invalidateQueries({ queryKey: ["mis-tareas"] })}
-                    onUpdated={() => queryClient.invalidateQueries({ queryKey: ["mis-tareas"] })}
                 />
 
                 {/* Floating Action Capsule */}

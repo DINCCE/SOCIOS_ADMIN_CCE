@@ -507,21 +507,38 @@ export async function actualizarPosicionTarea(args: {
   }
 
   // Find the current position of the task being moved
-  const currentIndex = tareasEnColumna.findIndex(t => t.id === args.tareaId)
+  let currentIndex = tareasEnColumna.findIndex(t => t.id === args.tareaId)
+
+  // If task not found in target column, it's a cross-column move
   if (currentIndex === -1) {
-    return { success: false, message: 'Tarea no encontrada en la columna' }
+    // Fetch the task from its current column
+    const { data: tareaActual } = await supabase
+      .from('tr_tareas')
+      .select('id, estado, posicion_orden')
+      .eq('id', args.tareaId)
+      .single()
+
+    if (!tareaActual) {
+      return { success: false, message: 'Tarea no encontrada' }
+    }
+
+    // Add the task to the array at the desired position
+    tareasEnColumna.splice(args.nuevaPosicion, 0, {
+      id: tareaActual.id,
+      posicion_orden: tareaActual.posicion_orden
+    })
+  } else {
+    // Same-column move: remove from current position first
+    const [tareaMovida] = tareasEnColumna.splice(currentIndex, 1)
+    // Insert at new position
+    tareasEnColumna.splice(args.nuevaPosicion, 0, tareaMovida)
   }
-
-  // Remove the task from the array
-  const [tareaMovida] = tareasEnColumna.splice(currentIndex, 1)
-
-  // Insert at new position
-  tareasEnColumna.splice(args.nuevaPosicion, 0, tareaMovida)
 
   // Update positions for all tasks in the column
   const updates = tareasEnColumna.map((tarea, index) => ({
     id: tarea.id,
-    posicion_orden: index
+    posicion_orden: index,
+    estado: args.estado  // Include estado for cross-column moves
   }))
 
   // Update each task position individually to avoid RLS issues with upsert
@@ -530,6 +547,7 @@ export async function actualizarPosicionTarea(args: {
       .from('tr_tareas')
       .update({
         posicion_orden: update.posicion_orden,
+        estado: update.estado,  // Update estado for cross-column moves
         actualizado_en: new Date().toISOString()
       })
       .eq('id', update.id)

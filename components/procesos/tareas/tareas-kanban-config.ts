@@ -95,7 +95,7 @@ export function tareasToKanbanData(tareas: TareaView[]): {
  */
 export async function handleTareasDragEnd(
   result: import('@hello-pangea/dnd').DropResult,
-  onUpdate: (tareaId: string, newEstado: TareaEstado) => Promise<{ success: boolean; message?: string }>,
+  onUpdate: (tareaId: string, newEstado: TareaEstado, newPosition?: number) => Promise<{ success: boolean; message?: string }>,
   onReorder?: (tareaId: string, newPosition: number, estado: TareaEstado) => Promise<{ success: boolean; message?: string }>
 ) {
   const { destination, source, draggableId } = result
@@ -117,10 +117,11 @@ export async function handleTareasDragEnd(
     return
   }
 
-  // Horizontal move (different column) - update estado
+  // Horizontal move (different column) - update estado and position
   if (destination.droppableId !== source.droppableId) {
     const newEstado = destination.droppableId as TareaEstado
-    await onUpdate(draggableId, newEstado)
+    // Pass the destination index so the position is respected in the new column
+    await onUpdate(draggableId, newEstado, destination.index)
   }
 }
 

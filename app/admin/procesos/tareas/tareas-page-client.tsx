@@ -100,6 +100,8 @@ export function TareasPageClient() {
       if (error) throw error
       return data as TareaView[]
     },
+    // Keep previous data while refetching to prevent empty state during view update latency
+    placeholderData: (previousData) => previousData,
   })
 
   // Global search filter
@@ -212,18 +214,59 @@ export function TareasPageClient() {
   const handleKanbanDragEnd = React.useCallback(async (result: import('@hello-pangea/dnd').DropResult) => {
     await handleTareasDragEnd(
       result,
-      // onUpdate: horizontal move (status change)
-      async (tareaId, newEstado) => {
+      // onUpdate: horizontal move (status change) with optional position
+      async (tareaId, newEstado, newPosition) => {
         // Store previous data for rollback
         const previousData = queryClient.getQueryData<TareaView[]>(['tareas'])
 
         // Optimistic update
-        queryClient.setQueryData(['tareas'], (old: TareaView[] | undefined) =>
-          old?.map((t) => t.id === tareaId ? { ...t, estado: newEstado } : t)
-        )
+        queryClient.setQueryData(['tareas'], (old: TareaView[] | undefined) => {
+          if (!old) return old
+
+          // If newPosition is provided, this is a cross-column move with specific position
+          if (newPosition !== undefined) {
+            // Find the task being moved
+            const taskToMove = old.find(t => t.id === tareaId)
+            if (!taskToMove) return old
+
+            // Remove task from its current position
+            const otherTasks = old.filter(t => t.id !== tareaId)
+
+            // Get tasks in the target column
+            const targetColumnTasks = old.filter(t => t.estado === newEstado)
+
+            // Insert the moved task at the desired position
+            targetColumnTasks.splice(newPosition, 0, { ...taskToMove, estado: newEstado })
+
+            // Reassign posicion_orden to all tasks in the target column
+            const reorderedTargetColumn = targetColumnTasks.map((t, i) => ({
+              ...t,
+              posicion_orden: i
+            }))
+
+            // Combine: tasks not in target column + reordered target column
+            const nonTargetTasks = otherTasks.filter(t => t.estado !== newEstado)
+            return [...nonTargetTasks, ...reorderedTargetColumn]
+          }
+
+          // Simple status change without position (backward compatibility)
+          return old?.map((t) => t.id === tareaId ? { ...t, estado: newEstado } : t)
+        })
 
         try {
-          const updateResult = await actualizarTarea(tareaId, { estado: newEstado })
+          let updateResult
+
+          // If newPosition is provided, use actualizarPosicionTarea to set both estado and position
+          if (newPosition !== undefined) {
+            updateResult = await actualizarPosicionTarea({
+              tareaId,
+              nuevaPosicion: newPosition,
+              estado: newEstado
+            })
+          } else {
+            // Simple status change
+            updateResult = await actualizarTarea(tareaId, { estado: newEstado })
+          }
 
           if (!updateResult.success) {
             throw new Error(updateResult.message)
@@ -248,6 +291,42 @@ export function TareasPageClient() {
         // Store previous data for rollback
         const previousData = queryClient.getQueryData<TareaView[]>(['tareas'])
 
+        // Optimistic update: Reorder tasks in local state immediately
+        queryClient.setQueryData(['tareas'], (old: TareaView[] | undefined) => {
+          if (!old) return old
+
+          // Filter tasks in the same column (estado)
+          const columnTasks = old.filter(t => t.estado === estado)
+          const otherTasks = old.filter(t => t.estado !== estado)
+
+          // Find the task being moved
+          const taskToMove = columnTasks.find(t => t.id === tareaId)
+          if (!taskToMove) return old
+
+          // Remove it from current position
+          const currentColumnTasks = columnTasks.filter(t => t.id !== tareaId)
+
+          // Insert at new position
+          currentColumnTasks.splice(newPosition, 0, taskToMove)
+
+          // Reassign posicion_orden to match new visual order
+          const reorderedColumnTasks = currentColumnTasks.map((t, i) => ({
+            ...t,
+            posicion_orden: i
+          }))
+
+          // Return all tasks with reordered column
+          return [...otherTasks, ...reorderedColumnTasks].sort((a, b) => {
+            // Sort by posicion_orden first, then by estado to maintain column order
+            if (a.estado !== b.estado) {
+              // Keep original column order
+              const estadoOrder = ['Pendiente', 'En Progreso', 'Pausada', 'Terminada', 'Cancelada']
+              return estadoOrder.indexOf(a.estado) - estadoOrder.indexOf(b.estado)
+            }
+            return a.posicion_orden - b.posicion_orden
+          })
+        })
+
         try {
           const updateResult = await actualizarPosicionTarea({
             tareaId,
@@ -259,7 +338,7 @@ export function TareasPageClient() {
             throw new Error(updateResult.message)
           }
 
-          // Refetch to ensure data is in sync
+          // Refetch to ensure data is in sync with server
           await queryClient.invalidateQueries({ queryKey: ['tareas'] })
           notifySuccess({ title: 'Posición actualizada correctamente' })
 
@@ -722,7 +801,6 @@ export function TareasPageClient() {
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
         onDeleted={() => queryClient.invalidateQueries({ queryKey: ['tareas'] })}
-        onUpdated={() => queryClient.invalidateQueries({ queryKey: ['tareas'] })}
       />
     </PageShell>
   )

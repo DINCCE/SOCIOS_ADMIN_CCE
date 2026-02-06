@@ -69,7 +69,6 @@ interface TareaDetailDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onDeleted?: () => void
-  onUpdated?: () => void
 }
 
 export function TareaDetailDialog({
@@ -77,7 +76,6 @@ export function TareaDetailDialog({
   open,
   onOpenChange,
   onDeleted,
-  onUpdated,
 }: TareaDetailDialogProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -159,7 +157,6 @@ export function TareaDetailDialog({
         queryClient.invalidateQueries({ queryKey: ["tarea", tareaId] })
         queryClient.invalidateQueries({ queryKey: ["tareas"] })
         queryClient.invalidateQueries({ queryKey: ["tarea-historial", tareaId] })
-        onUpdated?.()
       } else {
         toast.error(result.message)
       }
@@ -169,7 +166,7 @@ export function TareaDetailDialog({
     } finally {
       setIsSaving(false)
     }
-  }, [tareaId, isSaving, queryClient, onUpdated])
+  }, [tareaId, isSaving, queryClient])
 
   const handleDelete = async () => {
     if (!tareaId) return
@@ -200,11 +197,10 @@ export function TareaDetailDialog({
     if (result.success) {
       queryClient.invalidateQueries({ queryKey: ["tarea", tareaId] })
       queryClient.invalidateQueries({ queryKey: ["tareas"] })
-      onUpdated?.()
     } else {
       toast.error(result.message)
     }
-  }, [tareaId, queryClient, onUpdated])
+  }, [tareaId, queryClient])
 
   // Handle tag creation for SingleTagPopover
   const handleCreateTag = useCallback(async (tag: string) => {
@@ -213,12 +209,11 @@ export function TareaDetailDialog({
     if (result.success) {
       queryClient.invalidateQueries({ queryKey: ["tarea", tareaId] })
       queryClient.invalidateQueries({ queryKey: ["tareas"] })
-      onUpdated?.()
       toast.success(result.message)
     } else {
       toast.error(result.message)
     }
-  }, [tareaId, queryClient, onUpdated])
+  }, [tareaId, queryClient])
 
   // Transform assignee data for InlineAssigneePopover
   const assignedMiembro = useMemo(() => {

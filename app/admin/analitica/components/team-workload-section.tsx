@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { Users, UserPlus, ArrowRight } from "lucide-react"
+import { Users, UserPlus, ArrowRight, AlertCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 
@@ -15,15 +16,21 @@ interface MemberWorkload {
     completed: number
     avatar?: string
     status: 'overloaded' | 'balanced' | 'available'
+    // New props for Flow Health
+    oldTasks?: number  // Tasks > 7 days
+    oldTasksPercentage?: number
 }
 
 interface TeamWorkloadSectionProps {
     members: MemberWorkload[]
     idealLoad: number
     onReassign: (userId: string) => void
+    showOldTasks?: boolean  // New prop for Flow Health dashboard
 }
 
-export function TeamWorkloadSection({ members, idealLoad, onReassign }: TeamWorkloadSectionProps) {
+export function TeamWorkloadSection({ members, idealLoad, onReassign, showOldTasks = false }: TeamWorkloadSectionProps) {
+    const IDEAL_LOAD = idealLoad
+
     const getStatusText = (status: string) => {
         switch (status) {
             case 'overloaded': return "Sobrecargado"
@@ -47,74 +54,74 @@ export function TeamWorkloadSection({ members, idealLoad, onReassign }: TeamWork
                     <div className="flex items-center gap-1">
                         <div className="h-1.5 w-1.5 rounded-full bg-[var(--chart-2)]" /> Pendiente
                     </div>
-                    <div className="ml-2 pl-2 border-l border-border/50 flex items-center gap-1">
+                    {showOldTasks && (
+                        <div className="ml-2 pl-2 border-l border-border/50 flex items-center gap-1">
+                            <div className="h-1.5 w-1.5 rounded-full bg-orange-500" /> +7 días
+                        </div>
+                    )}
+                    <div className={cn("ml-2 pl-2 border-l border-border/50 flex items-center gap-1", !showOldTasks && "md:hidden")}>
                         <div className="h-1.5 w-1.5 rounded-full bg-[var(--chart-4)]" /> Crítico
                     </div>
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                     {members.map((member) => {
                         const totalPending = member.pending
                         const inProgress = member.inProgress
-                        const justPending = totalPending - inProgress
-                        
-                        const maxVisualScale = idealLoad * 1.5
-                        const inProgressPct = Math.min((inProgress / maxVisualScale) * 100, 100)
-                        const justPendingPct = Math.min((justPending / maxVisualScale) * 100, 100 - inProgressPct)
+                        const oldTasks = showOldTasks ? (member.oldTasks || 0) : 0
+                        const oldTasksPercentage = showOldTasks ? (member.oldTasksPercentage || 0) : 0
+                        const hasOldTasksWarning = showOldTasks && oldTasksPercentage > 30
 
                         return (
                             <div key={member.userId} className="group">
                                 <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2.5">
-                                        <Avatar className="h-7 w-7 border border-border/50">
+                                    <div className="flex items-center gap-2">
+                                        <Avatar className="h-6 w-6 border border-border/50">
                                             <AvatarImage src={member.avatar} />
                                             <AvatarFallback className="bg-primary/5 text-primary text-[10px] font-bold">
                                                 {member.name.split(' ').map(n => n[0]).join('')}
                                             </AvatarFallback>
                                         </Avatar>
-                                        <div>
-                                            <p className="text-sm font-medium leading-none text-foreground">{member.name}</p>
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                                <span className="text-[10px] font-semibold text-muted-foreground">
-                                                    {totalPending} pendientes ({inProgress} en progreso)
-                                                </span>
-                                            </div>
-                                        </div>
+                                        <span className="text-sm font-medium">{member.name}</span>
                                     </div>
 
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2">
                                         <span className={cn(
-                                            "text-[10px] font-bold",
-                                            member.status === 'overloaded' ? "text-[var(--chart-4)]" : "text-muted-foreground/60"
+                                            "text-xs font-semibold",
+                                            totalPending > IDEAL_LOAD ? "text-[var(--chart-4)]" : "text-muted-foreground"
                                         )}>
-                                            {getStatusText(member.status)}
+                                            {totalPending}
                                         </span>
-                                        {member.status === 'overloaded' && (
-                                            <Button
+                                        {showOldTasks && oldTasks > 0 && (
+                                            <Badge
                                                 variant="outline"
-                                                size="sm"
-                                                className="h-6 px-2 gap-1 text-[10px] font-bold border-[var(--chart-4)]/20 hover:bg-[var(--chart-4)]/10 hover:text-[var(--chart-4)]"
-                                                onClick={() => onReassign(member.userId)}
+                                                className={cn(
+                                                    "h-5 px-1.5 text-[9px] gap-0.5",
+                                                    hasOldTasksWarning
+                                                        ? "bg-orange-500/10 text-orange-600 border-orange-500/20"
+                                                        : "bg-muted/50 text-muted-foreground"
+                                                )}
                                             >
-                                                Redistribuir
-                                            </Button>
+                                                {oldTasks} viejas
+                                            </Badge>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="relative h-2.5 w-full bg-muted rounded-full overflow-hidden flex">
+                                {/* Simplified progress bar */}
+                                <div className="relative h-1.5 w-full bg-muted rounded-full overflow-hidden">
                                     <div
-                                        className="h-full bg-[var(--chart-1)] transition-all duration-500 first:rounded-l-full last:rounded-r-full"
-                                        style={{ width: `${inProgressPct}%` }}
+                                        className={cn(
+                                            "h-full rounded-full transition-all duration-500",
+                                            hasOldTasksWarning
+                                                ? "bg-orange-500"
+                                                : totalPending > IDEAL_LOAD * 1.2
+                                                    ? "bg-[var(--chart-4)]"
+                                                    : "bg-[var(--chart-1)]"
+                                        )}
+                                        style={{ width: `${Math.min((totalPending / (IDEAL_LOAD * 2)) * 100, 100)}%` }}
                                     />
-                                    <div
-                                        className="h-full bg-[var(--chart-2)] opacity-50 transition-all duration-500 first:rounded-l-full last:rounded-r-full"
-                                        style={{ width: `${justPendingPct}%` }}
-                                    />
-                                    {member.status === 'overloaded' && (
-                                        <div className="absolute top-0 bottom-0 right-0 w-1 bg-[var(--chart-4)] animate-pulse" />
-                                    )}
                                 </div>
                             </div>
                         )

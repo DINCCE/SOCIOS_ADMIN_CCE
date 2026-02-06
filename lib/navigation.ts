@@ -49,6 +49,10 @@ export const NAVIGATION_CONFIG: NavItem[] = [
         title: 'Tareas',
         url: '/admin/analitica',
       },
+      {
+        title: 'Salud de Tareas',
+        url: '/admin/analitica/flow-health',
+      },
     ],
   },
   {
